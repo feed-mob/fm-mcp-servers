@@ -5,12 +5,13 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
+import { fileURLToPath } from 'url';
 
 dotenv.config();
 
 const server = new McpServer({
   name: "Jampp MCP Server",
-  version: "0.0.1"
+  version: "0.0.5"
 });
 
 const AUTH_URL = "https://auth.jampp.com/v1/oauth/token";
@@ -217,7 +218,9 @@ server.tool("get_campaign_daily_spend",
 });
 
 // Start the server
-if (require.main === module) {
+const isMainModule = process.argv[1] === fileURLToPath(import.meta.url);
+
+if (isMainModule) {
   const transport = new StdioServerTransport();
   server.connect(transport).catch(error => {
     console.error("[jampp] Error starting server:", error);
