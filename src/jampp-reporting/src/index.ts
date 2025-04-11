@@ -5,18 +5,12 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-// Get the current file path and directory
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 dotenv.config();
 
 const server = new McpServer({
   name: "Jampp MCP Server",
-  version: "0.0.7"
+  version: "0.0.8"
 });
 
 const AUTH_URL = "https://auth.jampp.com/v1/oauth/token";
@@ -222,15 +216,14 @@ server.tool("get_campaign_daily_spend",
   }
 });
 
-// Start the server
-if (process.argv[1] === __filename || process.argv[1] === fileURLToPath(import.meta.url)) {
-  console.error("[jampp] Starting MCP server...");
-
+// Start server
+async function runServer() {
   const transport = new StdioServerTransport();
-  server.connect(transport).catch(error => {
-    console.error("[jampp] Error starting server:", error);
-    process.exit(1);
-  });
+  await server.connect(transport);
+  console.error("Jampp Reporting MCP Server running on stdio");
 }
 
-export default server;
+runServer().catch((error) => {
+  console.error("Fatal error running server:", error);
+  process.exit(1);
+});
