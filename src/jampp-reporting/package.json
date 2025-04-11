@@ -1,13 +1,11 @@
 {
   "name": "@feedmob/jampp-reporting",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "MCP server for Jampp API",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "bin": {
-    "jampp-reporting-mcp": "./dist/index.js"
-  },
+  "bin": "./dist/index.js",
   "files": [
     "dist",
     "README.md"
@@ -25,7 +23,7 @@
     "url": "https://github.com/feed-mob/fm-mcp-servers"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && chmod +x dist/index.js",
     "start": "node --enable-source-maps dist/index.js",
     "dev": "tsc && node --enable-source-maps dist/index.js",
     "prepublishOnly": "npm run build"
