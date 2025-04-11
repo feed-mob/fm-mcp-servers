@@ -30,7 +30,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Note: For accounts with 2FA enabled, you need to use an Automation Access Token
+      # Generate one at https://www.npmjs.com/settings/[username]/tokens/new
+      # Select "Automation" as the token type
       - name: Publish to npm
         run: npm publish --access public
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Use Automation Access Token to bypass 2FA requirement
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTOMATION_TOKEN }}

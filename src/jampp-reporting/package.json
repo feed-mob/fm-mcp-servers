@@ -1,10 +1,13 @@
 {
   "name": "@feedmob/jampp-reporting",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "MCP server for Jampp API",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "jampp-reporting-mcp": "./dist/index.js"
+  },
   "files": [
     "dist",
     "README.md"
