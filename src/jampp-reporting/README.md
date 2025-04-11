@@ -13,6 +13,7 @@ Node.js server implementing Model Context Protocol (MCP) for filesystem operatio
 
 ### NPX
 
+```json
 {
   "mcpServers": {
     "jampp": {
@@ -25,7 +26,7 @@ Node.js server implementing Model Context Protocol (MCP) for filesystem operatio
     }
   }
 }
-
+```
 
 ## License
 
