@@ -11,7 +11,7 @@ dotenv.config();
 
 const server = new McpServer({
   name: "Jampp MCP Server",
-  version: "0.0.5"
+  version: "0.0.6"
 });
 
 const AUTH_URL = "https://auth.jampp.com/v1/oauth/token";
