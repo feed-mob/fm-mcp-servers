@@ -6,12 +6,17 @@ import { z } from "zod";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// Get the current file path and directory
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 dotenv.config();
 
 const server = new McpServer({
   name: "Jampp MCP Server",
-  version: "0.0.6"
+  version: "0.0.7"
 });
 
 const AUTH_URL = "https://auth.jampp.com/v1/oauth/token";
@@ -218,16 +223,14 @@ server.tool("get_campaign_daily_spend",
 });
 
 // Start the server
-const isMainModule = process.argv[1] === fileURLToPath(import.meta.url);
+if (process.argv[1] === __filename || process.argv[1] === fileURLToPath(import.meta.url)) {
+  console.error("[jampp] Starting MCP server...");
 
-if (isMainModule) {
   const transport = new StdioServerTransport();
   server.connect(transport).catch(error => {
     console.error("[jampp] Error starting server:", error);
     process.exit(1);
   });
-
-  console.error("[jampp] Starting MCP server...");
 }
 
 export default server;
