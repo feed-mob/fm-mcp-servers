@@ -1,19 +1,31 @@
 {
-  "name": "jampp-reporting",
-  "version": "0.0.1",
+  "name": "@feedmob/jampp-reporting",
+  "version": "0.0.2",
   "description": "MCP server for Jampp API",
   "type": "module",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "keywords": [
     "mcp",
-    "jampp"
+    "jampp",
+    "reporting",
+    "feedmob"
   ],
   "author": "FeedMob",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/feed-mob/fm-mcp-servers"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsc && node dist/index.js"
+    "dev": "tsc && node dist/index.js",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.6.1",

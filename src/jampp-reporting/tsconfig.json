@@ -8,6 +8,9 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
     "types": ["node"]
   },
   "include": ["src/**/*"],
