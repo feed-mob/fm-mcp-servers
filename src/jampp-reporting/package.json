@@ -1,6 +1,6 @@
 {
   "name": "@feedmob/jampp-reporting",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "MCP server for Jampp API",
   "type": "module",
   "main": "dist/index.js",
@@ -26,8 +26,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "tsc && node dist/index.js",
+    "start": "node --enable-source-maps dist/index.js",
+    "dev": "tsc && node --enable-source-maps dist/index.js",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
