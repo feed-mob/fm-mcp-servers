@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -214,10 +216,15 @@ server.tool("get_campaign_daily_spend",
   }
 });
 
-async function runServer() {
+// Start the server
+if (require.main === module) {
   const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error("Jampp Reporting MCP Server running on stdio");
+  server.connect(transport).catch(error => {
+    console.error("[jampp] Error starting server:", error);
+    process.exit(1);
+  });
+
+  console.error("[jampp] Starting MCP server...");
 }
 
-runServer().catch(console.error);
+export default server;
