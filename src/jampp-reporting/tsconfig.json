@@ -3,9 +3,6 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "moduleResolution": "Node16",
-    "module": "Node16",
-    "target": "ES2022"
   },
   "include": [
     "./src/**/*.ts"
