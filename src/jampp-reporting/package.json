@@ -1,6 +1,6 @@
 {
   "name": "@feedmob/jampp-reporting",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server for Jampp API",
   "main": "dist/index.js",
   "author": "FeedMob",
@@ -24,6 +24,9 @@
     "build": "tsc && shx chmod +x dist/*.js",
     "prepare": "npm run build",
     "watch": "tsc --watch"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.6.1",
