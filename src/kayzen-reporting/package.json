@@ -1,0 +1,40 @@
+{
+"name": "@feedmob/kayzen-reporting",
+"version": "0.0.1",
+"description": "MCP server for Kayzen API",
+  "main": "dist/index.js",
+  "author": "FeedMob",
+  "license": "MIT",
+  "homepage": "https://github.com/feed-mob/fm-mcp-servers",
+  "bugs": "https://github.com/feed-mob/fm-mcp-servers/issues",
+  "type": "module",
+  "bin": {
+    "kayzen-reporting": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "keywords": [
+    "mcp",
+    "kayzen",
+    "reporting"
+  ],
+  "scripts": {
+    "build": "tsc && shx chmod +x dist/*.js",
+    "prepare": "npm run build",
+    "watch": "tsc --watch"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.7.0",
+    "axios": "^1.8.3",
+    "dotenv": "^16.4.7",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.24",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2",
+    "shx": "^0.3.4"
+  }
+}
