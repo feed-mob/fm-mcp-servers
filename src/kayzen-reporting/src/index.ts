@@ -5,8 +5,8 @@ import { KayzenClient } from "./kayzen-client.js";
 
 // Create an MCP server
 const server = new McpServer({
-  name: "Kayzen Analytics",
-  version: "1.0.0"
+  name: "Kayzen Reporting",
+  version: "0.0.1"
 });
 
 // Initialize Kayzen client
