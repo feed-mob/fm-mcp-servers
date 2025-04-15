@@ -1,6 +1,6 @@
 # Jampp Reporting MCP Server
 
-Node.js server implementing Model Context Protocol (MCP) for filesystem operations.
+Node.js server implementing Model Context Protocol (MCP) for [Jampp Reporting API](https://developers.jampp.com/docs/reporting-api).
 
 
 ## Usage with Claude Desktop
