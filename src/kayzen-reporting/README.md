@@ -1,6 +1,6 @@
-# Jampp Reporting MCP Server
+# Kayzen Reporting MCP Server
 
-Node.js server implementing Model Context Protocol (MCP) for filesystem operations.
+Node.js server implementing Model Context Protocol (MCP) for [Kayzen Reporting API](https://developers.kayzen.io/reference/list-reports).
 
 
 ## Usage with Claude Desktop
@@ -18,7 +18,7 @@ Node.js server implementing Model Context Protocol (MCP) for filesystem operatio
   "mcpServers": {
     "kayzen": {
       "command": "npx",
-      "args": [ "-y", "@feedmob/jayzen-reporting" ],
+      "args": [ "-y", "@feedmob/kayzen-reporting" ],
       "env": {
         "KAYZEN_USERNAME": "user_email",
         "KAYZEN_PASSWORD": "user_password",
