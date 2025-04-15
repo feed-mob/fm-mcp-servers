@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -6,7 +8,7 @@ import { KayzenClient } from "./kayzen-client.js";
 // Create an MCP server
 const server = new McpServer({
   name: "Kayzen Reporting",
-  version: "0.0.2"
+  version: "0.0.3"
 });
 
 // Initialize Kayzen client
