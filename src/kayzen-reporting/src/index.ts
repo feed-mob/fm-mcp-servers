@@ -8,7 +8,7 @@ import { KayzenClient } from "./kayzen-client.js";
 // Create an MCP server
 const server = new McpServer({
   name: "Kayzen Reporting",
-  version: "0.0.3"
+  version: "0.0.4"
 });
 
 // Initialize Kayzen client
@@ -30,6 +30,7 @@ interface ReportResultsResponse {
 // Add list reports tool
 server.tool(
   "list_reports",
+  "Get a list of all the existing reports from Kayzen Reporting API",
   {},
   async () => {
     try {
@@ -56,6 +57,7 @@ server.tool(
 // Add get report results tool
 server.tool(
   "get_report_results",
+  "Get the results of a report from Kayzen Reporting API",
   {
     report_id: z.string().describe("ID of the report to fetch results for"),
     start_date: z.string().optional().describe("Start date in YYYY-MM-DD format"),
@@ -86,27 +88,6 @@ server.tool(
       };
     }
   }
-);
-
-// Add analyze report results prompt
-server.prompt(
-  "analyze_report_results",
-  {
-    report_id: z.string().describe("ID of the report to analyze")
-  },
-  (params: { report_id: string }) => ({
-    messages: [{
-      role: "user",
-      content: {
-        type: "text",
-        text: `Please analyze the results of report ${params.report_id} and provide insights about:
-        1. Performance metrics
-        2. Key trends
-        3. Areas for optimization
-        4. Any unusual patterns or anomalies`
-      }
-    }]
-  })
 );
 
 // Start the server
