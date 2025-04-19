@@ -16,7 +16,7 @@ Node.js server implementing Model Context Protocol (MCP) for [Singular Reporting
 ```json
 {
   "mcpServers": {
-    "jampp": {
+    "singular": {
       "command": "npx",
       "args": [ "-y", "@feedmob/singular-reporting" ],
       "env": {
