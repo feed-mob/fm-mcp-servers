@@ -20,7 +20,7 @@ if (!apiKey || !apiBaseUrl) {
 // Create MCP server
 const server = new McpServer({
   name: "Singular MCP Server",
-  version: "0.0.1",
+  version: "0.0.2",
 });
 
 // Define the params directly as a ZodRawShape
