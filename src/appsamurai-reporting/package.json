@@ -1,6 +1,6 @@
 {
-  "name": "@feedmob/appsamurai-reporting-mcp-server",
-  "version": "0.0.1",
+  "name": "@feedmob/appsamurai-reporting",
+  "version": "0.0.2",
   "description": "MCP Server for AppSamurai Campaign Spend API",
   "main": "dist/index.js",
   "type": "module",
