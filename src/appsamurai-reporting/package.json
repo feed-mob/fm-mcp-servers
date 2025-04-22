@@ -1,5 +1,5 @@
 {
-  "name": "appsamurai-reporting-mcp-server",
+  "name": "@feedmob/appsamurai-reporting-mcp-server",
   "version": "0.0.1",
   "description": "MCP Server for AppSamurai Campaign Spend API",
   "main": "dist/index.js",
@@ -21,6 +21,8 @@
     "appsamurai"
   ],
   "author": "FeedMob",
+  "homepage": "https://github.com/feed-mob/fm-mcp-servers",
+  "bugs": "https://github.com/feed-mob/fm-mcp-servers/issues",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.7.0",
