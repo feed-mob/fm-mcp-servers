@@ -22,6 +22,9 @@ MCP (Model Context Protocol) servers provide structured data and context to AI m
 - **[Singular Reporting](src/singular-reporting)** - Integration with Singular's reporting API for advertising campaign data
   - Getting reporting data from Singular API
 
+- **[Appsamurai Reporting](src/appsamurai-reporting)** - Integration with AppSamurai Campaign Spend API for advertising campaign data
+  - Getting reporting data AppSamurai Campaign Spend API
+
 ## 📖 Documentation
 Each server implementation includes its own detailed documentation in its respective directory.
 
