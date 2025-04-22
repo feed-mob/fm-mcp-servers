@@ -1,4 +1,4 @@
-#!/usr/bin/env nod
+#!/usr/bin/env node
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -20,7 +20,7 @@ if (!APPSAMURAI_API_KEY) {
 // Create server instance
 const server = new McpServer({
   name: "appsamurai-reporting",
-  version: "0.0.3",
+  version: "0.0.4",
   capabilities: {
     tools: {},
     prompts: {},
