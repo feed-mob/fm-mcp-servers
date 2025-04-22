@@ -53,10 +53,8 @@ Add the following configuration to your client's MCP server settings (e.g., `cla
 {
   "mcpServers": {
     "appsamurai-reporting": {
-      "command": "node",
-      "args": [
-        "/path/to/appsamurai-reporting/build/index.js"
-      ],
+      "command": "npx",
+      "args": [ "-y", "@feedmob/appsamurai-reporting"],
       "env": {
         "APPSAMURAI_API_KEY": "api_key"
       }
