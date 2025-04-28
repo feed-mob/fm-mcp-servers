@@ -10,6 +10,14 @@ MCP (Model Context Protocol) servers provide structured data and context to AI m
 
 ### Advertising & Marketing
 
+- **[Liftoff Reporting](src/liftoff-reporting)** - Integration with Liftoff's reporting API for advertising campaign data
+  - Create reports
+  - Check report status
+  - Download report data (CSV or JSON)
+  - List apps
+  - List campaigns
+  - Download report data enriched with campaign names
+
 - **[Jampp Reporting](src/jampp-reporting)** - Integration with Jampp's reporting API for advertising campaign data
   - Campaign spend tracking
   - Performance metrics
