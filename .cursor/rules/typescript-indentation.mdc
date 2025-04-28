@@ -3,11 +3,6 @@ description: TypeScript files should use 2-space indentation
 globs: "**/*.{ts,tsx}"
 alwaysApply: true
 ---
----
-description: TypeScript files should use 2-space indentation
-globs: "**/*.{ts,tsx}"
-alwaysApply: true
----
 
 When working with TypeScript files:
 - Use 2 spaces for indentation
