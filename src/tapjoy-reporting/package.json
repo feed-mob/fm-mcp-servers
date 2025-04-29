@@ -1,14 +1,14 @@
 {
-  "name": "@feedmob/jampp-reporting",
-  "version": "0.1.3",
-  "description": "MCP server for Jampp API",
+  "name": "@feedmob/tapjoy-reporting",
+  "version": "0.0.1",
+  "description": "MCP server for Tapjoy API",
   "main": "dist/index.js",
   "author": "FeedMob",
   "homepage": "https://github.com/feed-mob/fm-mcp-servers",
   "bugs": "https://github.com/feed-mob/fm-mcp-servers/issues",
   "type": "module",
   "bin": {
-    "jampp-reporting": "dist/index.js"
+    "tapjoy-reporting": "dist/index.js"
   },
   "files": [
     "dist",
@@ -16,9 +16,7 @@
   ],
   "keywords": [
     "mcp",
-    "jampp",
-    "reporting",
-    "feedmob"
+    "tapjoy"
   ],
   "scripts": {
     "build": "tsc && shx chmod +x dist/*.js",

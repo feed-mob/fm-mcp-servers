@@ -10,7 +10,7 @@ dotenv.config();
 
 const server = new McpServer({
   name: "Tapjoy GraphQL Reporting MCP Server",
-  version: "1.0.0"
+  version: "0.0.1"
 });
 
 const TAPJOY_API_BASE_URL = "https://api.tapjoy.com";
@@ -36,14 +36,13 @@ async function getTapjoyAccessToken(): Promise<string> {
 
   // Request new token
   const authUrl = `${TAPJOY_API_BASE_URL}/v1/oauth2/token`;
-  const credentials = Buffer.from(TAPJOY_API_KEY).toString('base64');
 
   try {
     console.error("Requesting new Tapjoy access token...");
     const response = await fetch(authUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${credentials}`,
+        'Authorization': `Basic ${TAPJOY_API_KEY}`,
         'Accept': 'application/json; */*'
       }
     });
@@ -169,7 +168,7 @@ server.tool("get_advertiser_adset_spend",
   try {
     // Validate date range logic if necessary (e.g., start_date <= end_date)
     if (new Date(start_date) > new Date(end_date)) {
-        throw new Error("Start date cannot be after end date.");
+      throw new Error("Start date cannot be after end date.");
     }
 
     const query = getAdvertiserAdSetSpendQuery(start_date, end_date);
@@ -179,29 +178,50 @@ server.tool("get_advertiser_adset_spend",
     // Extract the relevant nodes as per Ruby example
     const adSetNodes = data?.advertiser?.adSets?.nodes;
 
-    if (!adSetNodes) {
-        console.warn("Tapjoy GraphQL response structure might have changed or no data found. Full data:", JSON.stringify(data, null, 2));
-        // Return empty array or specific message? Let's return what we have, might be null.
+    let processedResults: any[] = []; // Initialize array for processed results
+
+    if (Array.isArray(adSetNodes)) {
+      processedResults = adSetNodes.map(node => {
+        const campaignName = node?.campaign?.name ?? 'Unknown Campaign';
+        // Safely access nested spend value
+        const rawSpend = node?.insights?.reports?.[0]?.spend?.[0];
+        let spendUSD = 0; // Default to 0 if spend is not found or invalid
+
+        if (typeof rawSpend === 'number') {
+          spendUSD = rawSpend / 1000000; // Convert micro-dollars to USD
+        } else if (rawSpend != null) {
+          console.warn(`Invalid spend value found for campaign ${campaignName}:`, rawSpend);
+        }
+
+        return {
+          campaign: { name: campaignName },
+          insights: {
+            reports: [ { spendUSD: spendUSD } ] // Use spendUSD key
+          }
+        };
+      });
+
+      if (processedResults.length === 0) {
+         console.warn("No ad set nodes with spend data found after processing.");
+      }
+
+    } else {
+      console.warn("Tapjoy GraphQL response structure might have changed or no adSetNodes array found. Full data:", JSON.stringify(data, null, 2));
+      // Optionally return raw data or an empty array if no nodes found
+      processedResults = data ?? {}; // Fallback to returning raw data or empty object
     }
 
     return {
       content: [
         {
           type: "text",
-          // Return the extracted nodes or the full data if nodes are not found
-          text: JSON.stringify(adSetNodes ?? data ?? {}, null, 2)
+          // Return the processed results with USD spend
+          text: JSON.stringify(processedResults, null, 2)
         }
       ]
     };
   } catch (error: any) {
     let errorMessage = `Error getting Tapjoy advertiser ad set spend: ${error.message}`;
-    if (error.message.includes("401")) {
-        errorMessage += ". Please check if the TAPJOY_API_KEY is correct and has the necessary permissions.";
-    } else if (error.message.includes("GraphQL query failed")) {
-        // GraphQL specific errors are already in the message
-    } else if (error.message.includes("Failed to get Tapjoy access token")) {
-        // Auth errors are already specific
-    }
 
     return {
       content: [
