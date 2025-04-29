@@ -1,4 +1,4 @@
-# Jampp Reporting MCP Server
+# TapJoy Reporting MCP Server
 
 Node.js server implementing Model Context Protocol (MCP) for [TapJoy Reporting API](https://api.tapjoy.com/graphql/docs/guide-getting_started).
 
