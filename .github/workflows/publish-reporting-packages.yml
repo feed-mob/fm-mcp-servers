@@ -1,0 +1,102 @@
+name: Publish Reporting Packages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/liftoff-reporting/**'
+      - 'src/tapjoy-reporting/**'
+      - 'src/appsamurai-reporting/**'
+      - 'src/sigunlar-reporting/**'
+      - 'src/kayzen-reporting/**'
+      - 'src/jampp-reporting/**'
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Reporting package to publish (leave empty to detect from changed files)'
+        required: false
+        type: choice
+        options:
+          - ''
+          - liftoff
+          - tapjoy
+          - appsamurai
+          - sigunlar
+          - kayzen
+          - jampp
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - id: set-matrix
+        name: Detect changed packages
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.package }}" != "" ]; then
+            # Use manually specified package
+            echo "matrix={\"package\":[\"${{ github.event.inputs.package }}\"]}" >> $GITHUB_OUTPUT
+          else
+            # Detect from changed files
+            CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+            PACKAGES=()
+
+            if echo "$CHANGED_FILES" | grep -q "src/liftoff-reporting/"; then
+              PACKAGES+=("liftoff")
+            fi
+            if echo "$CHANGED_FILES" | grep -q "src/tapjoy-reporting/"; then
+              PACKAGES+=("tapjoy")
+            fi
+            if echo "$CHANGED_FILES" | grep -q "src/appsamurai-reporting/"; then
+              PACKAGES+=("appsamurai")
+            fi
+            if echo "$CHANGED_FILES" | grep -q "src/sigunlar-reporting/"; then
+              PACKAGES+=("sigunlar")
+            fi
+            if echo "$CHANGED_FILES" | grep -q "src/kayzen-reporting/"; then
+              PACKAGES+=("kayzen")
+            fi
+            if echo "$CHANGED_FILES" | grep -q "src/jampp-reporting/"; then
+              PACKAGES+=("jampp")
+            fi
+
+            # Convert PACKAGES array to JSON array
+            PACKAGES_JSON=$(echo "${PACKAGES[@]}" | jq -R 'split(" ") | map(select(length > 0))')
+            echo "matrix={\"package\":$PACKAGES_JSON}" >> $GITHUB_OUTPUT
+          fi
+
+  publish:
+    needs: detect-changes
+    if: ${{ fromJSON(needs.detect-changes.outputs.matrix).package[0] }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
+    defaults:
+      run:
+        working-directory: src/${{ matrix.package }}-reporting
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTOMATION_TOKEN }}
