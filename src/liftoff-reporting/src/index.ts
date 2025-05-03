@@ -22,7 +22,7 @@ if (!LIFTOFF_API_KEY || !LIFTOFF_API_SECRET) {
 // Create server instance
 const server = new McpServer({
   name: "liftoff-reporting",
-  version: "0.0.2", // Updated version
+  version: "0.0.3", // Updated version
   capabilities: {
     tools: {}, // Only tools capability needed for now
   },
