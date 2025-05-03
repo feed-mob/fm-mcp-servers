@@ -33,6 +33,9 @@ MCP (Model Context Protocol) servers provide structured data and context to AI m
 - **[Appsamurai Reporting](src/appsamurai-reporting)** - Integration with AppSamurai Campaign Spend API for advertising campaign data
   - Getting reporting data AppSamurai Campaign Spend API
 
+- - **[Liftoff Reporting](src/liftoff-reporting)** - Integration with Liftoff Campaign Spend API for advertising campaign data
+  - Getting reporting data Liftoff Campaign Spend API
+
 ## 📖 Documentation
 Each server implementation includes its own detailed documentation in its respective directory.
 
