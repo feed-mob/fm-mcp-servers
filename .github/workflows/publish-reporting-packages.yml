@@ -38,42 +38,45 @@ jobs:
 
       - id: set-matrix
         name: Detect changed packages
+        shell: bash
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.package }}" != "" ]; then
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.package }}" != "" ]]; then
             # Use manually specified package
             echo "matrix={\"package\":[\"${{ github.event.inputs.package }}\"]}" >> $GITHUB_OUTPUT
           else
             # Detect from changed files
             CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
-            PACKAGES=()
 
+            # Initialize an empty JSON array
+            JSON_ARRAY="[]"
+
+            # Add packages to JSON array if they have changes
             if echo "$CHANGED_FILES" | grep -q "src/liftoff-reporting/"; then
-              PACKAGES+=("liftoff")
+              JSON_ARRAY=$(echo $JSON_ARRAY | jq '. += ["liftoff"]')
             fi
             if echo "$CHANGED_FILES" | grep -q "src/tapjoy-reporting/"; then
-              PACKAGES+=("tapjoy")
+              JSON_ARRAY=$(echo $JSON_ARRAY | jq '. += ["tapjoy"]')
             fi
             if echo "$CHANGED_FILES" | grep -q "src/appsamurai-reporting/"; then
-              PACKAGES+=("appsamurai")
+              JSON_ARRAY=$(echo $JSON_ARRAY | jq '. += ["appsamurai"]')
             fi
             if echo "$CHANGED_FILES" | grep -q "src/sigunlar-reporting/"; then
-              PACKAGES+=("sigunlar")
+              JSON_ARRAY=$(echo $JSON_ARRAY | jq '. += ["sigunlar"]')
             fi
             if echo "$CHANGED_FILES" | grep -q "src/kayzen-reporting/"; then
-              PACKAGES+=("kayzen")
+              JSON_ARRAY=$(echo $JSON_ARRAY | jq '. += ["kayzen"]')
             fi
             if echo "$CHANGED_FILES" | grep -q "src/jampp-reporting/"; then
-              PACKAGES+=("jampp")
+              JSON_ARRAY=$(echo $JSON_ARRAY | jq '. += ["jampp"]')
             fi
 
-            # Convert PACKAGES array to JSON array
-            PACKAGES_JSON=$(echo "${PACKAGES[@]}" | jq -R 'split(" ") | map(select(length > 0))')
-            echo "matrix={\"package\":$PACKAGES_JSON}" >> $GITHUB_OUTPUT
+            # Generate the matrix output with proper JSON formatting
+            echo "matrix={\"package\":$JSON_ARRAY}" >> $GITHUB_OUTPUT
           fi
 
   publish:
     needs: detect-changes
-    if: ${{ fromJSON(needs.detect-changes.outputs.matrix).package[0] }}
+    if: ${{ fromJSON(needs.detect-changes.outputs.matrix).package[0] != null }}
     runs-on: ubuntu-latest
     strategy:
       matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
