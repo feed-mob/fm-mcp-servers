@@ -86,7 +86,7 @@ jobs:
       matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
     defaults:
       run:
-        working-directory: src/${{ matrix.package }}-reporting
+        working-directory: ${{ matrix.package == 'github' && 'src/github-issues' || format('src/{0}-reporting', matrix.package) }}
 
     steps:
       - uses: actions/checkout@v4
