@@ -33,6 +33,13 @@ MCP (Model Context Protocol) servers provide structured data and context to AI m
 - **[Appsamurai Reporting](src/appsamurai-reporting)** - Integration with AppSamurai Campaign Spend API for advertising campaign data
   - Getting reporting data AppSamurai Campaign Spend API
 
+- **[GitHub Issues](src/github-issues)** - Integration with GitHub's API
+  - Create new issues
+  - List repository issues with filtering options
+  - Update existing issues
+  - Search for issues and pull requests
+  - Get details of specific issues
+
 ## 📖 Documentation
 Each server implementation includes its own detailed documentation in its respective directory.
 
