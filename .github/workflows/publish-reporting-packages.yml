@@ -11,7 +11,6 @@ on:
       - 'src/singular-reporting/**'
       - 'src/kayzen-reporting/**'
       - 'src/jampp-reporting/**'
-      - 'src/github-issues/**'
   workflow_dispatch:
     inputs:
       package:
@@ -26,7 +25,6 @@ on:
           - singular
           - kayzen
           - jampp
-          - github
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
@@ -70,9 +68,6 @@ jobs:
             if echo "$CHANGED_FILES" | grep -q "src/jampp-reporting/"; then
               JSON_ARRAY=$(echo $JSON_ARRAY | jq '. += ["jampp"]')
             fi
-            if echo "$CHANGED_FILES" | grep -q "src/github-issues/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq '. += ["github"]')
-            fi
 
             # Generate the matrix output with proper JSON formatting
             echo "matrix={\"package\":$JSON_ARRAY}" >> $GITHUB_OUTPUT
@@ -86,7 +81,7 @@ jobs:
       matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
     defaults:
       run:
-        working-directory: ${{ matrix.package == 'github' && 'src/github-issues' || format('src/{0}-reporting', matrix.package) }}
+        working-directory: src/${{ matrix.package }}-reporting
 
     steps:
       - uses: actions/checkout@v4
