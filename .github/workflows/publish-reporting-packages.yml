@@ -8,7 +8,7 @@ on:
       - 'src/liftoff-reporting/**'
       - 'src/tapjoy-reporting/**'
       - 'src/appsamurai-reporting/**'
-      - 'src/sigunlar-reporting/**'
+      - 'src/singular-reporting/**'
       - 'src/kayzen-reporting/**'
       - 'src/jampp-reporting/**'
       - 'src/github-issues/**'
@@ -23,7 +23,7 @@ on:
           - liftoff
           - tapjoy
           - appsamurai
-          - sigunlar
+          - singular
           - kayzen
           - jampp
           - github
@@ -61,8 +61,8 @@ jobs:
             if echo "$CHANGED_FILES" | grep -q "src/appsamurai-reporting/"; then
               JSON_ARRAY=$(echo $JSON_ARRAY | jq '. += ["appsamurai"]')
             fi
-            if echo "$CHANGED_FILES" | grep -q "src/sigunlar-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq '. += ["sigunlar"]')
+            if echo "$CHANGED_FILES" | grep -q "src/singular-reporting/"; then
+              JSON_ARRAY=$(echo $JSON_ARRAY | jq '. += ["singular"]')
             fi
             if echo "$CHANGED_FILES" | grep -q "src/kayzen-reporting/"; then
               JSON_ARRAY=$(echo $JSON_ARRAY | jq '. += ["kayzen"]')
