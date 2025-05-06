@@ -11,7 +11,7 @@ on:
       - 'src/sigunlar-reporting/**'
       - 'src/kayzen-reporting/**'
       - 'src/jampp-reporting/**'
-      - 'src/github/**'
+      - 'src/github-issues/**'
   workflow_dispatch:
     inputs:
       package:
