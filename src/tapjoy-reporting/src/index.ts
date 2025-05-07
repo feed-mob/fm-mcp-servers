@@ -10,7 +10,7 @@ dotenv.config();
 
 const server = new McpServer({
   name: "Tapjoy GraphQL Reporting MCP Server",
-  version: "0.0.1"
+  version: "0.0.2"
 });
 
 const TAPJOY_API_BASE_URL = "https://api.tapjoy.com";
