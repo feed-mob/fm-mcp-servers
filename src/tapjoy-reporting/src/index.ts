@@ -10,7 +10,7 @@ dotenv.config();
 
 const server = new McpServer({
   name: "Tapjoy GraphQL Reporting MCP Server",
-  version: "0.0.3"
+  version: "0.0.4"
 });
 
 const TAPJOY_API_BASE_URL = "https://api.tapjoy.com";
@@ -172,7 +172,6 @@ server.tool("get_advertiser_adset_spend",
     }
 
     const query = getAdvertiserAdSetSpendQuery(start_date, end_date);
-    console.log("Executing Tapjoy GraphQL Query:", query);
     const data = await makeTapjoyGraphqlRequest(query);
 
     // Extract the relevant nodes as per Ruby example
