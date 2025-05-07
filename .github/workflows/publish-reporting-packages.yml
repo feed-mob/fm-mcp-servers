@@ -51,22 +51,22 @@ jobs:
 
             # Add packages to JSON array if they have changes
             if echo "$CHANGED_FILES" | grep -q "src/liftoff-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq '. += ["liftoff"]')
+              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["liftoff"]')
             fi
             if echo "$CHANGED_FILES" | grep -q "src/tapjoy-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq '. += ["tapjoy"]')
+              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["tapjoy"]')
             fi
             if echo "$CHANGED_FILES" | grep -q "src/appsamurai-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq '. += ["appsamurai"]')
+              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["appsamurai"]')
             fi
             if echo "$CHANGED_FILES" | grep -q "src/singular-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq '. += ["singular"]')
+              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["singular"]')
             fi
             if echo "$CHANGED_FILES" | grep -q "src/kayzen-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq '. += ["kayzen"]')
+              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["kayzen"]')
             fi
             if echo "$CHANGED_FILES" | grep -q "src/jampp-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq '. += ["jampp"]')
+              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["jampp"]')
             fi
 
             # Generate the matrix output with proper JSON formatting
