@@ -35,6 +35,9 @@ MCP (Model Context Protocol) servers provide structured data and context to AI m
 - **[TapJoy Reporting](src/tapjoy-reporting/)** -  Integration with TapJoy's reporting API for advertising campaign data
   - Retrieves spend data for active advertiser ad sets within a specified date range
 
+- **[Applovin Reporting](src/applovin-reporting/)** -  Integration with Applovin's reporting API for advertising campaign data
+  - Retrieves spend data for active advertiser ad sets within a specified date range
+
 - **[Liftoff Reporting](src/liftoff-reporting)** - Integration with Liftoff's reporting API for advertising campaign data
   - Create reports
   - Check report status

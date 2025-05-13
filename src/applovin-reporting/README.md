@@ -40,12 +40,11 @@ This server provides the following tool:
       "mcpServers": {
         "applovin": {
           "command": "npx",
-          "args": [ "-y", "@feedmob/applovin-reporting" ], // Adjust path as needed
+          "args": [ "-y", "@feedmob/applovin-reporting" ]
           "env": {
             "APPLOVIN_API_KEY": "your_applovin_api_key"
           }
         }
-        // ... other servers
       }
     }
     ```
