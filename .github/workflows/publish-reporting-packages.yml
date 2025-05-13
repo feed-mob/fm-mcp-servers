@@ -11,6 +11,7 @@ on:
       - 'src/singular-reporting/**'
       - 'src/kayzen-reporting/**'
       - 'src/jampp-reporting/**'
+      - 'src/applovin-reporting/**'
   workflow_dispatch:
     inputs:
       package:
@@ -25,6 +26,7 @@ on:
           - singular
           - kayzen
           - jampp
+          - applovin
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
@@ -67,6 +69,9 @@ jobs:
             fi
             if echo "$CHANGED_FILES" | grep -q "src/jampp-reporting/"; then
               JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["jampp"]')
+            fi
+            if echo "$CHANGED_FILES" | grep -q "src/applovin-reporting/"; then
+              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["applovin"]')
             fi
 
             # Generate the matrix output with proper JSON formatting
