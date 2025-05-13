@@ -32,13 +32,12 @@ This server provides the following tool:
     {
       "mcpServers": {
         "tapjoy": {
-          "command": "node",
-          "args": [ "/path/to/fm-mcp-servers/src/tapjoy-reporting/dist/index.js" ], // Adjust path as needed
+          "command": "npx",
+          "args": [ "-y", "@feedmob/tapjoy-reporting" ]
           "env": {
             "TAPJOY_API_KEY": "your_tapjoy_api_key_base64_encoded"
           }
-        }
-        // ... other servers
+        }        // ... other servers
       }
     }
     ```
