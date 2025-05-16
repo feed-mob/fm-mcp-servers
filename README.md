@@ -25,17 +25,13 @@ MCP (Model Context Protocol) servers provide structured data and context to AI m
 - **[Appsamurai Reporting](src/appsamurai-reporting)** - Integration with AppSamurai Campaign Spend API for advertising campaign data
   - Getting reporting data AppSamurai Campaign Spend API
 
-- **[GitHub Issues](src/github-issues)** - Integration with GitHub's API
-  - Create new issues
-  - List repository issues with filtering options
-  - Update existing issues
-  - Search for issues and pull requests
-  - Get details of specific issues
-
 - **[TapJoy Reporting](src/tapjoy-reporting/)** -  Integration with TapJoy's reporting API for advertising campaign data
   - Retrieves spend data for active advertiser ad sets within a specified date range
 
 - **[Applovin Reporting](src/applovin-reporting/)** -  Integration with Applovin's reporting API for advertising campaign data
+  - Retrieves spend data for active advertiser ad sets within a specified date range
+
+- **[IronSource Reporting](src/ironsource-reporting/)** -  Integration with IronSource's reporting API for advertising campaign data
   - Retrieves spend data for active advertiser ad sets within a specified date range
 
 - **[Liftoff Reporting](src/liftoff-reporting)** - Integration with Liftoff's reporting API for advertising campaign data
