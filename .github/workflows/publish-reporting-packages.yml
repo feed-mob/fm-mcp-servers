@@ -13,6 +13,7 @@ on:
       - 'src/jampp-reporting/**'
       - 'src/applovin-reporting/**'
       - 'src/feedmob-reporting/**'
+      - 'src/ironsource-reporting/**'
   workflow_dispatch:
     inputs:
       package:
@@ -29,6 +30,7 @@ on:
           - jampp
           - applovin
           - feedmob
+          - ironsource
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
@@ -77,6 +79,9 @@ jobs:
             fi
             if echo "$CHANGED_FILES" | grep -q "src/feedmob-reporting/"; then
               JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["feedmob"]')
+            fi
+            if echo "$CHANGED_FILES" | grep -q "src/ironsource-reporting/"; then
+              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["ironsource"]')
             fi
 
             # Generate the matrix output with proper JSON formatting
