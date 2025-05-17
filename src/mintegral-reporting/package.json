@@ -1,6 +1,6 @@
 {
   "name": "@feedmob/mintegral-reporting",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "MCP server for Mintegral Reporting API",
   "main": "dist/index.js",
   "author": "FeedMob",
@@ -35,8 +35,8 @@
   "devDependencies": {
     "@types/node": "^22.13.10",
     "@types/node-fetch": "^2.6.12",
-    "ts-node": "^10.9.2",
     "shx": "^0.3.4",
+    "ts-node": "^10.9.2",
     "typescript": "^5.8.2"
   }
 }
