@@ -12,7 +12,7 @@ dotenv.config();
 // ============= Server Setup =============
 const server = new McpServer({
   name: "mintegral-reporting",
-  version: "0.0.3"
+  version: "0.0.4"
 });
 
 // ============= Mintegral Implementation =============

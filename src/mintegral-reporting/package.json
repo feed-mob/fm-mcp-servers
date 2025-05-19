@@ -1,6 +1,6 @@
 {
   "name": "@feedmob/mintegral-reporting",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "MCP server for Mintegral Reporting API",
   "main": "dist/index.js",
   "author": "FeedMob",
@@ -27,7 +27,7 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.7.0",
+    "@modelcontextprotocol/sdk": "^1.11.4",
     "dotenv": "^16.4.7",
     "node-fetch": "^2.7.0",
     "zod": "^3.24.2"
