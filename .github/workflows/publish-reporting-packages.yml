@@ -17,6 +17,8 @@ on:
       - 'src/mintegral-reporting/**'
       - 'src/inmobi-reporting/**'
       - 'src/ironsource-aura-reporting/**'
+      - 'src/smadex-reporting/**'
+
   workflow_dispatch:
     inputs:
       package:
@@ -37,6 +39,7 @@ on:
           - mintegral
           - inmobi
           - ironsource-aura
+          - smadex
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
@@ -97,6 +100,9 @@ jobs:
             fi
             if echo "$CHANGED_FILES" | grep -q "src/ironsource-aura-reporting/"; then
               JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["ironsource-aura"]')
+            fi
+            if echo "$CHANGED_FILES" | grep -q "src/smadex-reporting/"; then
+              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["smadex"]')
             fi
 
             # Generate the matrix output with proper JSON formatting
