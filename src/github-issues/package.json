@@ -1,6 +1,6 @@
 {
   "name": "@feedmob/github-issues",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "MCP server for using the GitHub API",
   "license": "MIT",
   "author": "FeedMob",
@@ -19,6 +19,8 @@
     "watch": "tsc --watch"
   },
   "dependencies": {
+    "date-fns": "^4.1.0",
+    "fastmcp": "2.1.0",
     "@modelcontextprotocol/sdk": "1.0.1",
     "@types/node": "^22",
     "@types/node-fetch": "^2.6.12",

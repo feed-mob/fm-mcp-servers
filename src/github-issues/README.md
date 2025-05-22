@@ -1,125 +1,129 @@
-# GitHub MCP Server
+# FeedMob GitHub Issues MCP Server
 
-MCP Server for the GitHub API, enabling issue operations and search functionality.
+A GitHub Issues MCP server customized for the FeedMob team, providing GitHub Issues management and search functionality.
 
 ## Features
 
-The GitHub MCP Server provides the following capabilities:
-- Create and manage GitHub issues
-- Search for issues across repositories
-- List and filter repository issues
-- Update existing issues
-- Get details of specific issues
+This GitHub Issues MCP server provides the following features:
+- Create and manage GitHub Issues
+- Search Issues through FeedMob API
+- Update existing Issues
+- Get specific Issue details
+- Add comments to Issues
 
 ## Tools
 
+### `search_issues`
+- Search GitHub Issues through FeedMob API
+- Input parameters:
+  - `scheam` (string, required): Get from system resource `issues/search_schema`
+  - `start_date` (string): Issue creation start date, defaults to 6 days ago
+  - `end_date` (string): Issue creation end date, defaults to today
+  - `status` (optional string): Issue status, e.g., 'open', 'closed'
+  - `repo` (optional string): Repository name, e.g., 'feedmob', 'tracking_admin'. If not specified, all repositories will be searched
+  - `users` (optional string[]): List of users
+  - `team` (optional string): Team name, e.g., 'Star', 'Mighty'
+- Returns: Search results
+
 ### `create_issue`
-- Create a new issue in a GitHub repository
-- Inputs:
-  - `owner` (string): Repository owner
-  - `repo` (string): Repository name
-  - `title` (string): Issue title
+- Create a new Issue in a GitHub repository
+- Input parameters:
+  - `owner` (optional string): Repository owner, can use environment variable default
+  - `repo` (string, required): Repository name, e.g., 'feedmob', 'tracking_admin'
+  - `title` (string, required): Issue title
   - `body` (optional string): Issue description
-  - `assignees` (optional string[]): Usernames to assign
+  - `assignees` (optional string[]): Usernames to assign to
   - `labels` (optional string[]): Labels to add
   - `milestone` (optional number): Milestone number
-- Returns: Created issue details
-
-### `list_issues`
-- List and filter repository issues
-- Inputs:
-  - `owner` (string): Repository owner
-  - `repo` (string): Repository name
-  - `state` (optional string): Filter by state ('open', 'closed', 'all')
-  - `labels` (optional string[]): Filter by labels
-  - `sort` (optional string): Sort by ('created', 'updated', 'comments')
-  - `direction` (optional string): Sort direction ('asc', 'desc')
-  - `since` (optional string): Filter by date (ISO 8601 timestamp)
-  - `page` (optional number): Page number
-  - `per_page` (optional number): Results per page
-- Returns: Array of issue details
+- Returns: Created Issue details
 
 ### `update_issue`
-- Update an existing issue
-- Inputs:
-  - `owner` (string): Repository owner
-  - `repo` (string): Repository name
-  - `issue_number` (number): Issue number to update
+- Update an existing Issue
+- Input parameters:
+  - `owner` (string, required): Repository owner
+  - `repo` (string, required): Repository name, e.g., 'feedmob', 'tracking_admin'
+  - `issue_number` (number, required): Issue number to update
   - `title` (optional string): New title
   - `body` (optional string): New description
   - `state` (optional string): New state ('open' or 'closed')
   - `labels` (optional string[]): New labels
   - `assignees` (optional string[]): New assignees
   - `milestone` (optional number): New milestone number
-- Returns: Updated issue details
-
-### `search_issues`
-- Search for issues and pull requests across GitHub repositories
-- Inputs:
-  - `q` (string): Search query using GitHub issues search syntax
-  - `sort` (optional string): Sort field (comments, reactions, created, etc.)
-  - `order` (optional string): Sort order ('asc' or 'desc')
-  - `per_page` (optional number): Results per page (max 100)
-  - `page` (optional number): Page number
-- Returns: Issue and pull request search results
+- Returns: Updated Issue details
 
 ### `get_issue`
-- Gets the contents of an issue within a repository
-- Inputs:
-  - `owner` (string): Repository owner
-  - `repo` (string): Repository name
-  - `issue_number` (number): Issue number to retrieve
-- Returns: GitHub Issue object & details
+- Get details of a specific Issue in a repository
+- Input parameters:
+  - `owner` (string, required): Repository owner
+  - `repo` (string, required): Repository name, e.g., 'feedmob', 'tracking_admin'
+  - `issue_number` (number, required): Issue number to retrieve
+- Returns: GitHub Issue object and details
 
-## Search Query Syntax
+### `add_issue_comment`
+- Add a comment to an existing Issue
+- Input parameters:
+  - `owner` (string, required): Repository owner
+  - `repo` (string, required): Repository name, e.g., 'feedmob', 'tracking_admin'
+  - `issue_number` (number, required): Issue number
+  - `body` (string, required): Comment content
+- Returns: Created comment details
 
-### Issues Search
-- `is:issue` or `is:pr`: Filter by type
-- `is:open` or `is:closed`: Filter by state
-- `label:bug`: Search by label
-- `author:username`: Search by author
-- Example: `q: "memory leak" is:issue is:open label:bug`
+## Resources
 
-For detailed search syntax, see [GitHub's searching documentation](https://docs.github.com/en/search-github/searching-on-github).
+### `issues/search_schema`
+- Provides schema definition for Issues search
+- Gets detailed description of search parameters from FeedMob API
 
 ## Setup
+- Keep your feedmob account logged in, navigate to http://score.feedmob.com/ai/mcp_server_configs
+- Copy your personal exclusive JSON configuration directly
 
-### Environment Variables
-This server supports the following environment variables:
-- `GITHUB_PERSONAL_ACCESS_TOKEN`: Your GitHub Personal Access Token (required)
-- `GITHUB_DEFAULT_OWNER`: Default repository owner (optional)
-- `GITHUB_DEFAULT_REPO`: Default repository name (optional)
-
-### Personal Access Token
-[Create a GitHub Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens) with appropriate permissions:
-   - Go to [Personal access tokens](https://github.com/settings/tokens) (in GitHub Settings > Developer settings)
-   - Select which repositories you'd like this token to have access to (Public, All, or Select)
-   - Create a token with the `repo` scope ("Full control of private repositories")
-     - Alternatively, if working only with public repositories, select only the `public_repo` scope
-   - Copy the generated token
-
-### Usage with Claude Desktop
-To use this with Claude Desktop, add the following to your `claude_desktop_config.json`:
-
-```json
+Example:
+```
 {
   "mcpServers": {
-    "github": {
+    "feedmob-github-mcp-server": {
       "command": "npx",
       "args": [
         "-y",
         "@feedmob/github-issues"
       ],
       "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "<YOUR_TOKEN>",
-        "GITHUB_DEFAULT_OWNER": "optional-default-owner",
-        "GITHUB_DEFAULT_REPO": "optional-default-repo"
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "your github access token",
+        "GITHUB_DEFAULT_OWNER": "feed-mob",
+        "AI_API_URL": "feedmob source url",
+        "AI_API_TOKEN": "feedmob ai api token"
       }
     }
   }
 }
 ```
 
+### Using in Claude Desktop
+- To use this server in Claude Desktop, add the JSON configuration from the mcp_server_configs page to your `claude_desktop_config.json`:
+
+### Local Development
+For local development, you can run the server using the following commands:
+
+```bash
+# Install dependencies
+npm install
+
+# Build project
+npm run build
+
+# Run server
+npx tsx src/github-issues/index.ts
+```
+
 ## License
 
-This MCP server is licensed under the MIT License. This means you are free to use, modify, and distribute the software, subject to the terms and conditions of the MIT License. For more details, please see the LICENSE file in the project repository.
+This MCP server is licensed under the MIT License. This means you can freely use, modify, and distribute this software, but must comply with the terms and conditions of the MIT License. For more details, please refer to the LICENSE file in the project repository.
+
+## Project Information
+
+- **Package Name**: `@feedmob/github-issues`
+- **Version**: 0.0.3
+- **Author**: FeedMob
+- **Homepage**: https://github.com/feedmob/fm-mcp-servers
+- **Issue Reporting**: https://github.com/feedmob/fm-mcp-servers/issues
