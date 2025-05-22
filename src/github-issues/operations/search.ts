@@ -8,6 +8,15 @@ export const SearchOptions = z.object({
   per_page: z.number().min(1).max(100).optional(),
 });
 
+export const FeedmobSearchOptions =  z.object({
+  status: z.string().default('open'),
+  created_at: z.string().default('2025-01-01'),
+  repo: z.string().optional(),
+  create_user: z.string().optional(),
+  assign_users: z.string().optional(),
+  team: z.string().optional(),
+});
+
 export const SearchUsersOptions = SearchOptions.extend({
   sort: z.enum(["followers", "repositories", "joined"]).optional(),
 });

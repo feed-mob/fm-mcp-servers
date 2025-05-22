@@ -2,14 +2,19 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { Pool } from 'pg';
+
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ReadResourceRequestSchema,
+  ListResourcesRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import fetch, { Request, Response } from 'node-fetch';
+import fs from 'fs';
 
 import * as issues from './operations/issues.js';
 import * as search from './operations/search.js';
@@ -33,6 +38,12 @@ if (!globalThis.fetch) {
 // Default values from environment variables
 const DEFAULT_OWNER = process.env.GITHUB_DEFAULT_OWNER || '';
 const DEFAULT_REPO = process.env.GITHUB_DEFAULT_REPO || '';
+const pool = new Pool({
+  connectionString: process.env.SCORE_DB_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
 
 const server = new Server(
   {
@@ -42,6 +53,7 @@ const server = new Server(
   {
     capabilities: {
       tools: {},
+      resources: {},
     },
   }
 );
@@ -69,6 +81,69 @@ function formatGitHubError(error: GitHubError): string {
   return message;
 }
 
+server.setRequestHandler(ListResourcesRequestSchema, async () => {
+  return {
+    resources: [
+      {
+        uri: "issues/search_schema",
+        description: "Schema information for searching issues.",
+        name: 'schema required before search issues',
+      },
+      {
+        uri: "issues/users",
+        description: "issues all users. include pa/pm/dev users information",
+        name: 'issues users',
+      },
+    ],
+  };
+});
+
+// 添加资源访问处理程序
+server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  if (request.params.uri === "issues/search_schema") {
+    try {
+      // 读取github_issues_schema.md文件
+      const schemaFilePath = '/Users/kaiji/Desktop/feedmob/fm-mcp-servers/src/github-issues/github_issues_schema.md'
+      const schemaContent = fs.readFileSync(schemaFilePath, 'utf8');
+      
+      return {
+        contents: [
+          {
+            uri: request.params.uri,
+            mimeType: "text/markdown",
+            text: schemaContent,
+          },
+        ],
+      };
+    } catch (error) {
+      console.error('读取schema文件错误:', error);
+      throw new Error(`无法读取schema文件: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  
+  if (request.params.uri === "issues/users") {
+    let md = `
+      ### Deverloper Users
+      - dev_users: clark, kun, kaiji, ava, victor, yibin, rhyme, fleming, steven, roofeel, vincent, jacob, mandy, tao, eric, jason, circle, miles, decks, bran, edward, ergo, lucien, wesson, richard, mike_dev, javen, bran, sylor, lee, mason, ian
+      ### PM Users
+      - pm_users: rao, ashley, dora, yi
+      ### Pa Users
+      - pa_users: vicky,olive,nancy,feedmob-deploy,holly,emma,lunar,summer,windy,esther,christina,feedmob-qa,zhangyechen,lainey
+    `
+    return {
+      contents: [
+        {
+          uri: request.params.uri,
+          mimeType: "text/markdown",
+          text: md,
+        },
+      ],
+    };
+  }
+  
+  throw new Error(`Resource not found: ${request.params.uri}`);
+});
+
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
@@ -78,25 +153,25 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: zodToJsonSchema(issues.CreateIssueSchema),
       },
       {
-        name: "list_issues",
-        description: "List issues in a GitHub repository with filtering options",
-        inputSchema: zodToJsonSchema(issues.ListIssuesOptionsSchema)
-      },
-      {
         name: "update_issue",
         description: "Update an existing issue in a GitHub repository",
         inputSchema: zodToJsonSchema(issues.UpdateIssueOptionsSchema)
       },
       {
         name: "search_issues",
-        description: "Search for issues and pull requests across GitHub repositories",
-        inputSchema: zodToJsonSchema(search.SearchIssuesSchema),
+        description: "Search GitHub Issues(resouce: issues/search_schema must be called before use)",
+        inputSchema: zodToJsonSchema(search.FeedmobSearchOptions),
       },
       {
         name: "get_issue",
         description: "Get details of a specific issue in a GitHub repository.",
         inputSchema: zodToJsonSchema(issues.GetIssueSchema)
-      }
+      },
+      {
+        name: "add_issue_comment",
+        description: "Add a comment to an existing issue",
+        inputSchema: zodToJsonSchema(issues.IssueCommentSchema)
+      },
     ],
   };
 });
@@ -154,28 +229,59 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "search_issues": {
-        const args = search.SearchIssuesSchema.parse(request.params.arguments);
-        const results = await search.searchIssues(args);
-        return {
-          content: [{ type: "text", text: JSON.stringify(results, null, 2) }],
-        };
-      }
-
-      case "list_issues": {
-        const args = issues.ListIssuesOptionsSchema.parse(request.params.arguments);
-        // Use default values from environment variables if not provided
-        const owner = args.owner || DEFAULT_OWNER;
-        const repo = args.repo || DEFAULT_REPO;
-        const { ...options } = args;
-
-        if (!owner || !repo) {
-          throw new Error("Repository owner and name are required. Either provide them directly or set GITHUB_DEFAULT_OWNER and GITHUB_DEFAULT_REPO environment variables.");
+        const args = search.FeedmobSearchOptions.parse(request.params.arguments);
+        try {
+          // 构建 SQL 查询，根据参数过滤结果
+          let queryConditions = ['status = $1', 'issue_created_at >= $2::timestamp'];
+          let queryParams = [args.status, args.created_at];
+          let paramCounter = 3;
+          
+          // 添加可选过滤条件
+          if (args.repo) {
+            queryConditions.push(`repo = $${paramCounter}`);
+            queryParams.push(args.repo);
+            paramCounter++;
+          }
+          
+          if (args.create_user) {
+            queryConditions.push(`create_user = $${paramCounter}`);
+            queryParams.push(args.create_user);
+            paramCounter++;
+          }
+          
+          if (args.assign_users) {
+            queryConditions.push(`$${paramCounter} = ANY(assign_users)`);
+            queryParams.push(args.assign_users);
+            paramCounter++;
+          }
+          
+          if (args.team) {
+            queryConditions.push(`lower(team) = lower($${paramCounter})`);
+            queryParams.push(args.team);
+            paramCounter++;
+          }
+          
+          const query = `
+            SELECT
+            issue_id, repo, title, issue_created_at, closed_at, hubspot_ticket_link, create_user, assign_users, status, current_labels, process_time_seconds, developers, code_reviewers, publishers, qa_members, pm_qa_user, team
+            FROM mcp_server_issues 
+            WHERE ${queryConditions.join(' AND ')}
+            ORDER BY issue_created_at DESC
+          `;
+          
+          // 执行查询
+          const result = await pool.query(query, queryParams);
+          
+          // 返回查询结果
+          return {
+            content: [{ type: "text", text: JSON.stringify(result.rows, null, 2) }],
+          };
+        } catch (error) {
+          console.error('数据库查询错误:', error);
+          return {
+            content: [{ type: "text", text: `查询错误: ${error instanceof Error ? error.message : String(error)}` }],
+          };
         }
-
-        const result = await issues.listIssues(owner, repo, options);
-        return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-        };
       }
 
       case "update_issue": {
@@ -190,6 +296,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
 
         const result = await issues.updateIssue(owner, repo, issue_number, options);
+        return {
+          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case "add_issue_comment": {
+        const args = issues.IssueCommentSchema.parse(request.params.arguments);
+        const { owner, repo, issue_number, body } = args;
+        const result = await issues.addIssueComment(owner, repo, issue_number, body);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
