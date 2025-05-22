@@ -19,15 +19,18 @@
     "watch": "tsc --watch"
   },
   "dependencies": {
+    "fastmcp": "2.1.0",
     "@modelcontextprotocol/sdk": "1.0.1",
     "@types/node": "^22",
     "@types/node-fetch": "^2.6.12",
     "node-fetch": "^3.3.2",
+    "pg": "^8.16.0",
     "universal-user-agent": "^7.0.2",
     "zod": "^3.22.4",
     "zod-to-json-schema": "^3.23.5"
   },
   "devDependencies": {
+    "@types/pg": "^8.15.2",
     "shx": "^0.3.4",
     "typescript": "^5.6.2"
   }
