@@ -1,6 +1,15 @@
 import { z } from "zod";
 import { githubRequest, buildUrl } from "../common/utils.js";
 
+export const FeedmobSearchOptions =  z.object({
+  status: z.string().default('open'),
+  created_at: z.string().default('2025-01-01'),
+  repo: z.string().optional(),
+  create_user: z.string().optional(),
+  assign_users: z.string().optional(),
+  team: z.string().optional(),
+});
+
 export const GetIssueSchema = z.object({
   owner: z.string(),
   repo: z.string(),

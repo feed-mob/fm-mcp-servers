@@ -19,6 +19,7 @@
     "watch": "tsc --watch"
   },
   "dependencies": {
+    "fastmcp": "2.1.0",
     "@modelcontextprotocol/sdk": "1.0.1",
     "@types/node": "^22",
     "@types/node-fetch": "^2.6.12",
