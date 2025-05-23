@@ -18,6 +18,7 @@ on:
       - 'src/inmobi-reporting/**'
       - 'src/ironsource-aura-reporting/**'
       - 'src/smadex-reporting/**'
+      - 'src/samsung-reporting/**'
 
   workflow_dispatch:
     inputs:
@@ -40,6 +41,7 @@ on:
           - inmobi
           - ironsource-aura
           - smadex
+          - samsung
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
@@ -103,6 +105,9 @@ jobs:
             fi
             if echo "$CHANGED_FILES" | grep -q "src/smadex-reporting/"; then
               JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["smadex"]')
+            fi
+            if echo "$CHANGED_FILES" | grep -q "src/samsung-reporting/"; then
+              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["samsung"]')
             fi
 
             # Generate the matrix output with proper JSON formatting
