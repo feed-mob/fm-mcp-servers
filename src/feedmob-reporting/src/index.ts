@@ -3,12 +3,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend } from "./api.js";
+import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports } from "./api.js";
 
 // Create server instance
 const server = new McpServer({
   name: "feedmob-reporting",
-  version: "0.0.2",
+  version: "0.0.3",
   capabilities: {
     tools: {},
     prompts: {},
@@ -172,6 +172,42 @@ server.tool(
       console.error("Error in get_inmobi_reports tool:", errorMessage);
       return {
         content: [{ type: "text", text: `Error fetching Inmobi reports: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting AppsFlyer Reports
+server.tool(
+  "get_appsflyer_reports",
+  "Get AppsFlyer reports data via FeedMob API.",
+  {
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format"),
+    click_url_ids: z.array(z.string()).optional().describe("Array of click URL IDs (optional)"),
+    af_app_ids: z.array(z.string()).optional().describe("Array of AppsFlyer app IDs (optional)"),
+  },
+  async (params) => {
+    try {
+      const data = await getAppsflyerReports(
+        params.start_date,
+        params.end_date,
+        params.click_url_ids,
+        params.af_app_ids
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `AppsFlyer reports data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching AppsFlyer reports.";
+      console.error("Error in get_appsflyer_reports tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching AppsFlyer reports: ${errorMessage}` }],
         isError: true,
       };
     }
