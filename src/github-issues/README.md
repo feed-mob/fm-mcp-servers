@@ -59,6 +59,9 @@ A GitHub Issues MCP server customized for the FeedMob team
   - `body` (string, required): Comment content
 - Returns: Created comment details
 
+### `sync_latest_issues`
+- Sync GitHub Issues Latest Data By FeedMob API
+
 ## Resources
 
 ### `issues/search_schema`
