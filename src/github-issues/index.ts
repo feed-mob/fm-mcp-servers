@@ -24,7 +24,7 @@ if (!globalThis.fetch) {
 }
 
 // Default values from environment variables
-const DEFAULT_OWNER = process.env.GITHUB_DEFAULT_OWNER || '';
+const DEFAULT_OWNER = process.env.GITHUB_DEFAULT_OWNER;
 const AI_API_URL = process.env.AI_API_URL;
 const AI_API_TOKEN = process.env.AI_API_TOKEN;
 const server = new FastMCP({
@@ -212,6 +212,29 @@ server.addTool({
     return {
       content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
     };
+  },
+});
+
+server.addTool({
+  name: "sync_latest_issues",
+  description: "sync latest issues from Api",
+  execute: async () => {
+    try {
+      const response = await fetch(AI_API_URL + "/issues/sync_latest", {
+        method: 'GET',
+        headers: {
+          'Authorization': "Bearer " + AI_API_TOKEN,
+        }
+      });
+
+      return {
+        content: [{ type: "text", text: await response.text() }],
+      };
+    } catch (error) {
+      return {
+        content: [{ type: "text", text: `API ERROR: ${error instanceof Error ? error.message : String(error)}` }],
+      };
+    }
   },
 });
 
