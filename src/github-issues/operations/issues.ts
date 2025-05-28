@@ -1,15 +1,26 @@
 import { z } from "zod";
 import { githubRequest, buildUrl } from "../common/utils.js";
+import { subDays, format } from 'date-fns';
+
+export const FeedmobSearchOptions =  z.object({
+  scheam: z.string().describe("get from system resources issues/search_schema"),
+  start_date: z.string().default(format(subDays(new Date(), 6), 'yyyy-MM-dd')).describe("The creation start date of the issue"),
+  end_date: z.string().default(format(new Date(), 'yyyy-MM-dd')).describe("The creation end date of the issue"),
+  status: z.string().optional().describe("The status of the issue, e.g., 'open', 'closed'"),
+  repo: z.string().optional().describe("The repository name, e.g., 'feedmob', 'tracking_admin', If the user does not specify otherwise, this parameter can be omitted and all repos will be searched by default."),
+  users: z.array(z.string()).optional().optional(),
+  team: z.string().optional().describe("The team name, e.g., 'Star', 'Mighty'"),
+});
 
 export const GetIssueSchema = z.object({
   owner: z.string(),
-  repo: z.string(),
+  repo: z.string().describe("The repository name, e.g., 'feedmob', 'tracking_admin'"),
   issue_number: z.number(),
 });
 
 export const IssueCommentSchema = z.object({
   owner: z.string(),
-  repo: z.string(),
+  repo: z.string().describe("The repository name, e.g., 'feedmob', 'tracking_admin'"),
   issue_number: z.number(),
   body: z.string(),
 });
@@ -24,7 +35,7 @@ export const CreateIssueOptionsSchema = z.object({
 
 export const CreateIssueSchema = z.object({
   owner: z.string().optional(),
-  repo: z.string().optional(),
+  repo: z.string().describe("The repository name, e.g., 'feedmob', 'tracking_admin'"),
   ...CreateIssueOptionsSchema.shape,
 });
 
@@ -42,7 +53,7 @@ export const ListIssuesOptionsSchema = z.object({
 
 export const UpdateIssueOptionsSchema = z.object({
   owner: z.string(),
-  repo: z.string(),
+  repo: z.string().describe("The repository name, e.g., 'feedmob', 'tracking_admin'"),
   issue_number: z.number(),
   title: z.string().optional(),
   body: z.string().optional(),
