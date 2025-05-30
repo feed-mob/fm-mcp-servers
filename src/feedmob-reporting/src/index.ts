@@ -3,12 +3,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports } from "./api.js";
+import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports } from "./api.js";
 
 // Create server instance
 const server = new McpServer({
   name: "feedmob-reporting",
-  version: "0.0.3",
+  version: "0.0.4",
   capabilities: {
     tools: {},
     prompts: {},
@@ -208,6 +208,34 @@ server.tool(
       console.error("Error in get_appsflyer_reports tool:", errorMessage);
       return {
         content: [{ type: "text", text: `Error fetching AppsFlyer reports: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting AdOps Reports
+server.tool(
+  "get_adops_reports",
+  "Get AdOps reports data via FeedMob API.",
+  {
+    month: z.string().describe("Month in YYYY-MM format"),
+  },
+  async (params) => {
+    try {
+      const data = await getAdopsReports(params.month);
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `AdOps reports data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching AdOps reports.";
+      console.error("Error in get_adops_reports tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching AdOps reports: ${errorMessage}` }],
         isError: true,
       };
     }
