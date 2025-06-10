@@ -11,7 +11,7 @@ dotenv.config();
 
 const server = new McpServer({
   name: "Samsung Reporting MCP Server",
-  version: "0.0.2"
+  version: "0.0.3"
 });
 
 const SAMSUNG_BASE_URL = process.env.SAMSUNG_BASE_URL || 'https://devapi.samsungapps.com';
@@ -133,7 +133,7 @@ class SamsungApiService {
           startDate: this.startDate,
           endDate: this.endDate
         }],
-        noBreakdown: true,
+        noBreakdown: false,
         metricIds: metricIds,
         filters: {},
         trendAggregation: 'day'
