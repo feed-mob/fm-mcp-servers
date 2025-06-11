@@ -11,7 +11,7 @@ dotenv.config();
 
 const server = new McpServer({
   name: "Samsung Reporting MCP Server",
-  version: "0.0.7"
+  version: "0.0.8"
 });
 
 // Configuration constants
@@ -250,7 +250,8 @@ class SamsungApiService {
     contentId: string,
     metricIds: string[] = [...DEFAULT_METRIC_IDS],
     maxRetries: number = 3,
-    baseDelay: number = 2000
+    baseDelay: number = 2000,
+    noBreakdown: boolean = true
   ): Promise<any[]> {
     let lastError: Error | null = null;
 
@@ -270,7 +271,7 @@ class SamsungApiService {
           }],
           getDailyMetrics: false,
           noContentMetadata: true,
-          noBreakdown: false,
+          noBreakdown: noBreakdown,
           metricIds,
           filters: {},
           trendAggregation: 'day'
@@ -355,7 +356,8 @@ class SamsungApiService {
     apps: ContentApp[],
     metricIds: string[] = [...DEFAULT_METRIC_IDS],
     maxRetries: number = 3,
-    baseDelay: number = 2000
+    baseDelay: number = 2000,
+    noBreakdown: boolean = true
   ): Promise<Record<string, MetricResult>> {
     try {
       // Pre-fetch access token to avoid multiple token requests
@@ -365,7 +367,7 @@ class SamsungApiService {
       const promises = apps.map(async ({ app, contentId }): Promise<[string, MetricResult]> => {
         try {
           console.error(`Fetching metrics for ${app} (${contentId}) with retry mechanism`);
-          const metrics = await this.fetchContentMetric(contentId, metricIds, maxRetries, baseDelay);
+          const metrics = await this.fetchContentMetric(contentId, metricIds, maxRetries, baseDelay, noBreakdown);
           return [app, { contentId, metrics }];
         } catch (error: any) {
           console.error(`Error fetching metrics for ${app} after ${maxRetries} retries: ${error.message}`);
@@ -399,6 +401,9 @@ const maxRetriesSchema = z.number().int().min(1).max(10).optional().default(3)
 const baseDelaySchema = z.number().int().min(500).max(10000).optional().default(2000)
   .describe("Base delay in milliseconds between retry attempts (500-10000ms, default: 2000ms)");
 
+const noBreakdownSchema = z.boolean().optional().default(true)
+  .describe("Whether to exclude device breakdown data. Set to false to include detailed device metrics (default: true)");
+
 // Tool: Get Samsung Content Metrics
 server.tool("get_samsung_content_metrics",
   "Fetch content metrics from Samsung API for a specific date range. Optionally filter by app name. Includes retry mechanism for improved reliability.",
@@ -408,9 +413,10 @@ server.tool("get_samsung_content_metrics",
     appName: appNameSchema,
     metricIds: metricIdsSchema,
     maxRetries: maxRetriesSchema,
-    baseDelay: baseDelaySchema
+    baseDelay: baseDelaySchema,
+    noBreakdown: noBreakdownSchema
   },
-  async ({ startDate, endDate, appName, metricIds, maxRetries = 3, baseDelay = 2000 }) => {
+  async ({ startDate, endDate, appName, metricIds, maxRetries = 3, baseDelay = 2000, noBreakdown = true }) => {
     try {
       const logMessage = appName
         ? `Fetching Samsung content metrics for ${appName}, date range: ${startDate} to ${endDate} (retries: ${maxRetries}, delay: ${baseDelay}ms)`
@@ -422,7 +428,7 @@ server.tool("get_samsung_content_metrics",
       const appsToFetch = filterAppsByName(appName);
 
       const samsungService = new SamsungApiService(startDate, endDate);
-      const allMetrics = await samsungService.fetchContentMetrics(appsToFetch, metricIds, maxRetries, baseDelay);
+      const allMetrics = await samsungService.fetchContentMetrics(appsToFetch, metricIds, maxRetries, baseDelay, noBreakdown);
 
       // Format response with better structure
       const response = {
@@ -430,6 +436,7 @@ server.tool("get_samsung_content_metrics",
         requestedApp: appName || 'all',
         availableApps: getAvailableAppNames(),
         retryConfig: { maxRetries, baseDelay },
+        noBreakdown: noBreakdown,
         totalApps: Object.keys(allMetrics).length,
         successfulApps: Object.values(allMetrics).filter(result => !result.error).length,
         failedApps: Object.values(allMetrics).filter(result => result.error).length,
@@ -458,6 +465,7 @@ server.tool("get_samsung_content_metrics",
               requestedApp: appName || 'all',
               availableApps: getAvailableAppNames(),
               retryConfig: { maxRetries, baseDelay },
+              noBreakdown: noBreakdown,
               timestamp: new Date().toISOString()
             }, null, 2)
           }
