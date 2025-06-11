@@ -11,7 +11,7 @@ dotenv.config();
 
 const server = new McpServer({
   name: "Samsung Reporting MCP Server",
-  version: "0.0.6"
+  version: "0.0.7"
 });
 
 // Configuration constants
@@ -237,64 +237,125 @@ class SamsungApiService {
   }
 
   /**
-   * Fetch content metrics for a given content ID
+   * Sleep for specified milliseconds
    */
-  async fetchContentMetric(
-    contentId: string,
-    metricIds: string[] = [...DEFAULT_METRIC_IDS]
-  ): Promise<any[]> {
-    try {
-      await this.fetchAccessToken();
-
-      if (!this.tokenInfo) {
-        throw new Error('No valid access token available');
-      }
-
-      const requestBody = {
-        contentId,
-        periods: [{
-          startDate: this.startDate,
-          endDate: this.endDate
-        }],
-        getDailyMetrics: false,
-        noContentMetadata: true,
-        noBreakdown: false,
-        metricIds,
-        filters: {},
-        trendAggregation: 'day'
-      };
-
-      console.error(`Fetching content metrics for content ID: ${contentId}`);
-
-      const response = await fetch(`${SAMSUNG_BASE_URL}/gss/query/contentMetric`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.tokenInfo.token}`,
-          'service-account-id': SAMSUNG_ISS
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorBody}`);
-      }
-
-      const data = await response.json() as any;
-      return data.data?.periods || [];
-    } catch (error: any) {
-      console.error(`Error fetching content metric for ${contentId}:`, error);
-      throw new SamsungApiError(`Failed to fetch content metric for ${contentId}: ${error.message}`);
-    }
+  private async sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
-   * Fetch content metrics for specified apps with parallel processing
+   * Fetch content metrics for a given content ID with retry mechanism
+   */
+  async fetchContentMetric(
+    contentId: string,
+    metricIds: string[] = [...DEFAULT_METRIC_IDS],
+    maxRetries: number = 3,
+    baseDelay: number = 2000
+  ): Promise<any[]> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.fetchAccessToken();
+
+        if (!this.tokenInfo) {
+          throw new Error('No valid access token available');
+        }
+
+        const requestBody = {
+          contentId,
+          periods: [{
+            startDate: this.startDate,
+            endDate: this.endDate
+          }],
+          getDailyMetrics: false,
+          noContentMetadata: true,
+          noBreakdown: false,
+          metricIds,
+          filters: {},
+          trendAggregation: 'day'
+        };
+
+        console.error(`Fetching content metrics for content ID: ${contentId} (attempt ${attempt}/${maxRetries})`);
+
+        // Add delay before making the request (except for first attempt)
+        if (attempt > 1) {
+          const delay = baseDelay * Math.pow(2, attempt - 2); // Exponential backoff
+          console.error(`Waiting ${delay}ms before retry attempt ${attempt}`);
+          await this.sleep(delay);
+        }
+
+        const response = await fetch(`${SAMSUNG_BASE_URL}/gss/query/contentMetric`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.tokenInfo.token}`,
+            'service-account-id': SAMSUNG_ISS
+          },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+          const errorBody = await response.text();
+          const error = new Error(`HTTP ${response.status}: ${errorBody}`);
+
+          // Check if it's a retryable error
+          if (response.status >= 500 || response.status === 429 || response.status === 408) {
+            lastError = error;
+            console.error(`Retryable error for ${contentId} (attempt ${attempt}/${maxRetries}):`, error.message);
+
+            if (attempt === maxRetries) {
+              throw new SamsungApiError(`Failed to fetch content metric for ${contentId} after ${maxRetries} attempts: ${error.message}`);
+            }
+            continue; // Retry
+          } else {
+            // Non-retryable error (4xx except 429 and 408)
+            throw error;
+          }
+        }
+
+        const data = await response.json() as any;
+
+        // Add a small delay after successful request to be respectful to the API
+        await this.sleep(500);
+
+        console.error(`Successfully fetched content metrics for ${contentId} on attempt ${attempt}`);
+        return data.data?.periods || [];
+
+      } catch (error: any) {
+        lastError = error;
+
+        // If it's not a network/server error, don't retry
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+          // Network error - retry
+          console.error(`Network error for ${contentId} (attempt ${attempt}/${maxRetries}):`, error.message);
+        } else if (error.message.includes('HTTP 5') || error.message.includes('HTTP 429') || error.message.includes('HTTP 408')) {
+          // Server error or rate limit - retry
+          console.error(`Server error for ${contentId} (attempt ${attempt}/${maxRetries}):`, error.message);
+        } else {
+          // Other errors (like auth errors) - don't retry
+          console.error(`Non-retryable error for ${contentId}:`, error.message);
+          throw new SamsungApiError(`Failed to fetch content metric for ${contentId}: ${error.message}`);
+        }
+
+        if (attempt === maxRetries) {
+          throw new SamsungApiError(`Failed to fetch content metric for ${contentId} after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`);
+        }
+      }
+    }
+
+    // This should never be reached, but just in case
+    throw new SamsungApiError(`Failed to fetch content metric for ${contentId} after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`);
+  }
+
+  /**
+   * Fetch content metrics for specified apps with parallel processing and retry mechanism
    */
   async fetchContentMetrics(
     apps: ContentApp[],
-    metricIds: string[] = [...DEFAULT_METRIC_IDS]
+    metricIds: string[] = [...DEFAULT_METRIC_IDS],
+    maxRetries: number = 3,
+    baseDelay: number = 2000
   ): Promise<Record<string, MetricResult>> {
     try {
       // Pre-fetch access token to avoid multiple token requests
@@ -303,11 +364,11 @@ class SamsungApiService {
       // Process specified apps in parallel for better performance
       const promises = apps.map(async ({ app, contentId }): Promise<[string, MetricResult]> => {
         try {
-          console.error(`Fetching metrics for ${app} (${contentId})`);
-          const metrics = await this.fetchContentMetric(contentId, metricIds);
+          console.error(`Fetching metrics for ${app} (${contentId}) with retry mechanism`);
+          const metrics = await this.fetchContentMetric(contentId, metricIds, maxRetries, baseDelay);
           return [app, { contentId, metrics }];
         } catch (error: any) {
-          console.error(`Error fetching metrics for ${app}: ${error.message}`);
+          console.error(`Error fetching metrics for ${app} after ${maxRetries} retries: ${error.message}`);
           return [app, { contentId, error: error.message }];
         }
       });
@@ -332,20 +393,28 @@ const metricIdsSchema = z.array(z.string()).optional()
 const appNameSchema = z.string().optional()
   .describe(`Optional app name to filter results. Available apps: ${getAvailableAppNames().join(', ')}. If not provided, returns data for all apps.`);
 
+const maxRetriesSchema = z.number().int().min(1).max(10).optional().default(3)
+  .describe("Maximum number of retry attempts for failed requests (1-10, default: 3)");
+
+const baseDelaySchema = z.number().int().min(500).max(10000).optional().default(2000)
+  .describe("Base delay in milliseconds between retry attempts (500-10000ms, default: 2000ms)");
+
 // Tool: Get Samsung Content Metrics
 server.tool("get_samsung_content_metrics",
-  "Fetch content metrics from Samsung API for a specific date range. Optionally filter by app name.",
+  "Fetch content metrics from Samsung API for a specific date range. Optionally filter by app name. Includes retry mechanism for improved reliability.",
   {
     startDate: dateSchema.describe("Start date for the report (YYYY-MM-DD)"),
     endDate: dateSchema.describe("End date for the report (YYYY-MM-DD)"),
     appName: appNameSchema,
-    metricIds: metricIdsSchema
+    metricIds: metricIdsSchema,
+    maxRetries: maxRetriesSchema,
+    baseDelay: baseDelaySchema
   },
-  async ({ startDate, endDate, appName, metricIds }) => {
+  async ({ startDate, endDate, appName, metricIds, maxRetries = 3, baseDelay = 2000 }) => {
     try {
       const logMessage = appName
-        ? `Fetching Samsung content metrics for ${appName}, date range: ${startDate} to ${endDate}`
-        : `Fetching Samsung content metrics for all apps, date range: ${startDate} to ${endDate}`;
+        ? `Fetching Samsung content metrics for ${appName}, date range: ${startDate} to ${endDate} (retries: ${maxRetries}, delay: ${baseDelay}ms)`
+        : `Fetching Samsung content metrics for all apps, date range: ${startDate} to ${endDate} (retries: ${maxRetries}, delay: ${baseDelay}ms)`;
 
       console.error(logMessage);
 
@@ -353,13 +422,14 @@ server.tool("get_samsung_content_metrics",
       const appsToFetch = filterAppsByName(appName);
 
       const samsungService = new SamsungApiService(startDate, endDate);
-      const allMetrics = await samsungService.fetchContentMetrics(appsToFetch, metricIds);
+      const allMetrics = await samsungService.fetchContentMetrics(appsToFetch, metricIds, maxRetries, baseDelay);
 
       // Format response with better structure
       const response = {
         dateRange: { startDate, endDate },
         requestedApp: appName || 'all',
         availableApps: getAvailableAppNames(),
+        retryConfig: { maxRetries, baseDelay },
         totalApps: Object.keys(allMetrics).length,
         successfulApps: Object.values(allMetrics).filter(result => !result.error).length,
         failedApps: Object.values(allMetrics).filter(result => result.error).length,
@@ -387,6 +457,7 @@ server.tool("get_samsung_content_metrics",
               dateRange: { startDate, endDate },
               requestedApp: appName || 'all',
               availableApps: getAvailableAppNames(),
+              retryConfig: { maxRetries, baseDelay },
               timestamp: new Date().toISOString()
             }, null, 2)
           }
