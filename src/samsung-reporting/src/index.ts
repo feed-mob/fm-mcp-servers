@@ -11,7 +11,7 @@ dotenv.config();
 
 const server = new McpServer({
   name: "Samsung Reporting MCP Server",
-  version: "0.0.5"
+  version: "0.0.6"
 });
 
 // Configuration constants
@@ -98,6 +98,40 @@ function isValidDateFormat(date: string): boolean {
 
 function isValidDateRange(startDate: string, endDate: string): boolean {
   return new Date(startDate) <= new Date(endDate);
+}
+
+/**
+ * Get available app names for validation
+ */
+function getAvailableAppNames(): string[] {
+  return SAMSUNG_CONTENT_IDS.map(app => app.app);
+}
+
+/**
+ * Find app by name (case-insensitive)
+ */
+function findAppByName(appName: string): ContentApp | undefined {
+  return SAMSUNG_CONTENT_IDS.find(app =>
+    app.app.toLowerCase() === appName.toLowerCase()
+  );
+}
+
+/**
+ * Filter apps by name
+ */
+function filterAppsByName(appName?: string): ContentApp[] {
+  if (!appName) {
+    return SAMSUNG_CONTENT_IDS;
+  }
+
+  const foundApp = findAppByName(appName);
+  if (!foundApp) {
+    throw new SamsungApiError(
+      `App "${appName}" not found. Available apps: ${getAvailableAppNames().join(', ')}`
+    );
+  }
+
+  return [foundApp];
 }
 
 /**
@@ -256,17 +290,18 @@ class SamsungApiService {
   }
 
   /**
-   * Fetch content metrics for all apps with parallel processing
+   * Fetch content metrics for specified apps with parallel processing
    */
-  async fetchAllContentMetrics(
+  async fetchContentMetrics(
+    apps: ContentApp[],
     metricIds: string[] = [...DEFAULT_METRIC_IDS]
   ): Promise<Record<string, MetricResult>> {
     try {
       // Pre-fetch access token to avoid multiple token requests
       await this.fetchAccessToken();
 
-      // Process all apps in parallel for better performance
-      const promises = SAMSUNG_CONTENT_IDS.map(async ({ app, contentId }): Promise<[string, MetricResult]> => {
+      // Process specified apps in parallel for better performance
+      const promises = apps.map(async ({ app, contentId }): Promise<[string, MetricResult]> => {
         try {
           console.error(`Fetching metrics for ${app} (${contentId})`);
           const metrics = await this.fetchContentMetric(contentId, metricIds);
@@ -280,8 +315,8 @@ class SamsungApiService {
       const results = await Promise.all(promises);
       return Object.fromEntries(results);
     } catch (error: any) {
-      console.error('Error fetching all content metrics:', error);
-      throw new SamsungApiError(`Failed to fetch all content metrics: ${error.message}`);
+      console.error('Error fetching content metrics:', error);
+      throw new SamsungApiError(`Failed to fetch content metrics: ${error.message}`);
     }
   }
 }
@@ -294,24 +329,37 @@ const dateSchema = z.string()
 const metricIdsSchema = z.array(z.string()).optional()
   .describe("Optional array of metric IDs to fetch. Defaults to standard metrics if not provided.");
 
+const appNameSchema = z.string().optional()
+  .describe(`Optional app name to filter results. Available apps: ${getAvailableAppNames().join(', ')}. If not provided, returns data for all apps.`);
+
 // Tool: Get Samsung Content Metrics
 server.tool("get_samsung_content_metrics",
-  "Fetch content metrics from Samsung API for a specific date range.",
+  "Fetch content metrics from Samsung API for a specific date range. Optionally filter by app name.",
   {
     startDate: dateSchema.describe("Start date for the report (YYYY-MM-DD)"),
     endDate: dateSchema.describe("End date for the report (YYYY-MM-DD)"),
+    appName: appNameSchema,
     metricIds: metricIdsSchema
   },
-  async ({ startDate, endDate, metricIds }) => {
+  async ({ startDate, endDate, appName, metricIds }) => {
     try {
-      console.error(`Fetching Samsung content metrics for all apps, date range: ${startDate} to ${endDate}`);
+      const logMessage = appName
+        ? `Fetching Samsung content metrics for ${appName}, date range: ${startDate} to ${endDate}`
+        : `Fetching Samsung content metrics for all apps, date range: ${startDate} to ${endDate}`;
+
+      console.error(logMessage);
+
+      // Filter apps based on appName parameter
+      const appsToFetch = filterAppsByName(appName);
 
       const samsungService = new SamsungApiService(startDate, endDate);
-      const allMetrics = await samsungService.fetchAllContentMetrics(metricIds);
+      const allMetrics = await samsungService.fetchContentMetrics(appsToFetch, metricIds);
 
       // Format response with better structure
       const response = {
         dateRange: { startDate, endDate },
+        requestedApp: appName || 'all',
+        availableApps: getAvailableAppNames(),
         totalApps: Object.keys(allMetrics).length,
         successfulApps: Object.values(allMetrics).filter(result => !result.error).length,
         failedApps: Object.values(allMetrics).filter(result => result.error).length,
@@ -337,6 +385,8 @@ server.tool("get_samsung_content_metrics",
             text: JSON.stringify({
               error: errorMessage,
               dateRange: { startDate, endDate },
+              requestedApp: appName || 'all',
+              availableApps: getAvailableAppNames(),
               timestamp: new Date().toISOString()
             }, null, 2)
           }
