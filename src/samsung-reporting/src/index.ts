@@ -11,14 +11,21 @@ dotenv.config();
 
 const server = new McpServer({
   name: "Samsung Reporting MCP Server",
-  version: "0.0.3"
+  version: "0.0.4"
 });
 
 const SAMSUNG_BASE_URL = process.env.SAMSUNG_BASE_URL || 'https://devapi.samsungapps.com';
 const SAMSUNG_ISS = process.env.SAMSUNG_ISS || '';
 const SAMSUNG_PRIVATE_KEY = process.env.SAMSUNG_PRIVATE_KEY || '';
-const SAMSUNG_CONTENT_ID = process.env.SAMSUNG_CONTENT_ID || '';
 const SAMSUNG_SCOPES = ['publishing', 'gss'];
+
+const SAMSUNG_CONTENT_IDS = [
+  { app: 'Lyft', contentId: '000007874233' },
+  { app: 'Self Financial', contentId: '000008094857' },
+  { app: 'Chime', contentId: '000008223186' },
+  { app: 'ZipRecruiter', contentId: '000008182313' },
+  { app: 'Upside', contentId: '000008222297' },
+]
 
 /**
  * Custom error classes
@@ -163,6 +170,46 @@ class SamsungApiService {
       throw new SamsungApiError(`Failed to fetch content metric: ${error.message}`);
     }
   }
+
+  /**
+   * Fetch content metrics for all apps
+   */
+  async fetchAllContentMetrics(
+    metricIds: string[] = [
+      'total_unique_installs_filter',
+      'revenue_total',
+      'revenue_iap_order_count',
+      'daily_rat_score',
+      'daily_rat_volumne'
+    ]
+  ): Promise<any> {
+    try {
+      const results: any = {};
+
+      // Fetch metrics for all content IDs
+      for (const { app, contentId } of SAMSUNG_CONTENT_IDS) {
+        console.error(`Fetching metrics for ${app} (${contentId})`);
+        try {
+          const metrics = await this.fetchContentMetric(contentId, metricIds);
+          results[app] = {
+            contentId: contentId,
+            metrics: metrics
+          };
+        } catch (error: any) {
+          console.error(`Error fetching metrics for ${app}: ${error.message}`);
+          results[app] = {
+            contentId: contentId,
+            error: error.message
+          };
+        }
+      }
+
+      return results;
+    } catch (error: any) {
+      console.error('Error fetching all content metrics:', error);
+      throw new SamsungApiError(`Failed to fetch all content metrics: ${error.message}`);
+    }
+  }
 }
 
 // Tool: Get Samsung Content Metrics
@@ -174,27 +221,21 @@ server.tool("get_samsung_content_metrics",
     metricIds: z.array(z.string()).optional().describe("Optional array of metric IDs to fetch. Defaults to standard metrics if not provided.")
   }, async ({ startDate, endDate, metricIds }) => {
   try {
-    // Get contentId from environment variable
-    const contentId = SAMSUNG_CONTENT_ID;
-    if (!contentId) {
-      throw new Error("SAMSUNG_CONTENT_ID environment variable is not set");
-    }
-
     // Validate date range logic
     if (new Date(startDate) > new Date(endDate)) {
       throw new Error("Start date cannot be after end date.");
     }
 
-    console.error(`Fetching Samsung content metrics for content ID: ${contentId}, date range: ${startDate} to ${endDate}`);
+    console.error(`Fetching Samsung content metrics for all apps, date range: ${startDate} to ${endDate}`);
 
     const samsungService = new SamsungApiService(startDate, endDate);
-    const metrics = await samsungService.fetchContentMetric(contentId, metricIds);
+    const allMetrics = await samsungService.fetchAllContentMetrics(metricIds);
 
     return {
       content: [
         {
           type: "text",
-          text: JSON.stringify(metrics, null, 2)
+          text: JSON.stringify(allMetrics, null, 2)
         }
       ]
     };
