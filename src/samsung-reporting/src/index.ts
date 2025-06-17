@@ -11,13 +11,15 @@ dotenv.config();
 
 const server = new McpServer({
   name: "Samsung Reporting MCP Server",
-  version: "0.0.8"
+  version: "0.0.9"
 });
 
 // Configuration constants
 const SAMSUNG_BASE_URL = process.env.SAMSUNG_BASE_URL || 'https://devapi.samsungapps.com';
 const SAMSUNG_ISS = process.env.SAMSUNG_ISS || '';
 const SAMSUNG_PRIVATE_KEY = process.env.SAMSUNG_PRIVATE_KEY || '';
+const SAMSUNG_APP = process.env.SAMSUNG_APP || '';
+const SAMSUNG_CONTENT_ID = process.env.SAMSUNG_CONTENT_ID || '';
 const SAMSUNG_SCOPES = ['publishing', 'gss'] as const;
 const JWT_EXPIRY_MINUTES = 20;
 const TOKEN_BUFFER_MINUTES = 2; // Refresh token 2 minutes before expiry
@@ -48,13 +50,16 @@ const DEFAULT_METRIC_IDS = [
   'daily_rat_volumne'
 ] as const;
 
-const SAMSUNG_CONTENT_IDS: ContentApp[] = [
-  { app: 'Lyft', contentId: '000007874233' },
-  { app: 'Self Financial', contentId: '000008094857' },
-  { app: 'Chime', contentId: '000008223186' },
-  { app: 'ZipRecruiter', contentId: '000008182313' },
-  { app: 'Upside', contentId: '000008222297' }
-];
+// Initialize SAMSUNG_CONTENT_IDS based on environment variables
+const SAMSUNG_CONTENT_IDS: ContentApp[] = SAMSUNG_APP && SAMSUNG_CONTENT_ID
+  ? [{ app: SAMSUNG_APP, contentId: SAMSUNG_CONTENT_ID }]
+  : [
+      { app: 'Lyft', contentId: '000007874233' },
+      { app: 'Self Financial', contentId: '000008094857' },
+      { app: 'Chime', contentId: '000008223186' },
+      { app: 'ZipRecruiter', contentId: '000008182313' },
+      { app: 'Upside', contentId: '000007104981' }
+    ];
 
 /**
  * Custom error classes
@@ -89,6 +94,11 @@ function validateConfiguration(): void {
   }
   if (!SAMSUNG_PRIVATE_KEY) {
     throw new ConfigurationError('SAMSUNG_PRIVATE_KEY environment variable is required');
+  }
+
+  // Validate SAMSUNG_APP and SAMSUNG_CONTENT_ID if either is provided
+  if ((SAMSUNG_APP && !SAMSUNG_CONTENT_ID) || (!SAMSUNG_APP && SAMSUNG_CONTENT_ID)) {
+    throw new ConfigurationError('Both SAMSUNG_APP and SAMSUNG_CONTENT_ID must be provided if using custom app configuration');
   }
 }
 
@@ -406,7 +416,7 @@ const noBreakdownSchema = z.boolean().optional().default(true)
 
 // Tool: Get Samsung Content Metrics
 server.tool("get_samsung_content_metrics",
-  "Fetch content metrics from Samsung API for a specific date range. Optionally filter by app name. Includes retry mechanism for improved reliability.",
+  "Fetch content metrics from Samsung API for a specific date range. Optionally filter by app name or use environment variables (SAMSUNG_APP and SAMSUNG_CONTENT_ID) to specify a single app. Includes retry mechanism for improved reliability.",
   {
     startDate: dateSchema.describe("Start date for the report (YYYY-MM-DD)"),
     endDate: dateSchema.describe("End date for the report (YYYY-MM-DD)"),
@@ -418,9 +428,12 @@ server.tool("get_samsung_content_metrics",
   },
   async ({ startDate, endDate, appName, metricIds, maxRetries = 3, baseDelay = 2000, noBreakdown = true }) => {
     try {
-      const logMessage = appName
-        ? `Fetching Samsung content metrics for ${appName}, date range: ${startDate} to ${endDate} (retries: ${maxRetries}, delay: ${baseDelay}ms)`
-        : `Fetching Samsung content metrics for all apps, date range: ${startDate} to ${endDate} (retries: ${maxRetries}, delay: ${baseDelay}ms)`;
+      const envConfigured = SAMSUNG_APP && SAMSUNG_CONTENT_ID;
+      const logMessage = envConfigured
+        ? `Fetching Samsung content metrics for configured app ${SAMSUNG_APP}, date range: ${startDate} to ${endDate} (retries: ${maxRetries}, delay: ${baseDelay}ms)`
+        : appName
+          ? `Fetching Samsung content metrics for ${appName}, date range: ${startDate} to ${endDate} (retries: ${maxRetries}, delay: ${baseDelay}ms)`
+          : `Fetching Samsung content metrics for all apps, date range: ${startDate} to ${endDate} (retries: ${maxRetries}, delay: ${baseDelay}ms)`;
 
       console.error(logMessage);
 
@@ -433,8 +446,9 @@ server.tool("get_samsung_content_metrics",
       // Format response with better structure
       const response = {
         dateRange: { startDate, endDate },
-        requestedApp: appName || 'all',
+        requestedApp: appName || (envConfigured ? SAMSUNG_APP : 'all'),
         availableApps: getAvailableAppNames(),
+        envConfigured,
         retryConfig: { maxRetries, baseDelay },
         noBreakdown: noBreakdown,
         totalApps: Object.keys(allMetrics).length,
