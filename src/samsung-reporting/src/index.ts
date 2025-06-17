@@ -11,7 +11,7 @@ dotenv.config();
 
 const server = new McpServer({
   name: "Samsung Reporting MCP Server",
-  version: "0.1.0"
+  version: "0.1.1"
 });
 
 // Configuration constants
@@ -25,11 +25,11 @@ const TOKEN_BUFFER_MINUTES = 2; // Refresh token 2 minutes before expiry
 // Type definitions
 interface ContentApp {
   app: string;
-  contentId: string;
+  contentIds: string[];
 }
 
 interface MetricResult {
-  contentId: string;
+  contentIds: string[];
   metrics?: any[];
   error?: string;
 }
@@ -49,11 +49,11 @@ const DEFAULT_METRIC_IDS = [
 ] as const;
 
 const SAMSUNG_CONTENT_IDS: ContentApp[] = [
-  { app: 'Lyft', contentId: '000007874233' },
-  { app: 'Self Financial', contentId: '000008094857' },
-  { app: 'Chime', contentId: '000008223186' },
-  { app: 'ZipRecruiter', contentId: '000008182313' },
-  { app: 'Upside', contentId: '000007104981' }
+  { app: 'Lyft', contentIds: ['000007874233'] },
+  { app: 'Self Financial', contentIds: ['000008094857'] },
+  { app: 'Chime', contentIds: ['000008223186'] },
+  { app: 'ZipRecruiter', contentIds: ['000008182313'] },
+  { app: 'Upside', contentIds: ['000007104981', '000008222297'] },
 ];
 
 /**
@@ -350,6 +350,28 @@ class SamsungApiService {
   }
 
   /**
+   * Fetch content metrics for a given array of content IDs with retry mechanism, and aggregate results
+   */
+  async fetchContentMetricsForApp(
+    contentIds: string[],
+    metricIds: string[] = [...DEFAULT_METRIC_IDS],
+    maxRetries: number = 3,
+    baseDelay: number = 2000,
+    noBreakdown: boolean = true
+  ): Promise<any[]> {
+    const allResults: any[] = [];
+    for (const contentId of contentIds) {
+      try {
+        const result = await this.fetchContentMetric(contentId, metricIds, maxRetries, baseDelay, noBreakdown);
+        allResults.push({ contentId, metrics: result });
+      } catch (error: any) {
+        allResults.push({ contentId, error: error.message });
+      }
+    }
+    return allResults;
+  }
+
+  /**
    * Fetch content metrics for specified apps with parallel processing and retry mechanism
    */
   async fetchContentMetrics(
@@ -364,14 +386,14 @@ class SamsungApiService {
       await this.fetchAccessToken();
 
       // Process specified apps in parallel for better performance
-      const promises = apps.map(async ({ app, contentId }): Promise<[string, MetricResult]> => {
+      const promises = apps.map(async ({ app, contentIds }): Promise<[string, MetricResult]> => {
         try {
-          console.error(`Fetching metrics for ${app} (${contentId}) with retry mechanism`);
-          const metrics = await this.fetchContentMetric(contentId, metricIds, maxRetries, baseDelay, noBreakdown);
-          return [app, { contentId, metrics }];
+          console.error(`Fetching metrics for ${app} (${contentIds.join(',')}) with retry mechanism`);
+          const metricsArr = await this.fetchContentMetricsForApp(contentIds, metricIds, maxRetries, baseDelay, noBreakdown);
+          return [app, { contentIds, metrics: metricsArr } as any];
         } catch (error: any) {
           console.error(`Error fetching metrics for ${app} after ${maxRetries} retries: ${error.message}`);
-          return [app, { contentId, error: error.message }];
+          return [app, { contentIds, error: error.message } as any];
         }
       });
 
