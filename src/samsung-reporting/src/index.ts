@@ -11,7 +11,7 @@ dotenv.config();
 
 const server = new McpServer({
   name: "Samsung Reporting MCP Server",
-  version: "0.0.8"
+  version: "0.1.0"
 });
 
 // Configuration constants
@@ -53,7 +53,7 @@ const SAMSUNG_CONTENT_IDS: ContentApp[] = [
   { app: 'Self Financial', contentId: '000008094857' },
   { app: 'Chime', contentId: '000008223186' },
   { app: 'ZipRecruiter', contentId: '000008182313' },
-  { app: 'Upside', contentId: '000008222297' }
+  { app: 'Upside', contentId: '000007104981' }
 ];
 
 /**
