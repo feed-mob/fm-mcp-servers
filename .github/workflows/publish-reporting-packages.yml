@@ -19,6 +19,7 @@ on:
       - 'src/ironsource-aura-reporting/**'
       - 'src/smadex-reporting/**'
       - 'src/samsung-reporting/**'
+      - 'src/rtb-house-reporting/**'
 
   workflow_dispatch:
     inputs:
@@ -42,6 +43,7 @@ on:
           - ironsource-aura
           - smadex
           - samsung
+          - rtb-house
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
@@ -108,6 +110,9 @@ jobs:
             fi
             if echo "$CHANGED_FILES" | grep -q "src/samsung-reporting/"; then
               JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["samsung"]')
+            fi
+            if echo "$CHANGED_FILES" | grep -q "src/rtb-house-reporting/"; then
+              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["rtb-house"]')
             fi
 
             # Generate the matrix output with proper JSON formatting
