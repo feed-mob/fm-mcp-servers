@@ -20,14 +20,15 @@ if (!apiKey || !apiBaseUrl) {
 // Create MCP server
 const server = new McpServer({
   name: "Singular MCP Server",
-  version: "0.0.2",
+  version: "0.0.3",
 });
 
 // Define the params directly as a ZodRawShape
 const createReportParams = {
   start_date: z.string().describe("Start date in YYYY-MM-DD format"),
   end_date: z.string().describe("End date in YYYY-MM-DD format"),
-  source: z.string().optional().describe("Optional. Filter results by specific source")
+  source: z.string().optional().describe("Optional. Filter results by specific source"),
+  time_breakdown: z.string().optional().describe("Optional. Time breakdown: 'day' for daily data, 'all' for aggregated data (default: 'all')")
 } as const;
 
 server.tool(
@@ -38,9 +39,9 @@ server.tool(
     try {
       const requestBody = {
         ...params,
-        dimensions: "app,source,unified_campaign_name",
+        dimensions: "unified_campaign_name",
         metrics: "custom_impressions,custom_clicks,custom_installs,adn_cost",
-        time_breakdown: "day",
+        time_breakdown: params.time_breakdown || "all",
         format: "csv"
       };
 
@@ -60,7 +61,7 @@ server.tool(
         content: [{
           type: "text",
           text: JSON.stringify(response.data, null, 2)
-        }]
+        }],
       };
     } catch (error) {
       const errorMessage = error instanceof Error
@@ -81,24 +82,16 @@ const getReportStatusParams = {
   report_id: z.string(),
 };
 
-// Add new parameter schema for download report
-const downloadReportParams = {
-  download_url: z.string(),
-};
-
 const getReportStatusSchema = z.object(getReportStatusParams);
-const downloadReportSchema = z.object(downloadReportParams);
-
 type GetReportStatusParams = z.infer<typeof getReportStatusSchema>;
-type DownloadReportParams = z.infer<typeof downloadReportSchema>;
 
 interface SingularErrorResponse {
   message: string;
 }
 
 server.tool(
-  "get_report_status",
-  "Get the status of an asynchronous report from Singular until status is 'DONE'",
+  "get_singular_report",
+  "Get the complete report from Singular. Checks status and automatically downloads the CSV report data when ready.",
   getReportStatusParams,
   async (params: GetReportStatusParams) => {
     try {
@@ -111,47 +104,55 @@ server.tool(
           }
         }
       );
-      return {
-        content: [{
-          type: "text",
-          text: JSON.stringify(response.data, null, 2)
-        }]
-      };
+
+      const reportData = response.data;
+
+      // If status is DONE and download_url is available, automatically download the report
+      if (reportData.value && reportData.value.status === 'DONE' && reportData.value.download_url) {
+        try {
+          const downloadResponse = await axios.get(reportData.value.download_url, {
+            responseType: 'text'
+          });
+
+          // Return data in the specified format
+          const formattedResponse = {
+            status: 0,
+            substatus: 0,
+            value: {
+              csv_report: downloadResponse.data
+            }
+          };
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(formattedResponse)
+            }]
+          };
+        } catch (downloadError) {
+          const downloadErrorMessage = downloadError instanceof Error
+            ? `Download error: ${(downloadError as AxiosError<SingularErrorResponse>).response?.data?.message || downloadError.message}`
+            : 'Unknown download error occurred';
+          return {
+            content: [{
+              type: "text",
+              text: `Report is ready but download failed: ${downloadErrorMessage}\n\nStatus response: ${JSON.stringify(reportData, null, 2)}`
+            }],
+            isError: true
+          };
+        }
+      } else {
+        // Return status information if not done yet
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(reportData, null, 2)
+          }]
+        };
+      }
     } catch (error) {
       const errorMessage = error instanceof Error
         ? `Singular API error: ${(error as AxiosError<SingularErrorResponse>).response?.data?.message || error.message}`
-        : 'Unknown error occurred';
-      return {
-        content: [{
-          type: "text",
-          text: errorMessage
-        }],
-        isError: true
-      };
-    }
-  }
-);
-
-// Add new tool for downloading report
-server.tool(
-  "download_report",
-  "Download the CSV report from the provided S3 URL",
-  downloadReportParams,
-  async (params: DownloadReportParams) => {
-    try {
-      const response = await axios.get(params.download_url, {
-        responseType: 'text'
-      });
-
-      return {
-        content: [{
-          type: "text",
-          text: response.data
-        }]
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error
-        ? `Download error: ${(error as AxiosError<SingularErrorResponse>).response?.data?.message || error.message}`
         : 'Unknown error occurred';
       return {
         content: [{
@@ -182,22 +183,23 @@ Available tools:
    - start_date: string (required) - Start date (YYYY-MM-DD)
    - end_date: string (required) - End date (YYYY-MM-DD)
    - source: string (optional) - Filter results by specific source
+   - time_breakdown: string (optional) - Time breakdown: 'day' for daily data, 'all' for aggregated data (default: 'all')
 
    Fixed settings:
-   - dimensions: app,source,unified_campaign_name
+   - dimensions: unified_campaign_name
    - metrics: custom_impressions,custom_clicks,custom_installs,adn_cost
-   - time_breakdown: day
    - format: csv
 
-2. get_report_status
-   Gets the status of an asynchronous report until staus is 'DONE'.
+2. get_singular_report
+   Gets the complete report from Singular. Checks status and automatically downloads the CSV report data when ready.
    Parameters:
    - report_id: string (required) - The ID of the report to check
 
-3. download_report
-   Downloads the CSV report from the provided S3 URL.
-   Parameters:
-   - download_url: string (required) - The S3 URL to download the report
+   Returns:
+   - If report is still processing: Status information in JSON format
+   - If report is complete: Full CSV report data wrapped in JSON format with csv_report field
+
+   Note: This tool handles the complete workflow - you don't need to manually check status or download separately.
         `
       }
     }]

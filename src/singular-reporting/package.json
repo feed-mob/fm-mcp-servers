@@ -1,7 +1,7 @@
 {
   "name": "@feedmob/singular-reporting",
-  "version": "0.0.2",
-  "description": "MCP server for Singular API",
+  "version": "0.0.3",
+  "description": "MCP server for Singular Reporting",
   "main": "dist/index.js",
   "author": "FeedMob",
   "homepage": "https://github.com/feed-mob/fm-mcp-servers",
