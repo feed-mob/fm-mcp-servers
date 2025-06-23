@@ -11,7 +11,7 @@ dotenv.config();
 
 const server = new McpServer({
   name: "Samsung Reporting MCP Server",
-  version: "0.1.1"
+  version: "0.1.2"
 });
 
 // Configuration constants
@@ -42,6 +42,7 @@ interface TokenInfo {
 // Default metric IDs
 const DEFAULT_METRIC_IDS = [
   'total_unique_installs_filter',
+  'dn_by_total_dvce',
   'revenue_total',
   'revenue_iap_order_count',
   'daily_rat_score',
