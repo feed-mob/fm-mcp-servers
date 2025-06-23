@@ -42,6 +42,7 @@ interface TokenInfo {
 // Default metric IDs
 const DEFAULT_METRIC_IDS = [
   'total_unique_installs_filter',
+  'dn_by_total_dvce',
   'revenue_total',
   'revenue_iap_order_count',
   'daily_rat_score',
