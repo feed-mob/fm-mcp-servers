@@ -1,0 +1,21 @@
+{
+  "name": "femini_reporting",
+  "version": "1.0.0",
+  "description": "This is a customized MCP server for the Feedmob project, specifically for querying and analyzing ad spend data.",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "fastmcp": "^3.6.2",
+    "zod": "^3.23.8",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.3",
+    "@types/node": "^20.14.10"
+  }
+}
