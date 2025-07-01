@@ -159,18 +159,29 @@ export async function checkInmobiReportStatus(
 }
 
 export async function createDirectSpend(
-  net_spend: number,
   click_url_id: number,
-  spend_date: string
+  spend_date: string,
+  net_spend?: number,
+  gross_spend?: number,
+  partner_paid_action_count?: number,
+  client_paid_action_count?: number
 ): Promise<any> {
+  // Validate at least one spend metric is provided
+  if (!net_spend && !gross_spend && !partner_paid_action_count && !client_paid_action_count) {
+    throw new Error('必须提供至少一个支出指标：net_spend, gross_spend, partner_paid_action_count 或 client_paid_action_count');
+  }
+
   const url = `${FEEDMOB_API_BASE}/ai/api/direct_spends`;
 
   try {
     const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.post(url, {
-      net_spend,
       click_url_id,
-      spend_date
+      spend_date,
+      net_spend,
+      gross_spend,
+      partner_paid_action_count,
+      client_paid_action_count
     }, {
       headers: {
         'Content-Type': 'application/json',
