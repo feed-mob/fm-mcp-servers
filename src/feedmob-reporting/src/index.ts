@@ -8,7 +8,7 @@ import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, get
 // Create server instance
 const server = new McpServer({
   name: "feedmob-reporting",
-  version: "0.0.4",
+  version: "0.0.5",
   capabilities: {
     tools: {},
     prompts: {},
@@ -20,16 +20,26 @@ server.tool(
   "create_direct_spend",
   "Create Or Update a direct spend via FeedMob API.",
   {
-    net_spend: z.number().describe("Net spend amount"),
     click_url_id: z.number().describe("Click URL ID"),
     spend_date: z.string().describe("Spend date in YYYY-MM-DD format"),
+    net_spend: z.number().optional().describe("Net spend amount"),
+    gross_spend: z.number().optional().describe("Gross spend amount"),
+    partner_paid_action_count: z.number().optional().describe("Partner paid action count"),
+    client_paid_action_count: z.number().optional().describe("Client paid action count"),
   },
   async (params) => {
     try {
+      if (!params.net_spend && !params.gross_spend && !params.partner_paid_action_count && !params.client_paid_action_count) {
+        throw new Error("必须提供至少一个支出指标：net_spend, gross_spend, partner_paid_action_count 或 client_paid_action_count");
+      }
+
       const result = await createDirectSpend(
-        params.net_spend,
         params.click_url_id,
-        params.spend_date
+        params.spend_date,
+        params.net_spend,
+        params.gross_spend,
+        params.partner_paid_action_count,
+        params.client_paid_action_count
       );
       const formattedData = JSON.stringify(result, null, 2);
       return {
