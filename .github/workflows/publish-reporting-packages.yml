@@ -20,6 +20,7 @@ on:
       - 'src/smadex-reporting/**'
       - 'src/samsung-reporting/**'
       - 'src/rtb-house-reporting/**'
+      - 'src/femini_reporting/**'
 
   workflow_dispatch:
     inputs:
@@ -44,6 +45,7 @@ on:
           - smadex
           - samsung
           - rtb-house
+          - femini
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
@@ -113,6 +115,9 @@ jobs:
             fi
             if echo "$CHANGED_FILES" | grep -q "src/rtb-house-reporting/"; then
               JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["rtb-house"]')
+            fi
+            if echo "$CHANGED_FILES" | grep -q "src/femini_reporting/"; then
+              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["femini"]')
             fi
 
             # Generate the matrix output with proper JSON formatting
