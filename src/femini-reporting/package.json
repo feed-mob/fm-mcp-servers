@@ -4,7 +4,8 @@
   "description": "This is a customized MCP server for the Feedmob project, specifically for querying and analyzing ad spend data.",
   "main": "src/index.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
   },
   "keywords": [],
   "author": "",
