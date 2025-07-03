@@ -1,14 +1,27 @@
 {
-  "name": "femini-reporting",
-  "version": "0.0.1",
+  "name": "@feedmob/femini-reporting",
+  "version": "0.0.2",
   "description": "This is a customized MCP server for the Feedmob project, specifically for querying and analyzing ad spend data.",
   "main": "src/index.ts",
+  "homepage": "https://github.com/feed-mob/fm-mcp-servers",
+  "bugs": "https://github.com/feed-mob/fm-mcp-servers/issues",
+  "type": "module",
+  "bin": {
+    "femini-reporting": "dist/index.js"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "mcp",
+    "femini"
+  ],
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "author": "FeedMob",
   "license": "ISC",
   "dependencies": {
     "dotenv": "^16.4.5",
