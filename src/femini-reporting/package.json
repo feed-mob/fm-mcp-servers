@@ -10,8 +10,9 @@
     "femini-reporting": "dist/index.js"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc"
+    "build": "tsc && shx chmod +x dist/*.js",
+    "prepare": "npm run build",
+    "watch": "tsc --watch"
   },
   "keywords": [
     "mcp",
@@ -30,6 +31,10 @@
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
-    "typescript": "^5.5.3"
+    "typescript": "^5.5.3",
+    "shx": "^0.3.4"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
 }
