@@ -20,7 +20,7 @@ on:
       - 'src/smadex-reporting/**'
       - 'src/samsung-reporting/**'
       - 'src/rtb-house-reporting/**'
-      - 'src/femini_reporting/**'
+      - 'src/femini-reporting/**'
 
   workflow_dispatch:
     inputs:
@@ -116,7 +116,7 @@ jobs:
             if echo "$CHANGED_FILES" | grep -q "src/rtb-house-reporting/"; then
               JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["rtb-house"]')
             fi
-            if echo "$CHANGED_FILES" | grep -q "src/femini_reporting/"; then
+            if echo "$CHANGED_FILES" | grep -q "src/femini-reporting/"; then
               JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["femini"]')
             fi
 
