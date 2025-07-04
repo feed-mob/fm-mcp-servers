@@ -1,10 +1,12 @@
+#!/usr/bin/env node
+
 import { FastMCP } from "fastmcp";
 import { Schema, z } from "zod";
 
 // Create FastMCP server instance
 const server = new FastMCP({
   name: "femini-reporting",
-  version: "0.0.3",
+  version: "0.0.4",
   instructions: `
 This is a customized MCP server for the Feedmob project, specifically for querying and analyzing ad spend data.
 
@@ -193,11 +195,3 @@ server.addResource({
 server.start({
   transportType: "stdio"
 });
-
-// server.start({
-//   transportType: "httpStream",
-//   httpStream: {
-//     port: 3002,
-//     endpoint: "/stream",
-//   },
-// });
