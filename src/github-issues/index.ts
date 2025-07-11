@@ -183,22 +183,53 @@ server.addTool({
 });
 
 server.addTool({
-  name: "get_issue",
-  description: "Get details of a specific issue in a GitHub repository.",
+  name: "get_issues",
+  description: "批量获取多个 issues 的 comments",
   parameters: issues.GetIssueSchema,
   execute: async (args: z.infer<typeof issues.GetIssueSchema>) => {
-    const owner = args.owner || DEFAULT_OWNER;
-    const repo = args.repo;
-    const { issue_number } = args;
+    try {
+      const response = await fetch(`${AI_API_URL}/issues/get_comments`, {
+        method: 'POST',
+        headers: {
+          'Authorization': "Bearer " + AI_API_TOKEN,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          repo_issues: args.repo_issues,
+          comment_count: args.comment_count
+        })
+      });
 
-    if (!owner || !repo) {
-      throw new Error("Repository owner and name are required. Either provide them directly or set GITHUB_DEFAULT_OWNER environment variables.");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.text();
+      return {
+        content: [
+          {
+            type: "text",
+            text: `# Github Issue Comments
+**Raw JSON Data:**
+\`\`\`json
+${JSON.stringify(data, null, 2)}
+\`\`\`
+**对以上数据进行格式美化处理，参考以下 md 例子转换后的格式返回相应数据**
+### title
+repo: repo
+issue_number: issue_number
+------- 评论 1: user create_at -------
+comment body(原始文字，不需要转换成 md)
+`,
+          },
+        ],
+      };
+    } catch (error) {
+      console.error(`[ERROR] Failed to get issue comments:`, error);
+      return {
+        content: [{ type: "text", text: `Failed to get issue comments: ${error instanceof Error ? error.message : String(error)}` }],
+      };
     }
-
-    const issue = await issues.getIssue(owner, repo, issue_number);
-    return {
-      content: [{ type: "text", text: JSON.stringify(issue, null, 2) }],
-    };
   },
 });
 
