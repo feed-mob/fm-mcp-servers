@@ -13,9 +13,11 @@ export const FeedmobSearchOptions =  z.object({
 });
 
 export const GetIssueSchema = z.object({
-  owner: z.string(),
-  repo: z.string().describe("The repository name, e.g., 'feedmob', 'tracking_admin'"),
-  issue_number: z.number(),
+  comment_count: z.string().default('all').describe("获取所有的 comment, 或者指定数量的 comment, 默认从最新提交的的开始获取。"),
+  repo_issues: z.array(z.object({
+    repo: z.string(),
+    issue_number: z.number()
+  }))
 });
 
 export const IssueCommentSchema = z.object({
