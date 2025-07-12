@@ -2,6 +2,7 @@
 
 import { FastMCP } from "fastmcp";
 import { Schema, z } from "zod";
+import jwt from 'jsonwebtoken';
 
 // Create FastMCP server instance
 const server = new FastMCP({
@@ -19,6 +20,161 @@ Key Features:
 
 const FEMINI_API_URL = process.env.FEMINI_API_URL;
 const FEMINI_API_TOKEN = process.env.FEMINI_API_TOKEN;
+const FEEDMOB_API_BASE = process.env.FEEDMOB_API_BASE;
+const FEEDMOB_KEY = process.env.FEEDMOB_KEY;
+const FEEDMOB_SECRET = process.env.FEEDMOB_SECRET;
+
+if (!FEEDMOB_KEY || !FEEDMOB_SECRET) {
+  console.error("Error: FEEDMOB_KEY and FEEDMOB_SECRET environment variables must be set.");
+  process.exit(1);
+}
+
+// Generate JWT token
+function generateToken(key: string, secret: string): string {
+  const expirationDate = new Date();
+  expirationDate.setDate(expirationDate.getDate() + 7); // 7 days from now
+
+  const payload = {
+    key: key,
+    expired_at: expirationDate.toISOString().split('T')[0] // Format as YYYY-MM-DD
+  };
+
+  return jwt.sign(payload, secret, { algorithm: 'HS256' });
+}
+
+server.addTool({
+  name: "query_admin_infomation",
+  description: "Queries various metric data for client, campaign, partner, and click_url from the admin system, supporting multiple metrics and filtering conditions.",
+  parameters: z.object({
+    date_gteq: z.string().optional().describe("Start date (YYYY-MM-DD format), defaults to the first day of the previous month"),
+    date_lteq: z.string().optional().describe("End date (YYYY-MM-DD format), defaults to yesterday"),
+    metrics: z.array(z.enum([
+        "direct_spends",
+        "infomation",
+        "direct_spend_with_change_logs",
+        "infomation_with_change_logs",
+        "price_rate_change_logs",
+        "spend_requests",
+        "spend_request_with_change_logs"
+      ]))
+      .optional()
+      .default(["infomation"])
+      .describe(`### infomation
+        CAMPAIGN NAME,VENDOR NAME,TRACKER,LINK TYPE,MMP CLICK TRACKING LINK,MMP IMPRESSION TRACKING LINK,STATUS,START TIME,END TIME,DIRECT SPEND INPUT,NET CPI/CPA/CPM,GROSS UNIT PRICE,MARGIN,CLIENT PAID ACTION,VENDOR PAID ACTION,CAP ACTION,TARGET CAP,MAX CAP,DIRECT SPEND AUTOMATION SWITCH,CREATED AT,UPDATED AT
+        ### direct_spends
+        List of direct spends for the specified date range, including:
+        - date
+        - gross_spend
+        - net_spend
+        - margin
+        - last_update_user
+        ### direct_spend_with_change_logs
+        List of direct spends for the specified date range, including:
+        - date
+        - gross_spend
+        - net_spend
+        - margin
+        - last_update_user
+        - change_logs (user_name, action, version, comment, created_at, audited_changes)
+        ### infomation_with_change_logs
+        Same as \`infomation\`, but additionally includes \`CHANGE LOGS\` (user_name, action, version, comment, created_at, audited_changes)
+        ### price_rate_change_logs
+        List of price change for the specified date range, including:
+        - start_date
+        - end_date
+        - net_rate
+        - gross_rate
+        - margin
+        - create_user
+        ### spend_requests
+        List of spend requests, including:
+        - gross_spend_formula
+        - net_spend_formula
+        - margin_formula
+        - gross_spend_source
+        - net_spend_source
+        - margin_source
+        - github_ticket
+        - having_client_report
+        - margin_type
+        - status
+        - created_at
+        - hubspot_ticket
+        - client_paid_actions
+        - vendor_paid_actions
+        - automation_start_date
+        ### spend_request_with_change_logs
+        Same as \`spend_requests\`, but additionally includes \`change_logs\` (user_name, action, version, comment, created_at, audited_changes)
+      `).describe(`Metrics for admin system data.`),
+    legacy_client_id_in: z.array(z.string()).optional().describe("Client ID filter (array)"),
+    legacy_partner_id_in: z.array(z.string()).optional().describe("Partner ID filter (array)"),
+    legacy_campaign_id_in: z.array(z.string()).optional().describe("Campaign ID filter (array)"),
+    legacy_click_url_id_in: z.array(z.string()).optional().describe("Click URL ID filter (array)"),
+  }),
+  execute: async (args, { log }) => {
+    try {
+      const queryParams = new URLSearchParams();
+      
+      if (args.date_gteq) queryParams.append('date_gteq', args.date_gteq);
+      if (args.date_lteq) queryParams.append('date_lteq', args.date_lteq);
+      
+      // Process array parameters
+      if (args.metrics) {
+        args.metrics.forEach(metric => queryParams.append('metrics[]', metric));
+      }
+      if (args.legacy_client_id_in) {
+        args.legacy_client_id_in.forEach(id => queryParams.append('legacy_client_id_in[]', id));
+      }
+      if (args.legacy_partner_id_in) {
+        args.legacy_partner_id_in.forEach(id => queryParams.append('legacy_partner_id_in[]', id));
+      }
+      if (args.legacy_campaign_id_in) {
+        args.legacy_campaign_id_in.forEach(id => queryParams.append('legacy_campaign_id_in[]', id));
+      }
+      if (args.legacy_click_url_id_in) {
+        args.legacy_click_url_id_in.forEach(id => queryParams.append('legacy_click_url_id_in[]', id));
+      }
+
+      const apiUrl = `${FEEDMOB_API_BASE}/ai/api/femini_mcp_reports?${queryParams.toString()}`;
+      const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'FEEDMOB-KEY': FEEDMOB_KEY,
+          'FEEDMOB-TOKEN': token
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `# Query Result
+**Query Parameters:**
+- Metrics: ${args.metrics?.join(', ')}
+- Date Range: ${args.date_gteq || 'default'} to ${args.date_lteq || 'default'}
+**Raw JSON Data:**
+\`\`\`json
+${JSON.stringify(data, null, 2)}
+\`\`\`
+**Please further analyze and find the data required by the user based on the prompt, and return the data in a human-readable, formatted, and aesthetically pleasing manner.**
+`,
+          },
+        ],
+      };
+    } catch (error: unknown) {
+      throw new Error(`Failed to query admin infomation: ${(error as Error).message}`);
+    }
+  },
+});
 
 // Query femini data
 server.addTool({
