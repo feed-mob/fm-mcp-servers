@@ -44,7 +44,7 @@ function generateToken(key: string, secret: string): string {
 
 server.addTool({
   name: "query_admin_infomation",
-  description: "查找 client, campaign, partner, click_url 来自 admin 系统的各类指标数据，支持多种指标和过滤条件。",
+  description: "Queries various metric data for client, campaign, partner, and click_url from the admin system, supporting multiple metrics and filtering conditions.",
   parameters: z.object({
     date_gteq: z.string().optional().describe("Start date (YYYY-MM-DD format), defaults to the first day of the previous month"),
     date_lteq: z.string().optional().describe("End date (YYYY-MM-DD format), defaults to yesterday"),
@@ -77,7 +77,7 @@ server.addTool({
         - last_update_user
         - change_logs (user_name, action, version, comment, created_at, audited_changes)
         ### infomation_with_change_logs
-        与 \`infomation\` 相同，但额外包含 \`CHANGE LOGS\` (user_name, action, version, comment, created_at, audited_changes)
+        Same as \`infomation\`, but additionally includes \`CHANGE LOGS\` (user_name, action, version, comment, created_at, audited_changes)
         ### price_rate_change_logs
         List of price change for the specified date range, including:
         - start_date
@@ -104,8 +104,8 @@ server.addTool({
         - vendor_paid_actions
         - automation_start_date
         ### spend_request_with_change_logs
-        与 \`spend_requests\` 相同，但额外包含 \`change_logs\` (user_name, action, version, comment, created_at, audited_changes)
-      `),
+        Same as \`spend_requests\`, but additionally includes \`change_logs\` (user_name, action, version, comment, created_at, audited_changes)
+      `).describe(`Metrics for admin system data.`),
     legacy_client_id_in: z.array(z.string()).optional().describe("Client ID filter (array)"),
     legacy_partner_id_in: z.array(z.string()).optional().describe("Partner ID filter (array)"),
     legacy_campaign_id_in: z.array(z.string()).optional().describe("Campaign ID filter (array)"),
@@ -165,7 +165,7 @@ server.addTool({
 \`\`\`json
 ${JSON.stringify(data, null, 2)}
 \`\`\`
-**请根据提示进一步分析和查找出用户需要的数据，并按照人类易读格式化且美观的方式返回数据.**
+**Please further analyze and find the data required by the user based on the prompt, and return the data in a human-readable, formatted, and aesthetically pleasing manner.**
 `,
           },
         ],
