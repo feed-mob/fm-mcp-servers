@@ -104,8 +104,21 @@ server.addTool({
         }
       });
 
+      const data = await response.text();
+
       return {
-        content: [{ type: "text", text: await response.text() }],
+        content: [
+          {
+            type: "text",
+            text: `# Github Issue Query Result
+**Raw Markdown Data:**
+\`\`\`md
+${data}
+\`\`\`
+**Please further analyze and find the data required by the user based on the prompt, and return the data in a human-readable, formatted, and aesthetically pleasing manner.**
+`,
+          },
+        ],
       };
     } catch (error) {
       return {
