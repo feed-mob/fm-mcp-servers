@@ -4,16 +4,19 @@ import { subDays, format } from 'date-fns';
 
 export const FeedmobSearchOptions =  z.object({
   scheam: z.string().describe("get from system resources issues/search_schema"),
-  start_date: z.string().default(format(subDays(new Date(), 6), 'yyyy-MM-dd')).describe("The creation start date of the issue"),
+  start_date: z.string().default(format(subDays(new Date(), 30), 'yyyy-MM-dd')).describe("The creation start date of the issue"),
   end_date: z.string().default(format(new Date(), 'yyyy-MM-dd')).describe("The creation end date of the issue"),
   status: z.string().optional().describe("The status of the issue, e.g., 'open', 'closed'"),
   repo: z.string().optional().describe("The repository name, e.g., 'feedmob', 'tracking_admin', If the user does not specify otherwise, this parameter can be omitted and all repos will be searched by default."),
-  users: z.array(z.string()).optional().optional(),
+  users: z.array(z.string()).optional().describe("The users to filter issues by, can be assign_users, developers, code_reviewers, publishers, create_user, pm_qa_user"),
   team: z.string().optional().describe("The team name, e.g., 'Star', 'Mighty'"),
+  title: z.string().optional().describe("The title of the issue, supports fuzzy matching"),
+  labels: z.array(z.string()).optional().describe("Labels to filter issues by"),
+  fields: z.array(z.string()).describe("Fields to return for each issue, available fields: 'issue_id', 'repo', 'title', 'created_at', 'closed_at', 'hubspot_ticket_link', 'create_user', 'assign_users', 'status', 'current_labels', 'process_time_seconds', 'developers', 'code_reviewers', 'publishers', 'qa_members', 'pm_qa_user', 'team'"),
 });
 
 export const GetIssueSchema = z.object({
-  comment_count: z.string().default('all').describe("获取所有的 comment, 或者指定数量的 comment, 默认从最新提交的的开始获取。"),
+  comment_count: z.string().default('all').describe("Get all comments, or a specified number of comments, by default starting from the latest submission."),
   repo_issues: z.array(z.object({
     repo: z.string(),
     issue_number: z.number()

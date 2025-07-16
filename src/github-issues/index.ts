@@ -82,8 +82,8 @@ server.addTool({
       let params = new URLSearchParams();
       params.set('start_date', args.start_date);
       params.set('end_date', args.end_date);
+      args.fields.forEach(field => params.append('fields[]', field));
 
-      // 添加可选参数
       if (args.status !== undefined) {
         params.set('status', args.status);
       }
@@ -95,6 +95,12 @@ server.addTool({
       }
       if (args.team !== undefined) {
         params.set('team', args.team);
+      }
+      if (args.title !== undefined) {
+        params.set('title', args.title);
+      }
+      if (args.labels !== undefined) {
+        args.labels.forEach(label => params.append('labels[]', label));
       }
 
       const response = await fetch(`${AI_API_URL}/issues?${params}`, {
@@ -111,9 +117,9 @@ server.addTool({
           {
             type: "text",
             text: `# Github Issue Query Result
-**Raw Markdown Data:**
-\`\`\`md
-${data}
+**Raw JSON Data:**
+\`\`\`json
+${JSON.stringify(data, null, 2)}
 \`\`\`
 **Please further analyze and find the data required by the user based on the prompt, and return the data in a human-readable, formatted, and aesthetically pleasing manner.**
 `,
@@ -197,7 +203,7 @@ server.addTool({
 
 server.addTool({
   name: "get_issues",
-  description: "批量获取多个 issues 的 comments",
+  description: "Get comments for multiple issues in bulk",
   parameters: issues.GetIssueSchema,
   execute: async (args: z.infer<typeof issues.GetIssueSchema>) => {
     try {
@@ -227,12 +233,12 @@ server.addTool({
 \`\`\`json
 ${JSON.stringify(data, null, 2)}
 \`\`\`
-**对以上数据进行格式美化处理，参考以下 md 例子转换后的格式返回相应数据**
+**Please format the above data beautifully, refer to the following markdown example for the converted format and return the corresponding data.**
 ### title
 repo: repo
 issue_number: issue_number
-------- 评论 1: user create_at -------
-comment body(原始文字，不需要转换成 md)
+------- Comment 1: user create_at -------
+comment body(Original text, no need to convert to md)
 `,
           },
         ],
