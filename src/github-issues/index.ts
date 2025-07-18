@@ -82,8 +82,8 @@ server.addTool({
       let params = new URLSearchParams();
       params.set('start_date', args.start_date);
       params.set('end_date', args.end_date);
+      args.fields.forEach(field => params.append('fields[]', field));
 
-      // 添加可选参数
       if (args.status !== undefined) {
         params.set('status', args.status);
       }
@@ -96,6 +96,12 @@ server.addTool({
       if (args.team !== undefined) {
         params.set('team', args.team);
       }
+      if (args.title !== undefined) {
+        params.set('title', args.title);
+      }
+      if (args.labels !== undefined) {
+        args.labels.forEach(label => params.append('labels[]', label));
+      }
 
       const response = await fetch(`${AI_API_URL}/issues?${params}`, {
         method: 'GET',
@@ -104,8 +110,21 @@ server.addTool({
         }
       });
 
+      const data = await response.text();
+
       return {
-        content: [{ type: "text", text: await response.text() }],
+        content: [
+          {
+            type: "text",
+            text: `# Github Issue Query Result
+**Raw JSON Data:**
+\`\`\`json
+${JSON.stringify(data, null, 2)}
+\`\`\`
+**Please further analyze and find the data required by the user based on the prompt, and return the data in a human-readable, formatted, and aesthetically pleasing manner.**
+`,
+          },
+        ],
       };
     } catch (error) {
       return {
@@ -183,22 +202,53 @@ server.addTool({
 });
 
 server.addTool({
-  name: "get_issue",
-  description: "Get details of a specific issue in a GitHub repository.",
+  name: "get_issues",
+  description: "Get comments for multiple issues in bulk",
   parameters: issues.GetIssueSchema,
   execute: async (args: z.infer<typeof issues.GetIssueSchema>) => {
-    const owner = args.owner || DEFAULT_OWNER;
-    const repo = args.repo;
-    const { issue_number } = args;
+    try {
+      const response = await fetch(`${AI_API_URL}/issues/get_comments`, {
+        method: 'POST',
+        headers: {
+          'Authorization': "Bearer " + AI_API_TOKEN,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          repo_issues: args.repo_issues,
+          comment_count: args.comment_count
+        })
+      });
 
-    if (!owner || !repo) {
-      throw new Error("Repository owner and name are required. Either provide them directly or set GITHUB_DEFAULT_OWNER environment variables.");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.text();
+      return {
+        content: [
+          {
+            type: "text",
+            text: `# Github Issue Comments
+**Raw JSON Data:**
+\`\`\`json
+${JSON.stringify(data, null, 2)}
+\`\`\`
+**Please format the above data beautifully, refer to the following markdown example for the converted format and return the corresponding data.**
+### title
+repo: repo
+issue_number: issue_number
+------- Comment 1: user create_at -------
+comment body(Original text, no need to convert to md)
+`,
+          },
+        ],
+      };
+    } catch (error) {
+      console.error(`[ERROR] Failed to get issue comments:`, error);
+      return {
+        content: [{ type: "text", text: `Failed to get issue comments: ${error instanceof Error ? error.message : String(error)}` }],
+      };
     }
-
-    const issue = await issues.getIssue(owner, repo, issue_number);
-    return {
-      content: [{ type: "text", text: JSON.stringify(issue, null, 2) }],
-    };
   },
 });
 
