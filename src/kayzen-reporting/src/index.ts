@@ -8,7 +8,7 @@ import { KayzenClient } from "./kayzen-client.js";
 // Create an MCP server
 const server = new McpServer({
   name: "Kayzen Reporting",
-  version: "0.0.5"
+  version: "0.0.6"
 });
 
 // Initialize Kayzen client
@@ -71,10 +71,18 @@ server.tool(
         params.end_date
       ) as ReportResultsResponse;
 
+      const response = {
+        ...result,
+        time_range: {
+          start_date: params.start_date,
+          end_date: params.end_date
+        }
+      };
+
       return {
         content: [{
           type: "text",
-          text: JSON.stringify(result, null, 2)
+          text: JSON.stringify(response, null, 2)
         }]
       };
     } catch (error) {
