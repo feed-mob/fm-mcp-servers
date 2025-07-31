@@ -1,0 +1,45 @@
+{
+  "name": "@feedmob/impact-radius-reporting",
+  "version": "0.0.1",
+  "description": "MCP server for Impact Radius Reporting",
+  "main": "dist/index.js",
+  "author": "FeedMob",
+  "homepage": "https://github.com/feed-mob/fm-mcp-servers",
+  "bugs": "https://github.com/feed-mob/fm-mcp-servers/issues",
+  "type": "module",
+  "bin": {
+    "impact-radius-reporting": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "keywords": [
+    "mcp",
+    "impact-radius",
+    "reporting",
+    "feedmob"
+  ],
+  "scripts": {
+    "build": "tsc && shx chmod +x dist/*.js",
+    "prepare": "npm run build",
+    "watch": "tsc --watch"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.7.0",
+    "@types/node": "^20.11.24",
+    "axios": "^1.6.7",
+    "dotenv": "^16.4.5",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@types/node-fetch": "^2.6.12",
+    "ts-node": "^10.9.2",
+    "shx": "^0.3.4",
+    "typescript": "^5.8.2"
+  }
+}
