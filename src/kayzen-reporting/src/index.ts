@@ -8,18 +8,36 @@ import { KayzenClient } from "./kayzen-client.js";
 // Create an MCP server
 const server = new McpServer({
   name: "Kayzen Reporting",
-  version: "0.0.6"
+  version: "0.0.7"
 });
 
 // Initialize Kayzen client
 const kayzenClient = new KayzenClient();
 
 interface ReportListResponse {
-  reports: Array<{
-    id: string;
+  data: Array<{
+    id: number;
+    advertiser_id: number;
+    report_type_id: string;
     name: string;
-    type: string;
+    start_date: string;
+    end_date: string;
+    date_macro: string;
+    time_zone_id: number;
+    created_at: string;
+    report_schedule_frequency: string | null;
+    report_schedule_end_date: string | null;
+    report_schedule_recipients: string | null;
+    report_schedule_status: string | null;
+    report_schedule_flag_reason: string | null;
+    report_schedule_last_sent: string | null;
+    time_zone_name: string;
   }>;
+  meta: {
+    current_page: number;
+    total_pages: number;
+    total_entries: number;
+  };
 }
 
 interface ReportResultsResponse {
@@ -30,16 +48,65 @@ interface ReportResultsResponse {
 // Add list reports tool
 server.tool(
   "list_reports",
-  "Get a list of all the existing reports from Kayzen Reporting API",
-  {},
-  async () => {
+  "Get a list of all the existing reports from Kayzen Reporting API with filtering, pagination, and sorting options",
+  {
+    advertiser_id: z.number().optional().describe("Filter reports by advertiser ID"),
+    q: z.string().optional().describe("Search reports by name or ID"),
+    page: z.number().min(1).default(1).describe("Page number (default: 1)"),
+    per_page: z.number().min(1).max(100).default(30).describe("Number of rows per page (default: 30, max: 100)"),
+    sort_field: z.enum([
+      "id",
+      "advertiser_id",
+      "name",
+      "report_type",
+      "time_range",
+      "report_schedule_frequency",
+      "report_schedule_status",
+      "report_schedule_last_sent"
+    ]).optional().describe("Sort reports by this field"),
+    sort_direction: z.enum(["asc", "desc"]).optional().describe("Sort direction (asc or desc)")
+  },
+  async (params: {
+    advertiser_id?: number;
+    q?: string;
+    page?: number;
+    per_page?: number;
+    sort_field?: string;
+    sort_direction?: 'asc' | 'desc';
+  }) => {
     try {
-      const result = await kayzenClient.listReports() as ReportListResponse;
+      const result = await kayzenClient.listReports(params) as ReportListResponse;
+
+      const summary = {
+        pagination: {
+          current_page: result.meta.current_page,
+          total_pages: result.meta.total_pages,
+          total_entries: result.meta.total_entries,
+          per_page: params.per_page || 30
+        },
+        filters_applied: {
+          advertiser_id: params.advertiser_id,
+          search_query: params.q,
+          sort_field: params.sort_field,
+          sort_direction: params.sort_direction
+        }
+      };
+
       return {
-        content: [{
-          type: "text",
-          text: JSON.stringify(result, null, 2)
-        }]
+        content: [
+          {
+            type: "text",
+            text: `## Reports Summary
+${summary.pagination.total_entries} total reports found
+Page ${summary.pagination.current_page} of ${summary.pagination.total_pages}
+
+### Applied Filters
+${JSON.stringify(summary.filters_applied, null, 2)}
+
+### Reports Data
+${JSON.stringify(result.data, null, 2)}`
+          }
+        ]
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);

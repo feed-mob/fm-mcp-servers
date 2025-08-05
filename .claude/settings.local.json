@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__zen__chat",
+      "Bash(npm run build)",
+      "mcp__zen__analyze"
+    ],
+    "deny": []
+  }
+}
