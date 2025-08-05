@@ -83,11 +83,27 @@ export class KayzenClient {
     }
   }
 
-  async listReports() {
+  async listReports(params: {
+    advertiser_id?: number;
+    q?: string;
+    page?: number;
+    per_page?: number;
+    sort_field?: string;
+    sort_direction?: 'asc' | 'desc';
+  } = {}) {
     if (!this.username || !this.password || !this.basicAuth) {
       throw new Error('Authentication credentials required for this operation');
     }
-    return this.makeRequest('GET', '/reports');
+    
+    const queryParams: Record<string, unknown> = {};
+    if (params.advertiser_id !== undefined) queryParams.advertiser_id = params.advertiser_id;
+    if (params.q !== undefined) queryParams.q = params.q;
+    if (params.page !== undefined) queryParams.page = params.page;
+    if (params.per_page !== undefined) queryParams.per_page = params.per_page;
+    if (params.sort_field !== undefined) queryParams.sort_field = params.sort_field;
+    if (params.sort_direction !== undefined) queryParams.sort_direction = params.sort_direction;
+    
+    return this.makeRequest('GET', '/reports', queryParams);
   }
 
   async getReportResults(reportId: string, startDate?: string, endDate?: string) {
