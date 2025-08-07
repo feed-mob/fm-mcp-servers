@@ -22,7 +22,6 @@ on:
       - 'src/rtb-house-reporting/**'
       - 'src/femini-reporting/**'
       - 'src/sensor-tower/**'
-      - 'src/work-journals/**'
 
   workflow_dispatch:
     inputs:
@@ -48,7 +47,6 @@ on:
           - samsung
           - rtb-house
           - femini
-          - work-journals
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
@@ -124,9 +122,6 @@ jobs:
             fi
             if echo "$CHANGED_FILES" | grep -q "src/sensor-tower/"; then
               JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["sensor-tower"]')
-            fi
-            if echo "$CHANGED_FILES" | grep -q "src/work-journals/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["work-journals"]')
             fi
             # Generate the matrix output with proper JSON formatting
             echo "matrix={\"package\":$JSON_ARRAY}" >> $GITHUB_OUTPUT
