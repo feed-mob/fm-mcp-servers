@@ -48,6 +48,7 @@ on:
           - samsung
           - rtb-house
           - femini
+          - sensor-tower
           - work-journals
 jobs:
   detect-changes:
@@ -73,61 +74,37 @@ jobs:
             # Initialize an empty JSON array
             JSON_ARRAY="[]"
 
-            # Add packages to JSON array if they have changes
-            if echo "$CHANGED_FILES" | grep -q "src/liftoff-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["liftoff"]')
-            fi
-            if echo "$CHANGED_FILES" | grep -q "src/tapjoy-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["tapjoy"]')
-            fi
-            if echo "$CHANGED_FILES" | grep -q "src/appsamurai-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["appsamurai"]')
-            fi
-            if echo "$CHANGED_FILES" | grep -q "src/singular-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["singular"]')
-            fi
-            if echo "$CHANGED_FILES" | grep -q "src/kayzen-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["kayzen"]')
-            fi
-            if echo "$CHANGED_FILES" | grep -q "src/jampp-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["jampp"]')
-            fi
-            if echo "$CHANGED_FILES" | grep -q "src/applovin-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["applovin"]')
-            fi
-            if echo "$CHANGED_FILES" | grep -q "src/feedmob-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["feedmob"]')
-            fi
-            if echo "$CHANGED_FILES" | grep -q "src/ironsource-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["ironsource"]')
-            fi
-            if echo "$CHANGED_FILES" | grep -q "src/mintegral-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["mintegral"]')
-            fi
-            if echo "$CHANGED_FILES" | grep -q "src/inmobi-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["inmobi"]')
-            fi
-            if echo "$CHANGED_FILES" | grep -q "src/ironsource-aura-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["ironsource-aura"]')
-            fi
-            if echo "$CHANGED_FILES" | grep -q "src/smadex-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["smadex"]')
-            fi
-            if echo "$CHANGED_FILES" | grep -q "src/samsung-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["samsung"]')
-            fi
-            if echo "$CHANGED_FILES" | grep -q "src/rtb-house-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["rtb-house"]')
-            fi
-            if echo "$CHANGED_FILES" | grep -q "src/femini-reporting/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["femini"]')
-            fi
-            if echo "$CHANGED_FILES" | grep -q "src/sensor-tower/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["sensor-tower"]')
-            fi
-            if echo "$CHANGED_FILES" | grep -q "src/work-journals/"; then
-              JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["work-journals"]')
-            fi
+            # Function to add package to JSON array if its path is found in CHANGED_FILES
+            add_package_if_changed() {
+              local package_name=$1
+              local path_suffix=""
+              if [[ "$package_name" == *"reporting"* ]]; then
+                path_suffix="-reporting"
+              fi
+              if echo "$CHANGED_FILES" | grep -q "src/${package_name}${path_suffix}/"; then
+                JSON_ARRAY=$(echo "$JSON_ARRAY" | jq -c ". += [\"$package_name\"]")
+              fi
+            }
+
+            add_package_if_changed "liftoff"
+            add_package_if_changed "tapjoy"
+            add_package_if_changed "appsamurai"
+            add_package_if_changed "singular"
+            add_package_if_changed "kayzen"
+            add_package_if_changed "jampp"
+            add_package_if_changed "applovin"
+            add_package_if_changed "feedmob"
+            add_package_if_changed "ironsource"
+            add_package_if_changed "mintegral"
+            add_package_if_changed "inmobi"
+            add_package_if_changed "ironsource-aura"
+            add_package_if_changed "smadex"
+            add_package_if_changed "samsung"
+            add_package_if_changed "rtb-house"
+            add_package_if_changed "femini"
+            add_package_if_changed "sensor-tower"
+            add_package_if_changed "work-journals"
+
             # Generate the matrix output with proper JSON formatting
             echo "matrix={\"package\":$JSON_ARRAY}" >> $GITHUB_OUTPUT
           fi
@@ -140,7 +117,7 @@ jobs:
       matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
     defaults:
       run:
-        working-directory: src/${{ matrix.package }}-reporting
+        working-directory: src/${{ matrix.package }}${{ contains(matrix.package, 'reporting') && '-reporting' || '' }}
 
     steps:
       - uses: actions/checkout@v4
