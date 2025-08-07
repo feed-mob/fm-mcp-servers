@@ -8,7 +8,7 @@ import { KayzenClient } from "./kayzen-client.js";
 // Create an MCP server
 const server = new McpServer({
   name: "Kayzen Reporting",
-  version: "0.0.7"
+  version: "0.0.8"
 });
 
 // Initialize Kayzen client
@@ -127,10 +127,10 @@ server.tool(
   "Get the results of a report from Kayzen Reporting API",
   {
     report_id: z.string().describe("ID of the report to fetch results for"),
-    start_date: z.string().optional().describe("Start date in YYYY-MM-DD format"),
-    end_date: z.string().optional().describe("End date in YYYY-MM-DD format")
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format")
   },
-  async (params: { report_id: string; start_date?: string; end_date?: string }) => {
+  async (params: { report_id: string; start_date: string; end_date: string }) => {
     try {
       const result = await kayzenClient.getReportResults(
         params.report_id,
