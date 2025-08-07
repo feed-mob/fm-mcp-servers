@@ -6,7 +6,7 @@ import { subDays, format } from 'date-fns';
 
 // Create FastMCP server instance
 const server = new FastMCP({
-  name: "journals-mcp",
+  name: "work-journals",
   version: "0.0.1",
   instructions: `
 This is an MCP server for querying and managing work journals.
