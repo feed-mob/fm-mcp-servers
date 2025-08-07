@@ -1,0 +1,39 @@
+{
+  "name": "@feedmob/work-journals",
+  "version": "0.0.1",
+  "description": "This is an MCP server for querying and managing work journals.",
+  "main": "src/index.ts",
+  "homepage": "https://github.com/feed-mob/fm-mcp-servers",
+  "bugs": "https://github.com/feed-mob/fm-mcp-servers/issues",
+  "type": "module",
+  "bin": {
+    "work-journals": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc && shx chmod +x dist/*.js",
+    "prepare": "npm run build",
+    "watch": "tsc --watch"
+  },
+  "keywords": [
+    "mcp",
+    "work-journals"
+  ],
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "author": "FeedMob",
+  "license": "ISC",
+  "dependencies": {
+    "fastmcp": "*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.10",
+    "shx": "^0.3.4",
+    "typescript": "^5.5.3"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
