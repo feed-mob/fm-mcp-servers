@@ -26,7 +26,8 @@
   "license": "ISC",
   "dependencies": {
     "fastmcp": "*",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "date-fns": "^4.1.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.10",
