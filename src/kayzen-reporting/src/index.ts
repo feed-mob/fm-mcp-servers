@@ -8,7 +8,7 @@ import { KayzenClient } from "./kayzen-client.js";
 // Create an MCP server
 const server = new McpServer({
   name: "Kayzen Reporting",
-  version: "0.0.9"
+  version: "0.1.0"
 });
 
 // Initialize Kayzen client
@@ -48,24 +48,24 @@ interface ReportResultsResponse {
 // Helper function to parse and normalize dates with smart defaults
 function parseDateWithDefaults(dateString: string): string {
   const currentYear = new Date().getFullYear();
-  
+
   // Already in YYYY-MM-DD format
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
     return dateString;
   }
-  
+
   // MM-DD format (add current year)
   if (/^\d{1,2}-\d{1,2}$/.test(dateString)) {
     const [month, day] = dateString.split('-');
     return `${currentYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   }
-  
+
   // MM/DD format (add current year)
   if (/^\d{1,2}\/\d{1,2}$/.test(dateString)) {
     const [month, day] = dateString.split('/');
     return `${currentYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   }
-  
+
   // Month name patterns (January, Jan, 1月)
   const monthNames = {
     'january': '01', 'jan': '01', '1月': '01', '一月': '01',
@@ -81,14 +81,14 @@ function parseDateWithDefaults(dateString: string): string {
     'november': '11', 'nov': '11', '11月': '11', '十一月': '11',
     'december': '12', 'dec': '12', '12月': '12', '十二月': '12'
   };
-  
+
   const lowerDate = dateString.toLowerCase();
   for (const [name, monthNum] of Object.entries(monthNames)) {
     if (lowerDate.includes(name)) {
       return `${currentYear}-${monthNum}-01`;
     }
   }
-  
+
   // Single number (assume month, use first day)
   if (/^\d{1,2}$/.test(dateString)) {
     const month = parseInt(dateString);
@@ -96,7 +96,7 @@ function parseDateWithDefaults(dateString: string): string {
       return `${currentYear}-${month.toString().padStart(2, '0')}-01`;
     }
   }
-  
+
   // Return original if no pattern matched
   return dateString;
 }
@@ -112,13 +112,13 @@ function parseDateRange(startDate: string, endDate: string): { start: string; en
   const currentYear = new Date().getFullYear();
   let parsedStart = parseDateWithDefaults(startDate);
   let parsedEnd = parseDateWithDefaults(endDate);
-  
+
   // If start date is just a month (ends with -01), set end date to month end
   if (parsedStart.endsWith('-01') && parsedEnd === parsedStart) {
     const [year, month] = parsedStart.split('-').map(Number);
     parsedEnd = getMonthEnd(year, month);
   }
-  
+
   return { start: parsedStart, end: parsedEnd };
 }
 
