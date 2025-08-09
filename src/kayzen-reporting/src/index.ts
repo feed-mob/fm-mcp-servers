@@ -8,7 +8,7 @@ import { KayzenClient } from "./kayzen-client.js";
 // Create an MCP server
 const server = new McpServer({
   name: "Kayzen Reporting",
-  version: "0.0.8"
+  version: "0.0.9"
 });
 
 // Initialize Kayzen client
@@ -43,6 +43,28 @@ interface ReportListResponse {
 interface ReportResultsResponse {
   data: Array<Record<string, unknown>>;
   metadata?: Record<string, unknown>;
+}
+
+// Helper function to get report details by ID
+async function getReportDetails(reportId: string): Promise<{
+  id: number;
+  start_date: string;
+  end_date: string;
+  name: string;
+} | null> {
+  try {
+    const result = await kayzenClient.listReports({ q: reportId }) as ReportListResponse;
+    const report = result.data.find(r => r.id.toString() === reportId);
+    return report ? {
+      id: report.id,
+      start_date: report.start_date,
+      end_date: report.end_date,
+      name: report.name
+    } : null;
+  } catch (error) {
+    console.error('Error getting report details:', error);
+    return null;
+  }
 }
 
 // Add list reports tool
@@ -104,7 +126,10 @@ Page ${summary.pagination.current_page} of ${summary.pagination.total_pages}
 ${JSON.stringify(summary.filters_applied, null, 2)}
 
 ### Reports Data
-${JSON.stringify(result.data, null, 2)}`
+${JSON.stringify(result.data, null, 2)}
+
+---
+**Note for LLM**: When the user asks for report results for specific date ranges, remember to use those dates as start_date and end_date parameters in get_report_results calls. Each report above shows its original date range (start_date/end_date), but you can override these with user-specified dates if needed.`
           }
         ]
       };
@@ -124,25 +149,42 @@ ${JSON.stringify(result.data, null, 2)}`
 // Add get report results tool
 server.tool(
   "get_report_results",
-  "Get the results of a report from Kayzen Reporting API",
+  "Get the results of a report from Kayzen Reporting API. If start_date and end_date are not provided, uses the report's original date range.",
   {
     report_id: z.string().describe("ID of the report to fetch results for"),
-    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
-    end_date: z.string().describe("End date in YYYY-MM-DD format")
+    start_date: z.string().optional().describe("Start date in YYYY-MM-DD format (if not provided, uses report's original start date)"),
+    end_date: z.string().optional().describe("End date in YYYY-MM-DD format (if not provided, uses report's original end date)")
   },
-  async (params: { report_id: string; start_date: string; end_date: string }) => {
+  async (params: { report_id: string; start_date?: string; end_date?: string }) => {
     try {
+      let actualStartDate = params.start_date;
+      let actualEndDate = params.end_date;
+      let dateSource = 'user_specified';
+
+      // If dates not provided, get from report details
+      if (!actualStartDate || !actualEndDate) {
+        const reportDetails = await getReportDetails(params.report_id);
+        if (!reportDetails) {
+          throw new Error(`Report with ID ${params.report_id} not found`);
+        }
+
+        actualStartDate = actualStartDate || reportDetails.start_date;
+        actualEndDate = actualEndDate || reportDetails.end_date;
+        dateSource = 'report_original';
+      }
+
       const result = await kayzenClient.getReportResults(
         params.report_id,
-        params.start_date,
-        params.end_date
+        actualStartDate,
+        actualEndDate
       ) as ReportResultsResponse;
 
       const response = {
         ...result,
         time_range: {
-          start_date: params.start_date,
-          end_date: params.end_date
+          start_date: actualStartDate,
+          end_date: actualEndDate,
+          source: dateSource
         }
       };
 
