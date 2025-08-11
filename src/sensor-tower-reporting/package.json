@@ -1,5 +1,5 @@
 {
-  "name": "@feedmob/sensor-tower",
+  "name": "@feedmob/sensor-tower-reporting",
   "version": "0.1.2",
   "description": "MCP server for sensor-tower API",
   "main": "dist/index.js",
@@ -8,7 +8,7 @@
   "bugs": "https://github.com/feed-mob/fm-mcp-servers/issues",
   "type": "module",
   "bin": {
-    "sensor-tower": "dist/index.js"
+    "sensor-tower-reporting": "dist/index.js"
   },
   "files": [
     "dist",
@@ -16,7 +16,7 @@
   ],
   "keywords": [
     "mcp",
-    "sensor-tower"
+    "sensor-tower-reporting"
   ],
   "scripts": {
     "build": "tsc && shx chmod +x dist/*.js",
