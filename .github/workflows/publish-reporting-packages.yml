@@ -21,7 +21,7 @@ on:
       - 'src/samsung-reporting/**'
       - 'src/rtb-house-reporting/**'
       - 'src/femini-reporting/**'
-      - 'src/sensor-tower/**'
+      - 'src/sensor-tower-reporting/**'
 
   workflow_dispatch:
     inputs:
@@ -120,7 +120,7 @@ jobs:
             if echo "$CHANGED_FILES" | grep -q "src/femini-reporting/"; then
               JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["femini"]')
             fi
-            if echo "$CHANGED_FILES" | grep -q "src/sensor-tower/"; then
+            if echo "$CHANGED_FILES" | grep -q "src/sensor-tower-reporting/"; then
               JSON_ARRAY=$(echo $JSON_ARRAY | jq -c '. += ["sensor-tower"]')
             fi
             # Generate the matrix output with proper JSON formatting
