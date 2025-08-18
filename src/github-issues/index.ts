@@ -103,6 +103,10 @@ server.addTool({
         args.labels.forEach(label => params.append('labels[]', label));
       }
 
+      if (args.score_status !== undefined) {
+        params.set('score_status', args.score_status);
+      }
+
       const response = await fetch(`${AI_API_URL}/issues?${params}`, {
         method: 'GET',
         headers: {
