@@ -12,6 +12,7 @@ export const FeedmobSearchOptions =  z.object({
   team: z.string().optional().describe("The team name, e.g., 'Star', 'Mighty'"),
   title: z.string().optional().describe("The title of the issue, supports fuzzy matching"),
   labels: z.array(z.string()).optional().describe("Labels to filter issues by"),
+  score_status: z.string().optional().describe("The issue score status, e.g., 'not scored', 'scored'"),
   fields: z.array(z.string()).describe("Fields to return for each issue, available fields: 'issue_id', 'repo', 'title', 'created_at', 'closed_at', 'hubspot_ticket_link', 'create_user', 'assign_users', 'status', 'current_labels', 'process_time_seconds', 'developers', 'code_reviewers', 'publishers', 'qa_members', 'pm_qa_user', 'team'"),
 });
 
