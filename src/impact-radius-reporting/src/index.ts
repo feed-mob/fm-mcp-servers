@@ -41,7 +41,7 @@ interface ImpactRadiusResponse {
 
 server.tool(
   "fetch_action_list_from_impact_radius",
-  "Fetch all event list from Impact Radius API for a specific date range",
+  "Fetch action list from Impact Radius API with campaign mapping integration for a date range",
   fetchFcoParams,
   async (params) => {
     try {
@@ -138,25 +138,31 @@ Impact Radius MCP Server
 
 Available tools:
 
-1. fetch_spend
-   Fetch spend data from Impact Radius API for a specific publisher campaign and date range.
+1. fetch_action_list_from_impact_radius
+   Fetch action list from Impact Radius API with campaign mapping integration for a date range.
 
    Parameters:
-   - pub_campaign: string (required) - Publisher campaign ID
    - start_date: string (required) - Start date in YYYY-MM-DD format
    - end_date: string (required) - End date in YYYY-MM-DD format
 
    Returns:
-   - JSON array of daily performance records including spend data
-   - Each record contains: date_display, campaign_name, spend, clicks, impressions, etc.
+   - JSON object with allrecords array containing action data with mapping context
+   - Each record includes: original Impact Radius action data plus mapping fields
+   - Additional fields: mapping_impact_brand, mapping_impact_ad, mapping_impact_event_type, campaign, client_name
+   - Includes total_count of all records returned
 
    Authentication:
-   - Requires IMPACT_RADIUS_SID and IMPACT_RADIUS_TOKEN environment variables
-   - Uses HTTP Basic Authentication
+   - Requires IMPACT_RADIUS_SID and IMPACT_RADIUS_TOKEN environment variables for Impact Radius API
+   - Requires FEEDMOB_KEY and FEEDMOB_SECRET environment variables for FeedMob campaign mapping API
+   - Uses HTTP Basic Authentication for Impact Radius and JWT authentication for FeedMob
+
+   Data Integration:
+   - First fetches campaign mappings from FeedMob API
+   - Then queries Impact Radius API for each mapping configuration
+   - Combines action data with campaign mapping context
 
    Example usage:
-   fetch_spend({
-     pub_campaign: "12345",
+   fetch_action_list_from_impact_radius({
      start_date: "2024-01-01",
      end_date: "2024-01-31"
    })
