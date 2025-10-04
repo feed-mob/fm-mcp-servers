@@ -20,9 +20,9 @@ const baseRequestSchema = z.object({
   file: z
     .string()
     .trim()
-    .min(1, { message: "file is required" })
+    .min(1, { message: "file must be at least 1 character" })
     .describe(
-      "File contents to upload. Provide a base64 string, binary buffer encoded as base64, or a publicly accessible URL.",
+      "File contents to upload. Provide a base64 string, binary buffer encoded as base64, a publicly accessible URL, or a local file path.",
     ),
   fileName: z
     .string()
@@ -47,10 +47,12 @@ const baseRequestSchema = z.object({
 const imageKitOptionsSchema = z.object({
   useUniqueFileName: z
     .boolean()
+    .default(true)
     .optional()
     .describe("When true, ImageKit appends a unique suffix to avoid collisions."),
   isPrivateFile: z
     .boolean()
+    .default(false)
     .optional()
     .describe("Mark the file as private to require signed URLs."),
   responseFields: z
@@ -66,7 +68,9 @@ const imageKitOptionsSchema = z.object({
     ),
 });
 
-export const imageKitUploadParametersSchema = baseRequestSchema.extend({
+export const imageKitUploadBaseSchema = baseRequestSchema;
+
+export const imageKitUploadParametersSchema = imageKitUploadBaseSchema.extend({
   options: imageKitOptionsSchema.optional(),
 });
 
@@ -115,8 +119,9 @@ export class ImageKitUploader
       fileName: request.fileName,
       folder: request.folder ?? DEFAULT_FOLDER,
       tags: request.tags?.length ? request.tags : [...DEFAULT_TAGS],
-      useUniqueFileName: request.options?.useUniqueFileName,
-      isPrivateFile: request.options?.isPrivateFile,
+      useUniqueFileName:
+        request.options?.useUniqueFileName ?? true,
+      isPrivateFile: request.options?.isPrivateFile ?? false,
       responseFields,
       customMetadata: request.options?.customMetadata,
     };
