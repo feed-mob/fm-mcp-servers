@@ -1,7 +1,7 @@
 {
   "name": "imagekit",
   "version": "1.0.0",
-  "description": "",
+  "description": "FeedMob MCP server for ImageKit uploads, cropping, and watermarking.",
   "main": "index.js",
   "scripts": {
     "build": "tsc",
