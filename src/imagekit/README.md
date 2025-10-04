@@ -72,13 +72,38 @@ Add the server to your Claude configuration to make the tools available to the a
   "mcpServers": {
     "feedmob-imagekit": {
       "command": "npx",
-      "args": ["-y", "./src/imagekit"],
-      "transport": "stdio"
+      "args": ["-y", "@feedmob/imagekit"],
+      "transport": "stdio",
+      "env": {
+        "IMAGE_TOOL_API_KEY": "your-image-tool-api-key",
+        "IMAGEKIT_PRIVATE_KEY": "your-imagekit-private-key"
+      }
     }
   }
 }
 ```
 Adjust the `args` to match your installation method (local path, published package, or ts-node entry point).
+
+The server defaults to the Comet Images API (`https://api.cometapi.com/v1`) and bundled model (`bytedance-seedream-4-0-250828`). Optional overrides: add `IMAGE_TOOL_BASE_URL` and `IMAGE_TOOL_MODEL_ID` to the `env` block only when you need to swap API endpoints or models.
+
+Volcengine Ark / 火山方舟 example:
+```json
+{
+  "mcpServers": {
+    "feedmob-imagekit": {
+      "command": "npx",
+      "args": ["-y", "@feedmob/imagekit"],
+      "transport": "stdio",
+      "env": {
+        "IMAGE_TOOL_API_KEY": "your-ark-api-key",
+        "IMAGE_TOOL_BASE_URL": "https://ark.cn-beijing.volces.com/api/v3",
+        "IMAGE_TOOL_MODEL_ID": "doubao-seedream-4-0-250828",
+        "IMAGEKIT_PRIVATE_KEY": "your-imagekit-private-key"
+      }
+    }
+  }
+}
+```
 
 ## Development Notes
 - Implement new tooling in `src/tools/` and register it through `src/server.ts`; guard external inputs with `zod` schemas.
