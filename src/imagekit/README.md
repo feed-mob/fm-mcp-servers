@@ -22,11 +22,13 @@ Run the command inside `src/imagekit/`. Dependencies are local to this package.
 ## Tools
 - `add` — simple demo helper that sums two numbers and returns the result as a string.
 - `crop_and_watermark_image` — calls the Comet Images API to crop an input image to a supported aspect ratio and optionally add a watermark.
+- `upload_file` — uploads an asset to ImageKit (default provider) using base64 content or a remote URL and returns the resulting links.
 
 ### Environment Variables
 - `IMAGE_TOOL_API_KEY` — required for `crop_and_watermark_image`. Provision an API key scoped to image generation.
 - `IMAGE_TOOL_BASE_URL` — optional override for the image-generation provider base URL; defaults to `https://api.cometapi.com/v1`.
 - `IMAGE_TOOL_MODEL_ID` — optional model identifier; defaults to `bytedance-seedream-4-0-250828`.
+- `IMAGEKIT_PRIVATE_KEY` — required for the `upload_file` tool when using the default ImageKit provider.
 
 Copy `env.sample` to `.env` when developing locally:
 ```bash
@@ -53,6 +55,16 @@ From the FastMCP inspector:
 ? watermarkText FeedMob Confidential
 ```
 The tool returns the URL produced by Comet when the request succeeds.
+
+Upload example:
+```
+> upload_file
+? provider imagekit
+? file https://ik.imagekit.io/demo/sample.jpg
+? fileName sample.jpg
+? folder /marketing/campaign-2025
+```
+The tool responds with a JSON summary plus resource links for the uploaded asset and its thumbnail (when provided by ImageKit).
 
 ## Usage with Claude Desktop
 Add the server to your Claude configuration to make the tools available to the assistant:
