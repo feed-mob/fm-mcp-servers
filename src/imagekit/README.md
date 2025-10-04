@@ -21,7 +21,7 @@ Run the command inside `src/imagekit/`. Dependencies are local to this package.
 
 ## Tools
 - `crop_and_watermark_image` — calls the Comet Images API to crop an input image to a supported aspect ratio, optionally adds a watermark, and returns the final image URL (ImageKit URL when uploads are enabled, otherwise the generated link).
-- `upload_file` — uploads an asset to ImageKit (default provider) using base64 content or a remote URL and returns the resulting links. Files land in the `upload/` folder and include the `upload` tag unless you override those values.
+- `upload_file` — uploads an asset to ImageKit (default provider) using base64 content, a local filesystem path, or a remote URL and returns the resulting links. Files land in the `upload/` folder and include the `upload` tag unless you override those values.
 
 ### Environment Variables
 - `IMAGE_TOOL_API_KEY` — required for `crop_and_watermark_image`. Provision an API key scoped to image generation.
@@ -59,11 +59,21 @@ Upload example:
 ```
 > upload_file
 ? provider imagekit
-? file https://ik.imagekit.io/demo/sample.jpg
-? fileName sample.jpg
+? file ./assets/banner.png
+? fileName banner.png
 ? folder /marketing/campaign-2025
 ```
 The tool responds with a JSON summary plus resource links for the uploaded asset and its thumbnail (when provided by ImageKit).
+
+Remote content upload remains supported by supplying the `file` parameter with a remote URL:
+```
+> upload_file
+? provider imagekit
+? file https://ik.imagekit.io/demo/sample.jpg
+? fileName sample.jpg
+```
+
+Unless overridden via the `options` object, uploads default to `useUniqueFileName: true` (avoid filename collisions) and `isPrivateFile: false` (serve public URLs).
 
 ## Usage with Claude Desktop
 Add the server to your Claude configuration to make the tools available to the assistant:
