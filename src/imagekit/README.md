@@ -25,7 +25,8 @@ Run the command inside `src/imagekit/`. Dependencies are local to this package.
 
 ### Environment Variables
 - `IMAGE_TOOL_API_KEY` — required for `crop_and_watermark_image`. Provision an API key scoped to image generation.
-- `IMAGE_TOOL_API_HOST` — optional override for the image-generation provider host; defaults to `https://api.cometapi.com`.
+- `IMAGE_TOOL_BASE_URL` — optional override for the image-generation provider base URL; defaults to `https://api.cometapi.com/v1`.
+- `IMAGE_TOOL_MODEL_ID` — optional model identifier; defaults to `bytedance-seedream-4-0-250828`.
 
 Copy `env.sample` to `.env` when developing locally:
 ```bash
@@ -34,6 +35,14 @@ cp env.sample .env
 ```
 
 The server automatically loads `.env` via `dotenv` when you run any npm script.
+
+#### Provider Example (Volcengine Ark / 火山方舟)
+Override the defaults if you want to target Volcengine Ark:
+```
+IMAGE_TOOL_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
+IMAGE_TOOL_API_KEY=your-ark-api-key
+IMAGE_TOOL_MODEL_ID=doubao-seedream-4-0-250828
+```
 
 ### Example Invocation
 From the FastMCP inspector:

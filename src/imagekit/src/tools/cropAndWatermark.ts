@@ -26,17 +26,18 @@ const aspectRatioSizes: Record<ImageAspectRatio, string> = {
   "21:9": "3024x1296",
 };
 
-const DEFAULT_API_HOST = "https://api.cometapi.com";
-const GENERATION_PATH = "/v1/images/generations";
+const DEFAULT_API_BASE_URL = "https://api.cometapi.com/v1";
+const GENERATION_PATH = "/images/generations";
 
-const MODEL_ID = "bytedance-seedream-4-0-250828";
+const DEFAULT_MODEL_ID = "bytedance-seedream-4-0-250828";
 
 export interface CropAndWatermarkOptions {
   imageUrl: string;
   aspectRatio: ImageAspectRatio;
   watermarkText?: string;
   apiKey: string;
-  apiHost?: string;
+  apiBaseUrl?: string;
+  modelId?: string;
 }
 
 export async function cropAndWatermarkImage({
@@ -44,7 +45,8 @@ export async function cropAndWatermarkImage({
   aspectRatio,
   watermarkText = "",
   apiKey,
-  apiHost,
+  apiBaseUrl,
+  modelId = DEFAULT_MODEL_ID,
 }: CropAndWatermarkOptions): Promise<string> {
   const size = aspectRatioSizes[aspectRatio];
   const promptParts = [
@@ -59,18 +61,18 @@ export async function cropAndWatermarkImage({
   }
 
   const payload = {
-    model: MODEL_ID,
+    model: modelId,
     prompt: promptParts.join(" "),
     image: imageUrl,
     sequential_image_generation: "disabled",
     response_format: "url",
     size,
     stream: false,
-    watermark: Boolean(trimmedWatermark),
+    watermark: false,
   } as const;
 
-  const normalizedHost = (apiHost ?? DEFAULT_API_HOST).replace(/\/$/, "");
-  const endpoint = `${normalizedHost}${GENERATION_PATH}`;
+  const normalizedBaseUrl = (apiBaseUrl ?? DEFAULT_API_BASE_URL).replace(/\/$/, "");
+  const endpoint = `${normalizedBaseUrl}${GENERATION_PATH}`;
 
   const response = await fetch(endpoint, {
     method: "POST",
@@ -101,4 +103,5 @@ export async function cropAndWatermarkImage({
   return url;
 }
 
-export const defaultImageApiHost = DEFAULT_API_HOST;
+export const defaultImageApiBaseUrl = DEFAULT_API_BASE_URL;
+export const defaultImageModelId = DEFAULT_MODEL_ID;

@@ -29,7 +29,8 @@ server.addTool({
   }),
   execute: async ({ imageUrl, aspectRatio, watermarkText }) => {
     const apiKey = process.env.IMAGE_TOOL_API_KEY;
-    const apiHost = process.env.IMAGE_TOOL_API_HOST;
+    const apiBaseUrl = process.env.IMAGE_TOOL_BASE_URL;
+    const modelId = process.env.IMAGE_TOOL_MODEL_ID;
 
     if (!apiKey) {
       throw new Error("IMAGE_TOOL_API_KEY is not configured");
@@ -40,7 +41,8 @@ server.addTool({
       aspectRatio,
       watermarkText,
       apiKey,
-      apiHost,
+      apiBaseUrl,
+      modelId,
     });
   },
 });
