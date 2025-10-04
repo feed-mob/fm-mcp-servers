@@ -68,7 +68,6 @@ Each server implementation includes its own detailed documentation in its respec
   IMAGE_TOOL_MODEL_ID=doubao-seedream-4-0-250828
   ```
 - Notable tools:
-  - `add` — demo tool that returns the sum of two numbers.
   - `crop_and_watermark_image` — crops an input image to a supported aspect ratio and optionally adds watermark text using the configured image-generation provider.
 
 ## 🤝 Contributing
