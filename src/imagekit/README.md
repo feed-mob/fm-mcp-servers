@@ -19,6 +19,32 @@ Run the command inside `src/imagekit/`. Dependencies are local to this package.
 - `npm run build` — compile TypeScript to `dist/` using the shared root `tsconfig.json`.
 - `npm run start` — execute the compiled server from `dist/server.js` for smoke testing.
 
+## Tools
+- `add` — simple demo helper that sums two numbers and returns the result as a string.
+- `crop_and_watermark_image` — calls the Comet Images API to crop an input image to a supported aspect ratio and optionally add a watermark.
+
+### Environment Variables
+- `IMAGE_TOOL_API_KEY` — required for `crop_and_watermark_image`. Provision an API key scoped to image generation.
+- `IMAGE_TOOL_API_HOST` — optional override for the image-generation provider host; defaults to `https://api.cometapi.com`.
+
+Copy `env.sample` to `.env` when developing locally:
+```bash
+cp env.sample .env
+# then edit with your API key
+```
+
+The server automatically loads `.env` via `dotenv` when you run any npm script.
+
+### Example Invocation
+From the FastMCP inspector:
+```
+> crop_and_watermark_image
+? imageUrl https://example.com/image.png
+? aspectRatio 16:9
+? watermarkText FeedMob Confidential
+```
+The tool returns the URL produced by Comet when the request succeeds.
+
 ## Usage with Claude Desktop
 Add the server to your Claude configuration to make the tools available to the assistant:
 ```json
@@ -35,6 +61,6 @@ Add the server to your Claude configuration to make the tools available to the a
 Adjust the `args` to match your installation method (local path, published package, or ts-node entry point).
 
 ## Development Notes
-- Implement new tooling in `src/server.ts` and guard external inputs with `zod` schemas.
+- Implement new tooling in `src/tools/` and register it through `src/server.ts`; guard external inputs with `zod` schemas.
 - Co-locate any tests alongside the code (for example, `src/__tests__/upload.test.ts`) and wire `npm test` when the suite exists.
 - Keep environment-specific values outside the codebase; reach for `.env` files consumed via `dotenv` if future tools require credentials.

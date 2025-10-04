@@ -51,6 +51,19 @@ MCP (Model Context Protocol) servers provide structured data and context to AI m
 ## 📖 Documentation
 Each server implementation includes its own detailed documentation in its respective directory.
 
+### ImageKit Server Quickstart
+
+- Package location: `src/imagekit`
+- Scripts: `npm run dev`, `npm run inspect`, `npm run build`
+- Environment:
+  - `IMAGE_TOOL_API_KEY` — required; API token for the configured provider.
+  - `IMAGE_TOOL_API_HOST` — optional; defaults to `https://api.cometapi.com`.
+- Setup: copy `src/imagekit/env.sample` to `src/imagekit/.env` and fill in local secrets.
+- `.env` is loaded automatically via `dotenv` when running package scripts.
+- Notable tools:
+  - `add` — demo tool that returns the sum of two numbers.
+  - `crop_and_watermark_image` — crops an input image to a supported aspect ratio and optionally adds watermark text using the configured image-generation provider.
+
 ## 🤝 Contributing
 
 We welcome contributions! Please feel free to submit a Pull Request.
