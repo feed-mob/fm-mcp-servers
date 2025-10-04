@@ -21,14 +21,14 @@ Run the command inside `src/imagekit/`. Dependencies are local to this package.
 
 ## Tools
 - `add` — simple demo helper that sums two numbers and returns the result as a string.
-- `crop_and_watermark_image` — calls the Comet Images API to crop an input image to a supported aspect ratio and optionally add a watermark.
-- `upload_file` — uploads an asset to ImageKit (default provider) using base64 content or a remote URL and returns the resulting links.
+- `crop_and_watermark_image` — calls the Comet Images API to crop an input image to a supported aspect ratio, optionally adds a watermark, and returns the final image URL (ImageKit URL when uploads are enabled, otherwise the generated link).
+- `upload_file` — uploads an asset to ImageKit (default provider) using base64 content or a remote URL and returns the resulting links. Files land in the `upload/` folder and include the `upload` tag unless you override those values.
 
 ### Environment Variables
 - `IMAGE_TOOL_API_KEY` — required for `crop_and_watermark_image`. Provision an API key scoped to image generation.
 - `IMAGE_TOOL_BASE_URL` — optional override for the image-generation provider base URL; defaults to `https://api.cometapi.com/v1`.
 - `IMAGE_TOOL_MODEL_ID` — optional model identifier; defaults to `bytedance-seedream-4-0-250828`.
-- `IMAGEKIT_PRIVATE_KEY` — required for the `upload_file` tool when using the default ImageKit provider.
+- `IMAGEKIT_PRIVATE_KEY` — required for the `upload_file` tool and enables automatic ImageKit uploads from `crop_and_watermark_image`.
 
 Copy `env.sample` to `.env` when developing locally:
 ```bash
@@ -54,7 +54,7 @@ From the FastMCP inspector:
 ? aspectRatio 16:9
 ? watermarkText FeedMob Confidential
 ```
-The tool returns the URL produced by Comet when the request succeeds.
+The tool returns a single URL string pointing to the resulting asset. When ImageKit credentials are configured, the URL references the uploaded asset in ImageKit; otherwise it references the link returned by the generation API.
 
 Upload example:
 ```

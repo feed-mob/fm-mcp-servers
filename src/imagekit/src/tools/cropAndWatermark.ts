@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+import type { ImageUploadResult } from "../services/imageUploader.js";
+import {
+  uploadImageWithImageKit,
+  type ImageKitUploadOptions,
+  type ImageKitUploadRequest,
+  type ImageKitUploaderConfig,
+  type ImageKitUploadResponse,
+} from "../services/imageKitUpload.js";
+
 const aspectRatioValues = [
   "1:1",
   "4:3",
@@ -38,6 +47,15 @@ export interface CropAndWatermarkOptions {
   apiKey: string;
   apiBaseUrl?: string;
   modelId?: string;
+  imageKit?: ImageKitPostUploadConfig;
+}
+
+export interface ImageKitPostUploadConfig {
+  config: ImageKitUploaderConfig;
+  fileName?: string;
+  folder?: string;
+  tags?: string[];
+  options?: ImageKitUploadOptions;
 }
 
 export async function cropAndWatermarkImage({
@@ -47,33 +65,121 @@ export async function cropAndWatermarkImage({
   apiKey,
   apiBaseUrl,
   modelId = DEFAULT_MODEL_ID,
+  imageKit,
 }: CropAndWatermarkOptions): Promise<string> {
-  const size = aspectRatioSizes[aspectRatio];
+  const payload = createGenerationPayload({
+    aspectRatio,
+    imageUrl,
+    modelId,
+    watermarkText,
+  });
+
+  const endpoint = resolveGenerationEndpoint(apiBaseUrl);
+  const generatedUrl = await requestGeneratedImage({
+    apiKey,
+    endpoint,
+    payload,
+  });
+
+  if (!imageKit) {
+    return generatedUrl;
+  }
+
+  const uploadedUrl = await uploadGeneratedImage({
+    generatedUrl,
+    imageKit,
+  });
+
+  return uploadedUrl ?? generatedUrl;
+}
+
+export const defaultImageApiBaseUrl = DEFAULT_API_BASE_URL;
+export const defaultImageModelId = DEFAULT_MODEL_ID;
+
+function deriveFileNameFromUrl(sourceUrl: string): string {
+  try {
+    const parsed = new URL(sourceUrl);
+    const lastSegment = parsed.pathname.split("/").filter(Boolean).pop();
+    if (lastSegment) {
+      return sanitizeFileName(`cropped-${lastSegment}`);
+    }
+  } catch {
+    // ignore URL parsing errors and fall back to timestamped name
+  }
+
+  return `cropped-${Date.now()}.jpg`;
+}
+
+function sanitizeFileName(name: string): string {
+  return name.replace(/[^A-Za-z0-9._-]/g, "_");
+}
+
+function getUrlFromProviderData(
+  result: ImageUploadResult<ImageKitUploadResponse>,
+): string | undefined {
+  const providerUrl = result.providerData?.url;
+  return typeof providerUrl === "string" && providerUrl.trim().length > 0
+    ? providerUrl
+    : undefined;
+}
+
+type GenerationPayload = ReturnType<typeof createGenerationPayload>;
+
+function createGenerationPayload({
+  aspectRatio,
+  imageUrl,
+  modelId,
+  watermarkText,
+}: {
+  aspectRatio: ImageAspectRatio;
+  imageUrl: string;
+  modelId: string;
+  watermarkText?: string;
+}) {
+  return {
+    model: modelId,
+    prompt: buildGenerationPrompt(aspectRatio, watermarkText),
+    image: imageUrl,
+    sequential_image_generation: "disabled",
+    response_format: "url",
+    size: aspectRatioSizes[aspectRatio],
+    stream: false,
+    watermark: false,
+  } as const;
+}
+
+function buildGenerationPrompt(
+  aspectRatio: ImageAspectRatio,
+  watermarkText?: string,
+) {
   const promptParts = [
     `Crop the image to a ${aspectRatio} aspect ratio while keeping the main subject centered and intact.`,
   ];
 
-  const trimmedWatermark = watermarkText.trim();
+  const trimmedWatermark = watermarkText?.trim();
   if (trimmedWatermark) {
     promptParts.push(
       `Add a subtle, semi-transparent watermark reading "${trimmedWatermark}" in the bottom-right corner. Ensure every other part of the image remains unchanged.`,
     );
   }
 
-  const payload = {
-    model: modelId,
-    prompt: promptParts.join(" "),
-    image: imageUrl,
-    sequential_image_generation: "disabled",
-    response_format: "url",
-    size,
-    stream: false,
-    watermark: false,
-  } as const;
+  return promptParts.join(" ");
+}
 
+function resolveGenerationEndpoint(apiBaseUrl?: string): string {
   const normalizedBaseUrl = (apiBaseUrl ?? DEFAULT_API_BASE_URL).replace(/\/$/, "");
-  const endpoint = `${normalizedBaseUrl}${GENERATION_PATH}`;
+  return `${normalizedBaseUrl}${GENERATION_PATH}`;
+}
 
+async function requestGeneratedImage({
+  apiKey,
+  endpoint,
+  payload,
+}: {
+  apiKey: string;
+  endpoint: string;
+  payload: GenerationPayload;
+}): Promise<string> {
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -90,10 +196,7 @@ export async function cropAndWatermarkImage({
     );
   }
 
-  const data = (await response.json()) as {
-    data?: Array<{ url?: string }>;
-  };
-
+  const data = (await response.json()) as GenerationResponse;
   const url = data?.data?.[0]?.url;
 
   if (!url) {
@@ -103,5 +206,25 @@ export async function cropAndWatermarkImage({
   return url;
 }
 
-export const defaultImageApiBaseUrl = DEFAULT_API_BASE_URL;
-export const defaultImageModelId = DEFAULT_MODEL_ID;
+async function uploadGeneratedImage({
+  generatedUrl,
+  imageKit,
+}: {
+  generatedUrl: string;
+  imageKit: ImageKitPostUploadConfig;
+}): Promise<string | undefined> {
+  const uploadRequest: ImageKitUploadRequest = {
+    file: generatedUrl,
+    fileName: imageKit.fileName ?? deriveFileNameFromUrl(generatedUrl),
+    folder: imageKit.folder,
+    tags: imageKit.tags,
+    options: imageKit.options,
+  };
+
+  const uploadResult = await uploadImageWithImageKit(imageKit.config, uploadRequest);
+  return uploadResult.url ?? getUrlFromProviderData(uploadResult);
+}
+
+type GenerationResponse = {
+  data?: Array<{ url?: string }>;
+};

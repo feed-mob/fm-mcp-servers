@@ -19,6 +19,8 @@ const server = new FastMCP({
   version: "1.0.0",
 });
 
+const imageKitPrivateKey = process.env.IMAGEKIT_PRIVATE_KEY;
+
 const uploadFileParametersSchema = imageKitUploadParametersSchema.extend({
   provider: z.literal("imagekit").default("imagekit"),
 });
@@ -28,7 +30,7 @@ type UploadFileParameters = z.infer<typeof uploadFileParametersSchema>;
 server.addTool({
   name: "crop_and_watermark_image",
   description:
-    "Crop an image to a target aspect ratio and optionally add a watermark via the Comet API.",
+    "Crop an image to a target aspect ratio, optionally add a watermark, and upload to ImageKit when configured.",
   parameters: z.object({
     imageUrl: z.string().url(),
     aspectRatio: aspectRatioSchema,
@@ -48,14 +50,21 @@ server.addTool({
       throw new Error("IMAGE_TOOL_API_KEY is not configured");
     }
 
-    return cropAndWatermarkImage({
+    const generatedUrl = await cropAndWatermarkImage({
       imageUrl,
       aspectRatio,
       watermarkText,
       apiKey,
       apiBaseUrl,
       modelId,
+      imageKit: imageKitPrivateKey
+        ? {
+            config: { privateKey: imageKitPrivateKey },
+          }
+        : undefined,
     });
+
+    return generatedUrl;
   },
 });
 

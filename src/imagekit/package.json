@@ -16,6 +16,7 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
+    "@imagekit/nodejs": "^7.1.0",
     "@modelcontextprotocol/sdk": "^1.19.1",
     "dotenv": "^17.2.3",
     "fastmcp": "^3.19.0",

@@ -1,10 +1,20 @@
 import { z } from "zod";
 
+import ImageKit, { APIError, ImageKitError } from "@imagekit/nodejs";
+import type {
+  FileUploadParams,
+  FileUploadResponse,
+} from "@imagekit/nodejs/resources/files/files.js";
+
 import type {
   ImageUploadRequest,
   ImageUploadResult,
   ImageUploader,
 } from "./imageUploader.js";
+
+const DEFAULT_FOLDER = "upload/";
+const DEFAULT_TAGS = ["upload"] as const;
+const DEFAULT_BASE_URL = "https://upload.imagekit.io";
 
 const baseRequestSchema = z.object({
   file: z
@@ -24,11 +34,13 @@ const baseRequestSchema = z.object({
     .trim()
     .min(1, { message: "folder must be at least 1 character" })
     .optional()
+    .default(DEFAULT_FOLDER)
     .describe("Optional folder path such as /marketing/banners"),
   tags: z
     .array(z.string().trim().min(1, { message: "tags cannot be empty" }))
     .max(30, { message: "Up to 30 tags are supported by ImageKit" })
     .optional()
+    .default([...DEFAULT_TAGS])
     .describe("Optional tags to attach to the asset."),
 });
 
@@ -61,26 +73,11 @@ export const imageKitUploadParametersSchema = baseRequestSchema.extend({
 export type ImageKitUploadOptions = z.infer<typeof imageKitOptionsSchema>;
 export type ImageKitUploadRequest = ImageUploadRequest<ImageKitUploadOptions>;
 export type ImageKitUploadParameters = z.infer<typeof imageKitUploadParametersSchema>;
-
-export interface ImageKitUploadResponse {
-  fileId?: string;
-  name?: string;
-  url?: string;
-  thumbnailUrl?: string;
-  filePath?: string;
-  width?: number;
-  height?: number;
-  size?: number;
-  mimeType?: string;
-  fileType?: string;
-  metadata?: Record<string, unknown>;
-  [key: string]: unknown;
-}
-
-const DEFAULT_UPLOAD_ENDPOINT = "https://upload.imagekit.io/api/v1/files/upload";
+export type ImageKitUploadResponse = FileUploadResponse & Record<string, unknown>;
 
 export interface ImageKitUploaderConfig {
   privateKey: string;
+  baseURL?: string;
   uploadEndpoint?: string;
 }
 
@@ -90,100 +87,72 @@ export class ImageKitUploader
     ImageUploadResult<ImageKitUploadResponse>
   >
 {
-  private readonly privateKey: string;
-  private readonly uploadEndpoint: string;
+  private readonly client: ImageKit;
 
   constructor(config: ImageKitUploaderConfig) {
     if (!config.privateKey?.trim()) {
       throw new Error("ImageKit private key is required to initialize the uploader");
     }
 
-    this.privateKey = config.privateKey.trim();
-    this.uploadEndpoint = (config.uploadEndpoint ?? DEFAULT_UPLOAD_ENDPOINT).replace(/\/$/, "");
+    const baseURL = config.baseURL ?? config.uploadEndpoint ?? DEFAULT_BASE_URL;
+
+    this.client = new ImageKit({
+      privateKey: config.privateKey.trim(),
+      baseURL,
+    });
   }
 
   async upload(
     request: ImageKitUploadRequest,
     signal?: AbortSignal,
   ): Promise<ImageUploadResult<ImageKitUploadResponse>> {
-    const form = new FormData();
+    const responseFields = request.options?.responseFields as
+      | FileUploadParams["responseFields"]
+      | undefined;
 
-    form.set("file", request.file);
-    form.set("fileName", request.fileName);
+    const params: FileUploadParams = {
+      file: request.file,
+      fileName: request.fileName,
+      folder: request.folder ?? DEFAULT_FOLDER,
+      tags: request.tags?.length ? request.tags : [...DEFAULT_TAGS],
+      useUniqueFileName: request.options?.useUniqueFileName,
+      isPrivateFile: request.options?.isPrivateFile,
+      responseFields,
+      customMetadata: request.options?.customMetadata,
+    };
 
-    if (request.folder) {
-      form.set("folder", request.folder);
-    }
+    try {
+      const providerData = (await this.client.files.upload(params, {
+        signal,
+      })) as ImageKitUploadResponse;
 
-    if (request.tags?.length) {
-      form.set("tags", request.tags.join(","));
-    }
+      const metadata = providerData.metadata;
+      const normalizedMetadata =
+        metadata && typeof metadata === "object"
+          ? (metadata as Record<string, unknown>)
+          : undefined;
 
-    const options = request.options ?? {};
-
-    if (typeof options.useUniqueFileName === "boolean") {
-      form.set("useUniqueFileName", String(options.useUniqueFileName));
-    }
-
-    if (typeof options.isPrivateFile === "boolean") {
-      form.set("isPrivateFile", String(options.isPrivateFile));
-    }
-
-    if (options.responseFields?.length) {
-      form.set("responseFields", options.responseFields.join(","));
-    }
-
-    if (options.customMetadata && Object.keys(options.customMetadata).length > 0) {
-      form.set("customMetadata", JSON.stringify(options.customMetadata));
-    }
-
-    const authHeader = Buffer.from(`${this.privateKey}:`).toString("base64");
-
-    const response = await fetch(this.uploadEndpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${authHeader}`,
-      },
-      body: form,
-      signal,
-    });
-
-    if (!response.ok) {
-      const contentType = response.headers.get("content-type") ?? "";
-      if (contentType.includes("application/json")) {
-        const errorBody = (await response.json()) as { message?: string; help?: string };
-        const details = [errorBody.message, errorBody.help]
-          .filter((value) => typeof value === "string" && value.trim().length > 0)
-          .join(" | ");
+      return {
+        id: providerData.fileId,
+        url: providerData.url,
+        name: providerData.name,
+        metadata: normalizedMetadata,
+        providerData,
+      } satisfies ImageUploadResult<ImageKitUploadResponse>;
+    } catch (error) {
+      if (error instanceof APIError || error instanceof ImageKitError) {
+        const status =
+          typeof (error as APIError).status === "number" ? (error as APIError).status : undefined;
+        const message = error.message ?? "ImageKit upload failed";
         throw new Error(
-          details
-            ? `ImageKit upload failed with status ${response.status}: ${details}`
-            : `ImageKit upload failed with status ${response.status}`,
+          status
+            ? `ImageKit upload failed with status ${status}: ${message}`
+            : `ImageKit upload failed: ${message}`,
         );
       }
 
-      const errorText = await response.text();
-      throw new Error(
-        errorText.trim()
-          ? `ImageKit upload failed with status ${response.status}: ${errorText}`
-          : `ImageKit upload failed with status ${response.status}`,
-      );
+      throw error;
     }
-
-    const raw = (await response.json()) as ImageKitUploadResponse;
-
-    const result: ImageUploadResult<ImageKitUploadResponse> = {
-      id: typeof raw.fileId === "string" ? raw.fileId : undefined,
-      url: typeof raw.url === "string" ? raw.url : undefined,
-      name: typeof raw.name === "string" ? raw.name : undefined,
-      metadata:
-        raw.metadata && typeof raw.metadata === "object"
-          ? (raw.metadata as Record<string, unknown>)
-          : undefined,
-      providerData: raw,
-    };
-
-    return result;
   }
 }
 

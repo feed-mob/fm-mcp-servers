@@ -14,6 +14,8 @@ Always run `npm run build` before committing so published artifacts stay up to d
 ## Coding Style & Naming Conventions
 Write TypeScript targeting ES2022/NodeNext with strict mode. Use two-space indentation, `camelCase` for variables and functions, `PascalCase` for types, and favour `const`. Validate untrusted input with `zod` schemas and surface actionable error messages. Load secrets through environment variables and mention required keys in the package README.
 
+Respect the Single Responsibility Principle. When an implementation starts doing more than one thing, pull supporting logic into small private helpers (preferred) or, if multiple packages need it, a clearly named shared module. This keeps public surfaces focused and easier to test.
+
 ## Testing Guidelines
 Automate coverage for new logic. Create co-located specs such as `src/tools/__tests__/upload.test.ts` and wire `npm test` to your chosen runner (Vitest or Node’s built-in test module). Stub external HTTP calls to avoid hitting partner APIs. Before opening a PR, run `npm run build && npm test` in every package you touched and note any manual checks performed.
 
