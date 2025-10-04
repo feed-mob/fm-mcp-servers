@@ -1,6 +1,6 @@
 {
   "name": "@feedmob/imagekit",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "FeedMob MCP server for ImageKit uploads, cropping, and watermarking.",
   "main": "dist/server.js",
   "bin": "dist/server.js",
