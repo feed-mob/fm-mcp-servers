@@ -20,7 +20,6 @@ Run the command inside `src/imagekit/`. Dependencies are local to this package.
 - `npm run start` — execute the compiled server from `dist/server.js` for smoke testing.
 
 ## Tools
-- `add` — simple demo helper that sums two numbers and returns the result as a string.
 - `crop_and_watermark_image` — calls the Comet Images API to crop an input image to a supported aspect ratio, optionally adds a watermark, and returns the final image URL (ImageKit URL when uploads are enabled, otherwise the generated link).
 - `upload_file` — uploads an asset to ImageKit (default provider) using base64 content or a remote URL and returns the resulting links. Files land in the `upload/` folder and include the `upload` tag unless you override those values.
 
