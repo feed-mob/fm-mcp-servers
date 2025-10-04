@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 
 import "dotenv/config";
 import { FastMCP, type ContentResult } from "fastmcp";
