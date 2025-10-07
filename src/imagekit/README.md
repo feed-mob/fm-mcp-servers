@@ -24,10 +24,25 @@ Run the command inside `src/imagekit/`. Dependencies are local to this package.
 - `upload_file` — uploads an asset to ImageKit (default provider) using base64 content, a local filesystem path, or a remote URL and returns the resulting links. Files land in the `upload/` folder and include the `upload` tag unless you override those values.
 
 ### Environment Variables
-- `IMAGE_TOOL_API_KEY` — required for `crop_and_watermark_image`. Provision an API key scoped to image generation.
+
+#### ImageKit Configuration
+- `IMAGEKIT_PRIVATE_KEY` — required for the `upload_file` tool and enables automatic ImageKit uploads from `crop_and_watermark_image`.
+  - **Docs**: https://imagekit.io/docs/api-keys
+  - Please copy the Private Key
+
+#### Image Generation Provider (Comet API)
+- `IMAGE_TOOL_API_KEY` — required for `crop_and_watermark_image`.
+  - **Docs**: https://api.cometapi.com/doc
+  - Create a new API key
 - `IMAGE_TOOL_BASE_URL` — optional override for the image-generation provider base URL; defaults to `https://api.cometapi.com/v1`.
 - `IMAGE_TOOL_MODEL_ID` — optional model identifier; defaults to `bytedance-seedream-4-0-250828`.
-- `IMAGEKIT_PRIVATE_KEY` — required for the `upload_file` tool and enables automatic ImageKit uploads from `crop_and_watermark_image`.
+  - You can switch to another Doubao model listed at https://api.cometapi.com/pricing
+
+#### Alternative Provider: Volcengine Ark (火山方舟)
+- `IMAGE_TOOL_BASE_URL` — use `https://ark.cn-beijing.volces.com/api/v3` (change region if needed)
+- `IMAGE_TOOL_API_KEY` — get your API key at https://console.volcengine.com/
+- `IMAGE_TOOL_MODEL_ID` — recommended: `doubao-seedream-4-0-250828`
+  - You can switch to another Doubao model if needed. Find more models at https://www.volcengine.com/docs/82379/1541523
 
 Copy `env.sample` to `.env` when developing locally:
 ```bash
