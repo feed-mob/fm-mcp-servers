@@ -9,6 +9,7 @@ import { updateAssetPromptTool } from "./tools/updateAssetPrompt.js";
 import { createCivitaiPostTool } from "./tools/createCivitaiPost.js";
 import { updateCivitaiPostAssetTool } from "./tools/updateCivitaiPostAsset.js";
 import { createPostAssociationTool } from "./tools/createPostAssociation.js";
+import { listCivitaiPostsTool } from "./tools/listCivitaiPosts.js";
 
 const server = new FastMCP({
   name: "feedmob-civitai-records",
@@ -21,5 +22,6 @@ server.addTool(updateAssetPromptTool);
 server.addTool(createCivitaiPostTool);
 server.addTool(updateCivitaiPostAssetTool);
 server.addTool(createPostAssociationTool);
+server.addTool(listCivitaiPostsTool);
 
 server.start({ transportType: "stdio" });
