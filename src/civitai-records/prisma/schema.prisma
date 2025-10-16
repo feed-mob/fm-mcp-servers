@@ -32,8 +32,8 @@ model civitai_post_associations {
   post_id          BigInt
   association_id   BigInt
   association_type association_type
-  created_by       String
-  updated_by       String
+  created_by       String           @default("")
+  updated_by       String           @default("")
   created_at       DateTime         @default(now()) @db.Timestamptz(6)
   updated_at       DateTime         @default(now()) @db.Timestamptz(6)
   civitai_posts    civitai_posts    @relation(fields: [post_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -50,8 +50,8 @@ model civitai_posts {
   civitai_url               String
   status                    post_status
   metadata                  Json?
-  created_by                String
-  updated_by                String
+  created_by                String                      @default("")
+  updated_by                String                      @default("")
   created_at                DateTime                    @default(now()) @db.Timestamptz(6)
   updated_at                DateTime                    @default(now()) @db.Timestamptz(6)
   civitai_post_associations civitai_post_associations[]
