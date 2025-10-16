@@ -181,6 +181,7 @@ function serializePost(post: any, include_details: boolean): any {
     asset_type: post.asset_type,
     title: post.title,
     description: post.description,
+    created_by: post.created_by,
     metadata: post.metadata,
     created_at: post.created_at.toISOString(),
     updated_at: post.updated_at.toISOString(),
