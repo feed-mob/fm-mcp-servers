@@ -4,7 +4,8 @@ import "dotenv/config";
 import { FastMCP } from "fastmcp";
 
 import { createPromptTool } from "./tools/createPrompt.js";
-import { listDemoRecordsTool } from "./tools/demoRecords.js";
+import { createAssetTool } from "./tools/createAsset.js";
+import { updateAssetPromptTool } from "./tools/updateAssetPrompt.js";
 
 const server = new FastMCP({
   name: "feedmob-civitai-records",
@@ -12,6 +13,7 @@ const server = new FastMCP({
 });
 
 server.addTool(createPromptTool);
-server.addTool(listDemoRecordsTool);
+server.addTool(createAssetTool);
+server.addTool(updateAssetPromptTool);
 
 server.start({ transportType: "stdio" });
