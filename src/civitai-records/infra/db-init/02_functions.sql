@@ -105,6 +105,8 @@ DECLARE
   pol_sel    text;
   pol_ins    text;
   pol_upd    text;
+  seq_schema text;
+  seq_name   text;
 BEGIN
   SELECT n.nspname, c.relname
     INTO v_schema, v_table
@@ -123,6 +125,17 @@ BEGIN
   EXECUTE format('GRANT SELECT, INSERT, UPDATE ON %s TO %I', p_table, p_grant_role);
   IF p_block_delete THEN
     EXECUTE format('REVOKE DELETE ON %s FROM %I', p_table, p_grant_role);
+  END IF;
+
+  -- Ensure callers can advance any serial/identity sequence tied to the id column
+  SELECT n.nspname, c.relname
+    INTO seq_schema, seq_name
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE c.oid = pg_get_serial_sequence(p_table::text, p_id_col)::regclass;
+
+  IF seq_schema IS NOT NULL THEN
+    EXECUTE format('GRANT USAGE, SELECT ON SEQUENCE %I.%I TO %I', seq_schema, seq_name, p_grant_role);
   END IF;
 
   -- Column protections
