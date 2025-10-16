@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "bin": "dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp -r src/generated dist/",
     "dev": "tsx src/server.ts",
     "start": "node dist/server.js",
     "inspect": "fastmcp inspect src/server.ts",
