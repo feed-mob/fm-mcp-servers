@@ -1,6 +1,6 @@
 # FeedMob Civitai Records MCP Server
 
-Bootstrap skeleton for a Model Context Protocol server that will expose Civitai record workflows via the FeedMob MCP stack. The current implementation ships with a single demo tool so you can verify wiring before adding real integrations.
+MCP server for managing Civitai content workflows including prompts, assets (images/videos), and publication records. Tracks the full lifecycle from content generation to Civitai publication with support for many-to-many associations between posts, assets, and prompts.
 
 ## Prerequisites
 - Node.js 18+
@@ -34,7 +34,19 @@ SET search_path TO civitai;
 - `npm run start` — execute the compiled server from `dist/server.js` for smoke testing.
 
 ## Tools
-- `list_demo_records` — returns a small set of placeholder dataset entries so you can validate the transport and output format. Replace this with real tooling once the Civitai integration is ready.
+
+### Prompt Management
+- `create_prompt` — Create a new prompt record with content, model info, purpose, and metadata.
+
+### Asset Management
+- `create_asset` — Create a new asset (image/video) record with URI, source, optional input/output prompt associations, and metadata.
+- `update_asset_prompt` — Update the input or output prompt association for an existing asset.
+
+### Civitai Post Management
+- `create_civitai_post` — Record a new Civitai publication with status, asset reference, title, description, and metadata.
+- `update_civitai_post_asset` — Update the primary asset association for an existing Civitai post.
+- `create_post_association` — Create many-to-many associations between Civitai posts and assets or prompts.
+- `list_civitai_posts` — Query Civitai posts with filtering by civitai_id, asset_id, asset_type, status, created_by, or time range. Supports pagination and optional detailed asset/prompt inclusion.
 
 ### Environment Variables
 Copy `env.sample` to `.env` if you need local configuration:
@@ -42,8 +54,8 @@ Copy `env.sample` to `.env` if you need local configuration:
 cp env.sample .env
 ```
 
-Add any required secrets as you build out the integration. For example:
-- `DATABASE_URL` — connection string for the backing datastore that will hold Civitai records.
+Add any required secrets as you build out the integration. Currently required:
+- `DATABASE_URL` — PostgreSQL connection string for the Civitai records database (format: `postgres://user:password@host:5432/database`).
 
 The server automatically loads `.env` via `dotenv` for all npm scripts.
 
