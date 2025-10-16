@@ -12,6 +12,20 @@ npm install
 ```
 Run the command inside `src/civitai-records/`. Dependencies are local to this package.
 
+## Local Database
+Launch the Postgres container defined in `docker-compose.yml` to apply the init scripts under `infra/db-init`:
+```bash
+docker compose up -d db
+```
+Once the container finishes seeding, connect with the seeded sample login (`richard`) to verify access:
+```bash
+PGPASSWORD=richard_password psql -h localhost -U richard -d civitai
+```
+Inside the session set the schema search path so you only query the `civitai` schema:
+```sql
+SET search_path TO civitai;
+```
+
 ## Available Scripts
 - `npm run dev` — start the server with `tsx` for hot reload during development.
 - `npm run dev:cli` — enter the FastMCP interactive development CLI.
