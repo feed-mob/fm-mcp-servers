@@ -6,13 +6,16 @@
 SET ROLE civitai_owner;
 
 CREATE TABLE civitai.prompts (
-  id          bigserial PRIMARY KEY,
-  title       text NOT NULL,
-  content     text NOT NULL,
-  created_by  text NOT NULL,
-  updated_by  text NOT NULL,
-  created_at  timestamptz NOT NULL DEFAULT now(),
-  updated_at  timestamptz NOT NULL DEFAULT now()
+  id                  bigserial PRIMARY KEY,
+  content             text NOT NULL,
+  llm_model_provider  text NULL,
+  llm_model           text NULL,
+  purpose             text NULL,
+  metadata            jsonb,
+  created_by          text NOT NULL,
+  updated_by          text NOT NULL,
+  created_at          timestamptz NOT NULL DEFAULT now(),
+  updated_at          timestamptz NOT NULL DEFAULT now()
 );
 
 -- Permissive mode: any user can update any record
