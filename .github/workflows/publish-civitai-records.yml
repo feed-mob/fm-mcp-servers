@@ -1,0 +1,43 @@
+name: Publish Civitai Records Package
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/civitai-records/**'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Confirm publishing Civitai Records package'
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || github.event.inputs.publish == 'true' }}
+    defaults:
+      run:
+        working-directory: src/civitai-records
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTOMATION_TOKEN }}
