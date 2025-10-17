@@ -8,6 +8,7 @@ CREATE ROLE civitai_owner NOLOGIN CREATEROLE;
 CREATE ROLE civitai_user  NOLOGIN;
 
 GRANT civitai_user TO civitai_owner WITH ADMIN OPTION;
+GRANT civitai_owner TO CURRENT_USER;     -- membership enables SET ROLE (required for AWS RDS)
 
 -- 2) Schema (owned by civitai_owner)
 CREATE SCHEMA civitai AUTHORIZATION civitai_owner;
