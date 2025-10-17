@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:16
+    container_name: civitai-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: civitai
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./infra/db-init:/docker-entrypoint-initdb.d
+      - civitai_data:/var/lib/postgresql/data
+
+volumes:
+  civitai_data:
