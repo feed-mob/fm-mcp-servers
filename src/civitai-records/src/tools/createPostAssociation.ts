@@ -48,8 +48,6 @@ export const createPostAssociationTool = {
         post_id: postIdBigInt,
         association_id: associationIdBigInt,
         association_type,
-        created_by: "",
-        updated_by: "",
       },
     });
 

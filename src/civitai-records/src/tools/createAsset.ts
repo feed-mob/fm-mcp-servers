@@ -69,8 +69,6 @@ export const createAssetTool = {
         input_prompt_id: inputPromptId,
         output_prompt_id: outputPromptId,
         metadata: metadata ?? undefined,
-        created_by: "",
-        updated_by: "",
       },
     });
 

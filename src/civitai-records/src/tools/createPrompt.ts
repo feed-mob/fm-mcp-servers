@@ -43,8 +43,6 @@ export const createPromptTool = {
         llm_model,
         purpose,
         metadata: metadata ?? undefined,
-        created_by: "",
-        updated_by: "",
       },
     });
 

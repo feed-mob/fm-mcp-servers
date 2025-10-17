@@ -12,8 +12,8 @@ CREATE TABLE civitai.prompts (
   llm_model           text NULL,
   purpose             text NULL,
   metadata            jsonb,
-  created_by          text NOT NULL,
-  updated_by          text NOT NULL,
+  created_by          text NOT NULL DEFAULT current_user,
+  updated_by          text NOT NULL DEFAULT current_user,
   created_at          timestamptz NOT NULL DEFAULT now(),
   updated_at          timestamptz NOT NULL DEFAULT now()
 );

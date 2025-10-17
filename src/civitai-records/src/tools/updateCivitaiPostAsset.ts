@@ -58,7 +58,6 @@ export const updateCivitaiPostAssetTool = {
       data: {
         asset_id: assetIdBigInt,
         asset_type: asset_type ?? undefined,
-        updated_by: "",
       },
     });
 

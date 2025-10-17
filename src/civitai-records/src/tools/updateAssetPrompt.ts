@@ -66,7 +66,6 @@ export const updateAssetPromptTool = {
       data: {
         input_prompt_id: inputPromptId,
         output_prompt_id: outputPromptId,
-        updated_by: "",
       },
     });
 

@@ -12,8 +12,8 @@ CREATE TABLE civitai.civitai_post_associations (
   post_id           bigint NOT NULL REFERENCES civitai.civitai_posts(id),
   association_id    bigint NOT NULL,
   association_type  civitai.association_type NOT NULL,
-  created_by        text NOT NULL,
-  updated_by        text NOT NULL,
+  created_by  text NOT NULL DEFAULT current_user,
+  updated_by  text NOT NULL DEFAULT current_user,
   created_at        timestamptz NOT NULL DEFAULT now(),
   updated_at        timestamptz NOT NULL DEFAULT now()
 );

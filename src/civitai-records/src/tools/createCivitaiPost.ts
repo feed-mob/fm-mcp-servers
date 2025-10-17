@@ -80,8 +80,6 @@ export const createCivitaiPostTool = {
         title: title ?? undefined,
         description: description ?? undefined,
         metadata: metadata ?? undefined,
-        created_by: "",
-        updated_by: "",
       },
     });
 

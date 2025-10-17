@@ -17,8 +17,8 @@ CREATE TABLE civitai.civitai_posts (
   civitai_url text NOT NULL,
   status      civitai.post_status NOT NULL,
   metadata    jsonb,
-  created_by  text NOT NULL,
-  updated_by  text NOT NULL,
+  created_by  text NOT NULL DEFAULT current_user,
+  updated_by  text NOT NULL DEFAULT current_user,
   created_at  timestamptz NOT NULL DEFAULT now(),
   updated_at  timestamptz NOT NULL DEFAULT now()
 );
