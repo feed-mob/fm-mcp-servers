@@ -8,7 +8,7 @@ export const createCivitaiPostParameters = z.object({
   civitai_id: z
     .string()
     .min(1)
-    .describe("The unique publication ID returned by Civitai after successfully posting content. This is Civitai's identifier for this specific publication (e.g., '12345678')."),
+    .describe("The numeric post ID from the Civitai post URL. Extract this from URLs like https://civitai.com/posts/23602354 where the ID is 23602354."),
   civitai_url: z
     .string()
     .min(1)
