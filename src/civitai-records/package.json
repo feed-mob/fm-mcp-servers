@@ -1,11 +1,11 @@
 {
   "name": "@feedmob/civitai-records",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "FeedMob FastMCP server scaffold for Civitai record utilities.",
   "main": "dist/server.js",
   "bin": "dist/server.js",
   "scripts": {
-    "build": "prisma generate && tsc && cp -r src/generated dist/",
+    "build": "./build.sh",
     "dev": "tsx src/server.ts",
     "start": "node dist/server.js",
     "inspect": "fastmcp inspect src/server.ts",
