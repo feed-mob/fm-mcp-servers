@@ -8,7 +8,7 @@ export const createCivitaiPostParameters = z.object({
   civitai_id: z
     .string()
     .min(1)
-    .describe("The unique publication ID returned by Civitai after successfully posting content. This is Civitai's identifier for this specific publication (e.g., '12345678')."),
+    .describe("The numeric post ID from the Civitai post URL. Extract this from URLs like https://civitai.com/posts/23602354 where the ID is 23602354."),
   civitai_url: z
     .string()
     .min(1)
@@ -37,7 +37,7 @@ export const createCivitaiPostParameters = z.object({
     .nullable()
     .default(null)
     .describe("The description or caption of the publication as posted to Civitai."),
-  metadata: metadataSchema.describe("Complete response metadata from Civitai's API as a JSON object. Store the full API response here to preserve all platform-specific details like creation timestamp, stats, tags, etc."),
+  metadata: metadataSchema.describe("Additional structured data about this post in JSON format. Can include Civitai API response, engagement metrics (views, likes, comments), tags, categories, workflow details, or any custom fields relevant to tracking this post."),
 });
 
 export type CreateCivitaiPostParameters = z.infer<typeof createCivitaiPostParameters>;
