@@ -37,7 +37,7 @@ export const createCivitaiPostParameters = z.object({
     .nullable()
     .default(null)
     .describe("The description or caption of the publication as posted to Civitai."),
-  metadata: metadataSchema.describe("Complete response metadata from Civitai's API as a JSON object. Store the full API response here to preserve all platform-specific details like creation timestamp, stats, tags, etc."),
+  metadata: metadataSchema.describe("Additional structured data about this post in JSON format. Can include Civitai API response, engagement metrics (views, likes, comments), tags, categories, workflow details, or any custom fields relevant to tracking this post."),
 });
 
 export type CreateCivitaiPostParameters = z.infer<typeof createCivitaiPostParameters>;

@@ -10,12 +10,17 @@ import { createCivitaiPostTool } from "./tools/createCivitaiPost.js";
 import { updateCivitaiPostAssetTool } from "./tools/updateCivitaiPostAsset.js";
 import { createPostAssociationTool } from "./tools/createPostAssociation.js";
 import { listCivitaiPostsTool } from "./tools/listCivitaiPosts.js";
+import { getWorkflowGuideTool } from "./tools/getWorkflowGuide.js";
+import { recordCivitaiWorkflowPrompt } from "./prompts/recordCivitaiWorkflow.js";
 
 const server = new FastMCP({
   name: "feedmob-civitai-records",
   version: "0.1.0",
 });
 
+server.addPrompt(recordCivitaiWorkflowPrompt);
+
+server.addTool(getWorkflowGuideTool);
 server.addTool(createPromptTool);
 server.addTool(createAssetTool);
 server.addTool(updateAssetPromptTool);
