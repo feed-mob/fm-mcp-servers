@@ -7,8 +7,8 @@ You are helping track Civitai content. Follow this workflow to properly record i
 The typical workflow for tracking Civitai content follows this order:
 1. Create prompt (if applicable)
 2. Create asset (linking to prompt if it was used to generate)
-3. Create Civitai post (linking to asset if applicable)
-4. Create additional associations (if needed)
+3. Create Civitai post
+4. Link assets to posts (if needed)
 
 ## Step-by-Step Instructions
 
@@ -33,12 +33,14 @@ The typical workflow for tracking Civitai content follows this order:
 **When**: After generating or uploading media (image/video)
 **Tool**: `create_asset`
 **Required**: `asset_url`, `asset_type`, `asset_source`
-**Optional**: `input_prompt_id` (from step 1), `output_prompt_id`, `metadata`
-**Output**: Returns `asset_id` - save this for the next step
+**Optional**: `input_prompt_id` (from step 1), `output_prompt_id`, `post_id`, `civitai_id`, `civitai_url`, `sha256sum`, `metadata`
+**Output**: Returns `asset_id`
 
 **Important**:
 - `input_prompt_id`: The prompt that GENERATED this asset (link the prompt_id from step 1)
 - `output_prompt_id`: A prompt derived FROM this asset (e.g., a caption you created)
+- `post_id`: Link to the Civitai post this asset belongs to
+- `civitai_id`/`civitai_url`: Direct Civitai metadata for the asset
 - `asset_source`: Use "generated" for AI-generated, "upload" for user uploads
 
 **Example**:
@@ -47,7 +49,8 @@ The typical workflow for tracking Civitai content follows this order:
   "asset_url": "s3://my-bucket/images/sunset-mountain-12345.jpg",
   "asset_type": "image",
   "asset_source": "generated",
-  "input_prompt_id": "123"
+  "input_prompt_id": "123",
+  "sha256sum": "abc123..."
 }
 ```
 
@@ -55,13 +58,13 @@ The typical workflow for tracking Civitai content follows this order:
 **When**: After publishing content to Civitai
 **Tool**: `create_civitai_post`
 **Required**: `civitai_id`, `civitai_url`
-**Optional**: `status`, `asset_id` (from step 2), `asset_type`, `title`, `description`, `metadata`
-**Output**: Returns `post_id`
+**Optional**: `status`, `title`, `description`, `metadata`
+**Output**: Returns `post_id` - save this for linking assets
 
 **Important**:
 - `civitai_id`: Extract from URL like https://civitai.com/posts/23602354 → use "23602354"
 - `status`: "published" (default), "pending", or "failed"
-- `asset_id`: Link to the asset you created in step 2
+- Assets link TO posts (not the other way around) - use `update_asset` to set `post_id`
 - `metadata`: Store additional information such as Civitai API response, engagement metrics, tags, or custom tracking data
 
 **Example**:
@@ -70,8 +73,6 @@ The typical workflow for tracking Civitai content follows this order:
   "civitai_id": "23602354",
   "civitai_url": "https://civitai.com/posts/23602354",
   "status": "published",
-  "asset_id": "456",
-  "asset_type": "image",
   "title": "Sunset Mountain Landscape",
   "description": "AI-generated mountain scene",
   "metadata": {
@@ -83,67 +84,81 @@ The typical workflow for tracking Civitai content follows this order:
 }
 ```
 
-### 4. Creating Additional Associations (Optional)
-**When**: If you need to link multiple assets or prompts to one post
-**Tool**: `create_post_association`
-**Required**: `post_id`, `association_id`, `association_type`
+### 4. Linking Assets to Posts (Optional)
+**When**: If you need to associate an asset with a post
+**Tool**: `update_asset`
+**Required**: `asset_id`
+**Optional**: `post_id`, `civitai_id`, `civitai_url`, `input_prompt_id`, `output_prompt_id`
 
 **Use cases**:
-- A post with multiple images (link each asset_id)
-- A post with multiple prompts used (link each prompt_id)
-
-**Example**:
-```json
-{
-  "post_id": "789",
-  "association_id": "999",
-  "association_type": "asset"
-}
-```
-
-## Common Workflows
-
-### Full Workflow (Prompt → Asset → Post)
-1. `create_prompt` → get `prompt_id`
-2. `create_asset` with `input_prompt_id` → get `asset_id`
-3. `create_civitai_post` with `asset_id` → get `post_id`
-
-### Asset + Post (No Prompt)
-1. `create_asset` (leave `input_prompt_id` null) → get `asset_id`
-2. `create_civitai_post` with `asset_id` → get `post_id`
-
-### Post Only (No Asset)
-1. `create_civitai_post` (leave `asset_id` null) → get `post_id`
-
-## Updating Records
-
-### Update Asset's Prompt Links
-**Tool**: `update_asset_prompt`
-**Required**: `asset_id`
-**Optional**: `input_prompt_id`, `output_prompt_id`
-**Use**: Change which prompts are linked to an asset
+- Link an existing asset to a post you just created
+- Update asset metadata with Civitai information
+- Change prompt associations
 
 **Example**:
 ```json
 {
   "asset_id": "456",
-  "input_prompt_id": "789",
-  "output_prompt_id": null
+  "post_id": "789"
 }
 ```
 
-### Update Post's Asset
-**Tool**: `update_civitai_post_asset`
-**Required**: `post_id`
-**Optional**: `asset_id`, `asset_type`
-**Use**: Change which asset is linked to a post
+## Common Workflows
 
-**Example**:
+### Full Workflow (Prompt → Asset → Post → Link)
+1. `create_prompt` → get `prompt_id`
+2. `create_asset` with `input_prompt_id` → get `asset_id`
+3. `create_civitai_post` → get `post_id`
+4. `update_asset` with `asset_id` and `post_id` to link them
+
+### Asset + Post (No Prompt)
+1. `create_asset` → get `asset_id`
+2. `create_civitai_post` → get `post_id`
+3. `update_asset` with `asset_id` and `post_id` to link them
+
+### Asset with Post ID at Creation
+1. `create_civitai_post` → get `post_id`
+2. `create_asset` with `post_id` → links automatically
+
+### Post Only (No Asset)
+1. `create_civitai_post` → get `post_id`
+
+## Updating Records
+
+### Update Asset
+**Tool**: `update_asset`
+**Required**: `asset_id`
+**Optional**: `input_prompt_id`, `output_prompt_id`, `post_id`, `civitai_id`, `civitai_url`
+**Use**: Update any asset metadata or associations
+
+**Important**:
+- Pass `undefined` to keep current value
+- Pass `null` to remove/clear a value
+- Pass a new value to update
+
+**Example - Link to post**:
 ```json
 {
-  "post_id": "123",
-  "asset_id": "999",
-  "asset_type": "image"
+  "asset_id": "456",
+  "post_id": "789"
+}
+```
+
+**Example - Clear post link**:
+```json
+{
+  "asset_id": "456",
+  "post_id": null
+}
+```
+
+**Example - Update prompts and Civitai metadata**:
+```json
+{
+  "asset_id": "456",
+  "input_prompt_id": "123",
+  "civitai_id": "23602354",
+  "civitai_url": "https://civitai.com/images/23602354"
 }
 ```
 
@@ -151,14 +166,14 @@ The typical workflow for tracking Civitai content follows this order:
 
 ### List Posts
 **Tool**: `list_civitai_posts`
-**Filters**: `civitai_id`, `asset_id`, `asset_type`, `status`, `created_by`, `start_time`, `end_time`
+**Filters**: `civitai_id`, `status`, `created_by`, `start_time`, `end_time`
 **Pagination**: `limit`, `offset`
-**Details**: Set `include_details: true` to get full asset and prompt information
+**Details**: Set `include_details: true` to get full asset and prompt information (posts now include arrays of associated assets)
 
 ## Best Practices
 
 1. **Always save IDs**: Each tool returns an ID - save it for linking in subsequent steps
-2. **Follow the order**: Prompt → Asset → Post (create dependencies first)
+2. **Follow the order**: Prompt → Asset → Post → Link (create dependencies first)
 3. **Use metadata wisely**: Store relevant information in the `metadata` field including:
    - API responses from Civitai or other platforms
    - Engagement metrics (views, likes, comments, shares)
@@ -168,8 +183,10 @@ The typical workflow for tracking Civitai content follows this order:
 4. **Link properly**: 
    - `input_prompt_id`: What prompt CREATED this asset
    - `output_prompt_id`: What prompt was DERIVED FROM this asset
+   - `post_id` in assets: What post this asset belongs to
 5. **Extract civitai_id correctly**: From https://civitai.com/posts/23602354, the ID is "23602354"
 6. **Filter by creator**: Use `created_by` in `list_civitai_posts` to see posts from specific users
+7. **Understand the relationship**: Assets point to posts (one-to-many: one post can have many assets)
 
 ## Error Prevention
 
@@ -177,7 +194,6 @@ The typical workflow for tracking Civitai content follows this order:
 - `asset_type` must be "image" or "video"
 - `asset_source` must be "generated" or "upload"
 - `status` must be "pending", "published", or "failed"
-- `association_type` must be "asset" or "prompt"
 - Timestamps should be ISO 8601 format (e.g., '2025-01-15T10:00:00Z')
 
 ## Troubleshooting
@@ -195,5 +211,6 @@ The typical workflow for tracking Civitai content follows this order:
 - Don't try to link IDs that don't exist yet - follow the workflow order
 
 **Multiple assets per post**
-- Create the primary asset during post creation
-- Use `create_post_association` to link additional assets afterward
+- A post can have many assets
+- Each asset can only belong to one post (or none)
+- Use `update_asset` to set the `post_id` for each asset
