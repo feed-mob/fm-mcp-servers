@@ -123,6 +123,28 @@ function serializePost(post: any, include_details: boolean): any {
       metadata: asset.metadata,
       created_at: asset.created_at.toISOString(),
       updated_at: asset.updated_at.toISOString(),
+      input_prompt: asset.prompts_assets_input_prompt_idToprompts ? {
+        prompt_id: asset.prompts_assets_input_prompt_idToprompts.id.toString(),
+        content: asset.prompts_assets_input_prompt_idToprompts.content,
+        llm_model_provider: asset.prompts_assets_input_prompt_idToprompts.llm_model_provider,
+        llm_model: asset.prompts_assets_input_prompt_idToprompts.llm_model,
+        purpose: asset.prompts_assets_input_prompt_idToprompts.purpose,
+        metadata: asset.prompts_assets_input_prompt_idToprompts.metadata,
+        created_by: asset.prompts_assets_input_prompt_idToprompts.created_by,
+        created_at: asset.prompts_assets_input_prompt_idToprompts.created_at.toISOString(),
+        updated_at: asset.prompts_assets_input_prompt_idToprompts.updated_at.toISOString(),
+      } : null,
+      output_prompt: asset.prompts_assets_output_prompt_idToprompts ? {
+        prompt_id: asset.prompts_assets_output_prompt_idToprompts.id.toString(),
+        content: asset.prompts_assets_output_prompt_idToprompts.content,
+        llm_model_provider: asset.prompts_assets_output_prompt_idToprompts.llm_model_provider,
+        llm_model: asset.prompts_assets_output_prompt_idToprompts.llm_model,
+        purpose: asset.prompts_assets_output_prompt_idToprompts.purpose,
+        metadata: asset.prompts_assets_output_prompt_idToprompts.metadata,
+        created_by: asset.prompts_assets_output_prompt_idToprompts.created_by,
+        created_at: asset.prompts_assets_output_prompt_idToprompts.created_at.toISOString(),
+        updated_at: asset.prompts_assets_output_prompt_idToprompts.updated_at.toISOString(),
+      } : null,
     }));
   }
 
@@ -151,11 +173,16 @@ export const listCivitaiPostsTool = {
       end_time,
     });
 
-    const posts = await prisma.civitai_posts.findMany({
+    const posts = await (prisma.civitai_posts.findMany as any)({
       where,
       ...(include_details && {
         include: {
-          assets: true,
+          assets: {
+            include: {
+              prompts_assets_input_prompt_idToprompts: true,
+              prompts_assets_output_prompt_idToprompts: true,
+            },
+          },
         },
       }),
       take: limit,

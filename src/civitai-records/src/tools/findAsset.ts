@@ -50,37 +50,12 @@ export const findAssetTool = {
       whereClause.sha256sum = sha256sum.trim();
     }
 
-    const asset = await prisma.assets.findFirst({
+    const asset: any = await (prisma.assets.findFirst as any)({
       where: whereClause,
       include: {
-        prompts_assets_input_prompt_idToprompts: {
-          select: {
-            id: true,
-            content: true,
-            llm_model_provider: true,
-            llm_model: true,
-            purpose: true,
-          },
-        },
-        prompts_assets_output_prompt_idToprompts: {
-          select: {
-            id: true,
-            content: true,
-            llm_model_provider: true,
-            llm_model: true,
-            purpose: true,
-          },
-        },
-        civitai_posts: {
-          select: {
-            id: true,
-            civitai_id: true,
-            civitai_url: true,
-            title: true,
-            description: true,
-            status: true,
-          },
-        },
+        prompts_assets_input_prompt_idToprompts: true,
+        prompts_assets_output_prompt_idToprompts: true,
+        civitai_posts: true,
       },
     });
 
