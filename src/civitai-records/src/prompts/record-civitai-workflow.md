@@ -1,440 +1,249 @@
-# Civitai Content Recording Workflow
+# Civitai Content Recording Guide
 
-You are helping track Civitai content. Follow this workflow to properly record items:
+You are assisting the Civitai tracking pipeline. Follow this guide to capture prompts, assets, and posts consistently across our tools.
 
-## Workflow Overview
+## Goal & Mindset
+- Keep a canonical, duplicate-free record that links prompts, assets, and posts.
+- Record dependencies before references (e.g., prompt before asset, post before linking).
+- Store every ID that a tool returns so it can be reused in subsequent calls.
 
-The typical workflow for tracking Civitai content follows this order:
-1. (Optional) Calculate SHA256 hash for asset files/URLs to prevent duplicates
-2. Create prompt (if applicable)
-3. Create asset (linking to prompt if it was used to generate)
-4. Create Civitai post
-5. Link assets to posts (if needed)
+## Tool Quick Reference
+- `calculate_sha256`
+  - Purpose: Generate a SHA256 hash for a local file or remote URL to prevent duplicates and map assets.
+  - Input: `path` (local file path or HTTPS/HTTP URL).
+  - Returns: `{ sha256sum }`.
+  - Use before creating assets and when matching local media to Civitai content.
+  - Example (local):
+    ```json
+    {"path": "/local/path/to/image.jpg"}
+    ```
+  - Example (URL):
+    ```json
+    {"path": "https://example.com/image.jpg"}
+    ```
+- `find_asset`
+  - Purpose: Check if an asset already exists or fetch full asset details.
+  - Input: At least one of `asset_id` or `sha256sum`.
+  - Returns: `{found: boolean, asset?: {...}}`.
+  - Use the SHA256 from `calculate_sha256` before creating new assets.
+  - Example:
+    ```json
+    {"sha256sum": "abc123def456"}
+    ```
+- `create_prompt`
+  - Purpose: Save the text prompt used to generate an asset.
+  - Required: `prompt_text`.
+  - Optional: `llm_model_provider`, `llm_model`, `purpose`, `metadata`.
+  - Returns: `{prompt_id}`.
+  - Example:
+    ```json
+    {
+      "prompt_text": "A serene mountain landscape at sunset",
+      "llm_model_provider": "openai",
+      "llm_model": "dall-e-3",
+      "purpose": "image_generation"
+    }
+    ```
+- `create_asset`
+  - Purpose: Register generated or uploaded media.
+  - Required: `asset_url`, `asset_type` (`image` | `video`), `asset_source` (`generated` | `upload`).
+  - Optional: `input_prompt_id`, `output_prompt_id`, `post_id`, `civitai_id`, `civitai_url`, `metadata`.
+  - Returns: `{asset_id}`.
+  - Tip: Link `input_prompt_id` to the prompt that produced the asset. The tool automatically hashes `asset_url` and returns `sha256sum` in the response.
+  - Example:
+    ```json
+    {
+      "asset_url": "s3://bucket/images/mountain.jpg",
+      "asset_type": "image",
+      "asset_source": "generated",
+      "input_prompt_id": "123"
+    }
+    ```
+- `create_civitai_post`
+  - Purpose: Record a published post on Civitai.
+  - Required: `civitai_id`, `civitai_url`.
+  - Optional: `status` (`pending` | `published` | `failed`), `title`, `description`, `metadata`.
+  - Returns: `{post_id}`.
+  - Note: `civitai_account` is inferred from the `CIVITAI_ACCOUNT` env var (default `c29`).
+  - Example:
+    ```json
+    {
+      "civitai_id": "23602354",
+      "civitai_url": "https://civitai.com/posts/23602354",
+      "status": "published",
+      "title": "Sunset Mountain Landscape",
+      "description": "AI-generated mountain scene",
+      "metadata": {
+        "views": 0,
+        "likes": 0,
+        "tags": ["landscape", "ai-art"],
+        "workflow": "flux-1-pro"
+      }
+    }
+    ```
+- `update_asset`
+  - Purpose: Link assets to posts, adjust prompt associations, or update metadata.
+  - Required: `asset_id`.
+  - Optional: `post_id`, `input_prompt_id`, `output_prompt_id`, `civitai_id`, `civitai_url`, `metadata`.
+  - Returns: Updated asset payload.
+  - Guidance: Omit a field or send `undefined` to keep its value; send `null` to clear it.
+  - Examples:
+    ```json
+    {"asset_id": "456", "post_id": "789"}
+    ```
+    ```json
+    {"asset_id": "456", "post_id": null}
+    ```
+- `list_civitai_posts`
+  - Purpose: Browse posts and their related assets/prompts.
+  - Filters: `civitai_id`, `status`, `created_by`, `start_time`, `end_time`.
+  - Pagination: `limit`, `offset`.
+  - Extras: `include_details: true` returns assets with nested prompt data.
+  - Example:
+    ```json
+    {"include_details": true, "limit": 10}
+    ```
 
-## Step-by-Step Instructions
+## Canonical Workflow
+1. (Optional) `calculate_sha256` → hash local file or remote URL.
+2. (Optional) `find_asset` → skip creation if the SHA already exists.
+3. (Optional) `create_prompt` → store the prompt before recording the asset.
+4. `create_asset` → register the media (include `input_prompt_id` when available).
+5. `create_civitai_post` → save the post metadata.
+6. `update_asset` → link the asset to the post (if not done during creation) and enrich metadata.
 
-### 0. Calculate SHA256 Hash (Optional - Duplicate Prevention)
-**When**: Before creating an asset, to check for duplicates
-**Tool**: `calculate_sha256`
-**Required**: `path` (file path or URL)
-**Output**: Returns `sha256sum` - use with `find_asset` to check if asset exists
+## Step-by-Step Details
 
-**Example**:
-```json
-{
-  "path": "/local/path/to/image.jpg"
-}
-```
+### 0. Calculate SHA256 (Duplicate Prevention)
+- Use when you have a file/URL and need to avoid duplicate assets or confirm matches.
+- Call `calculate_sha256` with the file path or download URL.
+- Use the returned `sha256sum` with `find_asset` to check for existing records or to map media to existing records.
 
-**Example - URL**:
-```json
-{
-  "path": "https://example.com/image.jpg"
-}
-```
+### 1. Record the Prompt
+- Capture prompts before the associated asset is created.
+- Required input: `prompt_text`.
+- Optional metadata: model provider, model name, purpose, custom `metadata`.
+- Keep the returned `prompt_id` to set `input_prompt_id` or `output_prompt_id` later.
 
-### 1. Recording a Prompt
-**When**: Before generating content, or when you have a text prompt to save
-**Tool**: `create_prompt`
-**Required**: `prompt_text`
-**Optional**: `llm_model_provider`, `llm_model`, `purpose`, `metadata`
-**Output**: Returns `prompt_id` - save this for the next step
+### 2. Record the Asset
+- Required inputs: `asset_url`, `asset_type`, `asset_source`.
+- Optional relationship fields:
+  - `input_prompt_id`: Prompt that generated the asset.
+  - `output_prompt_id`: Prompt derived from the asset (e.g., captioning).
+  - `post_id`: Civitai post containing the asset (if you already recorded it).
+  - `civitai_id` / `civitai_url`: IDs scraped from Civitai image/video pages.
+  - `metadata`: Any structured data you want to retain (API response, tags, metrics).
+- The tool automatically calculates `sha256sum` from `asset_url` and includes it in the response.
+- Save the returned `asset_id` for linking or future updates.
 
-**Example**:
-```json
-{
-  "prompt_text": "A serene mountain landscape at sunset with vibrant orange and purple skies",
-  "llm_model_provider": "openai",
-  "llm_model": "dall-e-3",
-  "purpose": "image_generation"
-}
-```
+### 3. Record the Civitai Post
+- Extract the numeric ID from the post URL (`https://civitai.com/posts/23602354` → `23602354`).
+- Provide `civitai_id` and `civitai_url`; include optional `status`, `title`, `description`, `metadata`.
+- Store the returned `post_id`. Assets point to posts (one post can have many assets).
 
-### 2. Recording an Asset
-**When**: After generating or uploading media (image/video)
-**Tool**: `create_asset`
-**Required**: `asset_url`, `asset_type`, `asset_source`
-**Optional**: `input_prompt_id` (from step 1), `output_prompt_id`, `post_id`, `civitai_id`, `civitai_url`, `sha256sum`, `metadata`
-**Output**: Returns `asset_id`
+### 4. Link Assets and Maintain Metadata
+- Use `update_asset` to:
+  - Attach `post_id` once the post exists.
+  - Set or change `input_prompt_id` / `output_prompt_id`.
+  - Add or refresh `civitai_id` / `civitai_url`.
+  - Clear values by sending `null`.
+- Remember: assets own the link to posts; posts do not store asset IDs.
 
-**Important**:
-- `input_prompt_id`: The prompt that GENERATED this asset (link the prompt_id from step 1)
-- `output_prompt_id`: A prompt derived FROM this asset (e.g., a caption you created)
-- `post_id`: Link to the Civitai post this asset belongs to
-- `civitai_id`/`civitai_url`: Direct Civitai metadata for the asset
-- `asset_source`: Use "generated" for AI-generated, "upload" for user uploads
-- `sha256sum`: Use to prevent duplicates - check with `find_asset` before creating
+## Supporting Queries
+- `find_asset`:
+  - Use `sha256sum` to prevent duplicates or locate existing records.
+  - Use `asset_id` to fetch the complete asset payload for auditing.
+  - Examples:
+    ```json
+    {"sha256sum": "abc123def456"}
+    ```
+    ```json
+    {"asset_id": "456"}
+    ```
+- `list_civitai_posts`:
+  - Filter by `status`, `created_by`, time window, or specific `civitai_id`.
+  - Include `include_details: true` to retrieve each post’s assets and nested prompt metadata for verification or reporting.
+  - Example:
+    ```json
+    {
+      "status": "published",
+      "include_details": true,
+      "limit": 5,
+      "offset": 0
+    }
+    ```
 
-**Example**:
-```json
-{
-  "asset_url": "s3://my-bucket/images/sunset-mountain-12345.jpg",
-  "asset_type": "image",
-  "asset_source": "generated",
-  "input_prompt_id": "123",
-  "sha256sum": "abc123..."
-}
-```
+## Best Practices & Validation
+- Always capture and reuse the IDs returned from each tool.
+- Follow the dependency order: hash → prompt → asset → post → link.
+- Prevent duplicates: hash first, look up with `find_asset`, reuse the existing `asset_id` instead of creating a new record.
+- Assets automatically store a SHA256 hash of their `asset_url`; keep the returned value handy for auditing.
+- Respect field constraints:
+  - `asset_type`: `image` or `video`.
+  - `asset_source`: `generated` or `upload`.
+  - `status`: `pending`, `published`, or `failed`.
+  - IDs: strings containing only digits.
+  - Timestamps: ISO 8601 (`2025-01-15T10:00:00Z`).
+- Use the `metadata` field for API responses, engagement metrics, tags, workflows, or other tracking data.
+- When linking prompts: `input_prompt_id` represents the prompt that created the asset, `output_prompt_id` represents a prompt derived from it.
 
-### 3. Recording a Civitai Post
-**When**: After publishing content to Civitai
-**Tool**: `create_civitai_post`
-**Required**: `civitai_id`, `civitai_url`
-**Optional**: `status`, `title`, `description`, `metadata`
-**Output**: Returns `post_id` - save this for linking assets
+## Troubleshooting Checklist
+- **“asset_id must be a valid integer ID”**: Ensure you are sending the ID as a string containing digits only.
+- **“Record not found”**: Confirm the ID via `list_civitai_posts` or ensure you saved the correct ID from the previous call.
+- **Cannot link a prompt**: Create the prompt first, then supply the returned `prompt_id` when creating/updating the asset.
+- **Multiple assets per post**: Record each asset separately and link them all to the same `post_id` using `update_asset`.
 
-**Important**:
-- `civitai_id`: Extract from URL like https://civitai.com/posts/23602354 → use "23602354"
-- `civitai_account`: Automatically set from `CIVITAI_ACCOUNT` environment variable (default: "c29")
-- `status`: "published" (default), "pending", or "failed"
-- Assets link TO posts (not the other way around) - use `update_asset` to set `post_id`
-- `metadata`: Store additional information such as Civitai API response, engagement metrics, tags, or custom tracking data
+## Playbooks
 
-**Example**:
-```json
-{
-  "civitai_id": "23602354",
-  "civitai_url": "https://civitai.com/posts/23602354",
-  "status": "published",
-  "title": "Sunset Mountain Landscape",
-  "description": "AI-generated mountain scene",
-  "metadata": {
-    "views": 0,
-    "likes": 0,
-    "tags": ["landscape", "ai-art"],
-    "workflow": "flux-1-pro"
-  }
-}
-```
+### Standard End-to-End Flow
+1. `calculate_sha256` on the file or URL.
+2. `find_asset` with that `sha256sum`; stop if `found` is true.
+3. `create_prompt` (if a prompt exists) → keep `prompt_id`.
+4. `create_asset` with `input_prompt_id`.
+5. `create_civitai_post` → keep `post_id`.
+6. `update_asset` to attach `post_id`.
 
-### 4. Linking Assets to Posts (Optional)
-**When**: If you need to associate an asset with a post
-**Tool**: `update_asset`
-**Required**: `asset_id`
-**Optional**: `post_id`, `civitai_id`, `civitai_url`, `input_prompt_id`, `output_prompt_id`
+### Asset + Post Without a Prompt
+1. `create_asset` → keep `asset_id`.
+2. `create_civitai_post` → keep `post_id`.
+3. `update_asset` with both IDs to link.
 
-**Use cases**:
-- Link an existing asset to a post you just created
-- Update asset metadata with Civitai information
-- Change prompt associations
+### Assets First, Then Post
+1. Create each asset without `post_id`.
+2. Once the post is recorded, call `update_asset({asset_id, post_id})` for every asset.
 
-**Example**:
-```json
-{
-  "asset_id": "456",
-  "post_id": "789"
-}
-```
+### Match Local Media to a Civitai URL
+1. Hash the local file with `calculate_sha256`.
+2. Visit candidate Civitai image pages to grab the download URLs.
+3. Hash each remote file with `calculate_sha256`.
+4. When hashes match, call `update_asset` to store the corresponding `civitai_id` and `civitai_url`.
 
-## Common Workflows
-
-### Full Workflow (SHA256 → Prompt → Asset → Post → Link)
-1. `calculate_sha256` with file/URL → get `sha256sum`
-2. `find_asset` with `sha256sum` to check if exists
-3. `create_prompt` → get `prompt_id`
-4. `create_asset` with `input_prompt_id` and `sha256sum` → get `asset_id`
-5. `create_civitai_post` → get `post_id`
-6. `update_asset` with `asset_id` and `post_id` to link them
-
-### Asset + Post (No Prompt)
-1. `create_asset` → get `asset_id`
-2. `create_civitai_post` → get `post_id`
-3. `update_asset` with `asset_id` and `post_id` to link them
-
-### Asset with Post ID at Creation
-1. `create_civitai_post` → get `post_id`
-2. `create_asset` with `post_id` → links automatically
-
-### Recording Civitai Post with Its Assets
-**Note**: Most Civitai posts contain assets. See "How to Extract Asset URLs from Civitai Posts" section below for detailed instructions on extracting image/video URLs from the post page and recording them properly.
-
-## Updating Records
-
-### Update Asset
-**Tool**: `update_asset`
-**Required**: `asset_id`
-**Optional**: `input_prompt_id`, `output_prompt_id`, `post_id`, `civitai_id`, `civitai_url`
-**Use**: Update any asset metadata or associations
-
-**Important**:
-- Pass `undefined` to keep current value
-- Pass `null` to remove/clear a value
-- Pass a new value to update
-
-**Example - Link to post**:
-```json
-{
-  "asset_id": "456",
-  "post_id": "789"
-}
-```
-
-**Example - Clear post link**:
-```json
-{
-  "asset_id": "456",
-  "post_id": null
-}
-```
-
-**Example - Update prompts and Civitai metadata**:
-```json
-{
-  "asset_id": "456",
-  "input_prompt_id": "123",
-  "civitai_id": "23602354",
-  "civitai_url": "https://civitai.com/images/23602354"
-}
-```
-
-## Querying Records
-
-### Find Asset (Duplicate Detection)
-**Tool**: `find_asset`
-**Required**: At least one of `asset_id` OR `sha256sum`
-**Optional**: Both parameters can be provided
-**Output**: `{found: true, asset: {...}}` or `{found: false}`
-
-**Use cases**:
-- Check if an asset with a specific SHA256 hash already exists before creating
-- Retrieve full asset details by ID
-- Prevent duplicate uploads
-
-**Example - Find by hash**:
-```json
-{
-  "sha256sum": "abc123def456..."
-}
-```
-
-**Example - Find by ID**:
-```json
-{
-  "asset_id": "456"
-}
-```
-
-### List Posts
-**Tool**: `list_civitai_posts`
-**Filters**: `civitai_id`, `status`, `created_by`, `start_time`, `end_time`
-**Pagination**: `limit`, `offset`
-**Details**: Set `include_details: true` to get full asset information with their associated input and output prompts (posts include arrays of assets with nested prompt data)
-
-**Example - Get posts with full details**:
-```json
-{
-  "include_details": true,
-  "limit": 10
-}
-```
-
-### Calculate SHA256
-**Tool**: `calculate_sha256`
-**Required**: `path` (file path or URL)
-**Use**: Generate SHA256 hash for files or URLs before creating assets
-**Output**: Returns `sha256sum` that can be used with `find_asset` and `create_asset`
-
-**Example**:
-```json
-{
-  "path": "https://civitai.com/images/12345.jpg"
-}
-```
-
-## Best Practices
-
-1. **Always save IDs**: Each tool returns an ID - save it for linking in subsequent steps
-2. **Follow the order**: SHA256 → Prompt → Asset → Post → Link (create dependencies first)
-3. **Prevent duplicates**: 
-   - Use `calculate_sha256` to hash files/URLs
-   - Use `find_asset` with `sha256sum` before creating new assets
-   - If asset exists, reuse its `asset_id` instead of creating a duplicate
-4. **Use metadata wisely**: Store relevant information in the `metadata` field including:
-   - API responses from Civitai or other platforms
-   - Engagement metrics (views, likes, comments, shares)
-   - Tags, categories, and classifications
-   - Workflow or generation details
-   - Custom tracking fields for your use case
-5. **Link properly**: 
-   - `input_prompt_id`: What prompt CREATED this asset
-   - `output_prompt_id`: What prompt was DERIVED FROM this asset
-   - `post_id` in assets: What post this asset belongs to
-6. **Extract civitai_id correctly**: From https://civitai.com/posts/23602354, the ID is "23602354"
-7. **Civitai account tracking**: Posts are automatically tagged with the `CIVITAI_ACCOUNT` environment variable (default: "c29")
-8. **Filter by creator**: Use `created_by` in `list_civitai_posts` to see posts from specific users
-9. **Understand the relationship**: Assets point to posts (one-to-many: one post can have many assets)
-10. **Get full details**: Use `include_details: true` in `list_civitai_posts` to retrieve complete asset and prompt information
-
-## Error Prevention
-
-- IDs must be strings containing valid integers
-- `asset_type` must be "image" or "video"
-- `asset_source` must be "generated" or "upload"
-- `status` must be "pending", "published", or "failed"
-- Timestamps should be ISO 8601 format (e.g., '2025-01-15T10:00:00Z')
-
-## Troubleshooting
-
-**"asset_id must be a valid integer ID"**
-- Ensure you're passing the ID as a string containing only digits
-- Don't include quotes or special characters in the ID value
-
-**"Record not found"**
-- Verify the ID exists by using `list_civitai_posts` to check
-- Make sure you're using the correct ID from the previous step's response
-
-**Can't link prompt to asset**
-- Create the prompt first using `create_prompt`, then use the returned `prompt_id`
-- Don't try to link IDs that don't exist yet - follow the workflow order
-
-**Multiple assets per post**
-- A post can have many assets
-- Each asset can only belong to one post (or none)
-- Use `update_asset` to set the `post_id` for each asset
-
-## How to Extract Asset URLs from Civitai Posts
-
-When recording a Civitai post that contains multiple images or videos, you need to extract the individual asset URLs from the post page.
-
-### Civitai URL Structure
-- **Post URL**: `https://civitai.com/posts/23604281`
-- **Image URL**: `https://civitai.com/images/106433016`
-- **Post ID**: Extract from post URL (e.g., `23604281`)
-- **Image ID**: Extract from image URL (e.g., `106433016`)
-
-### Steps to Extract Asset URLs
-
-1. **Visit the Civitai post page**: Navigate to the post URL (e.g., `https://civitai.com/posts/23604281`)
-
-2. **Identify all images/videos**: Look at each media item in the post
-
-3. **Extract asset URLs**: 
-   - Right-click each image and inspect or view the image source
-   - Look for URLs in the format `https://civitai.com/images/{IMAGE_ID}`
-   - Each image/video has a unique image ID
-   - **For videos**: If the user only provides the Civitai image page URL (e.g., `https://civitai.com/images/106432973`), you can fetch the actual download URL by visiting that page and extracting the video download link
-
-4. **Get download URLs for videos**:
-   - If user provides: `https://civitai.com/images/106432973`
-   - Visit that URL to find the actual video download link
-   - Use the download URL as `asset_url` when creating the asset
-   - Keep the Civitai image URL in `civitai_url` field
-
-5. **Record the workflow**:
-   ```
-   For post: https://civitai.com/posts/23604281
-   
-   a. Create the Civitai post record:
-      - civitai_id: "23604281"
-      - civitai_url: "https://civitai.com/posts/23604281"
-   
-   b. For each image in the post (e.g., https://civitai.com/images/106433016):
-      - Calculate SHA256: calculate_sha256({path: "https://civitai.com/images/106433016"})
-      - Create asset: create_asset({
-          asset_url: "https://civitai.com/images/106433016",
-          asset_type: "image",
-          asset_source: "upload",
-          sha256sum: "<hash from step above>",
-          civitai_id: "106433016",
-          civitai_url: "https://civitai.com/images/106433016",
-          post_id: "<post_id from step a>"
-        })
-   
-   b-alt. For videos (e.g., https://civitai.com/images/106432973):
-      - Visit the Civitai image page to get the actual video download URL
-      - Calculate SHA256: calculate_sha256({path: "<actual_video_download_url>"})
-      - Create asset: create_asset({
-          asset_url: "<actual_video_download_url>",
-          asset_type: "video",
-          asset_source: "upload",
-          sha256sum: "<hash from step above>",
-          civitai_id: "106432973",
-          civitai_url: "https://civitai.com/images/106432973",
-          post_id: "<post_id from step a>"
-        })
-   
-   c. Repeat step b for each asset in the post
-   ```
-
-5. **Alternative workflow** (create assets first, then link):
-   ```
-   a. Create each asset without post_id
-   b. Create the Civitai post → get post_id
-   c. Update each asset with: update_asset({asset_id: "...", post_id: "..."})
-   ```
+## Extracting Asset URLs from Civitai Posts
+1. Open the post (`https://civitai.com/posts/{POST_ID}`) and list every image/video shown.
+2. For each media item, capture the image page URL (`https://civitai.com/images/{IMAGE_ID}`).
+3. For videos, open the image page to reveal the actual download URL; use that download URL as `asset_url` and keep the page URL in `civitai_url`.
+4. Optionally hash each download URL to check for duplicates before creating assets.
 
 ### Example: Multi-Asset Post
+For `https://civitai.com/posts/23604281` containing three images:
 
-**Scenario**: Post at `https://civitai.com/posts/23604281` contains 3 images:
-- `https://civitai.com/images/106433016`
-- `https://civitai.com/images/106433017`
-- `https://civitai.com/images/106433018`
+1. `create_civitai_post({ "civitai_id": "23604281", "civitai_url": "https://civitai.com/posts/23604281" })` → `post_id: "1"`.
+2. For each image URL (`https://civitai.com/images/106433016`, `...017`, `...018`):
+   - `calculate_sha256({ "path": "<image URL or download URL>" })` → returns `sha256sum`.
+   - `find_asset({ "sha256sum": "<hash>" })`; if `found` is true, reuse the returned `asset_id` and update it if needed.
+   - If not found, `create_asset({
+       "asset_url": "<image or download URL>",
+       "asset_type": "image",
+       "asset_source": "upload",
+       "civitai_id": "<IMAGE_ID>",
+       "civitai_url": "https://civitai.com/images/<IMAGE_ID>",
+       "post_id": "1"
+     })`.
 
-**Recording workflow**:
-1. `create_civitai_post({civitai_id: "23604281", civitai_url: "https://civitai.com/posts/23604281"})` → returns `post_id: "1"`
-2. `create_asset({asset_url: "https://civitai.com/images/106433016", asset_type: "image", asset_source: "upload", civitai_id: "106433016", post_id: "1"})`
-3. `create_asset({asset_url: "https://civitai.com/images/106433017", asset_type: "image", asset_source: "upload", civitai_id: "106433017", post_id: "1"})`
-4. `create_asset({asset_url: "https://civitai.com/images/106433018", asset_type: "image", asset_source: "upload", civitai_id: "106433018", post_id: "1"})`
+### Video-Specific Notes
+- When the user gives only the page URL (`https://civitai.com/images/106432973`):
+  1. Visit that page and copy the direct download URL (e.g., `https://image.civitai.com/video/xyz123.mp4`).
+  2. Hash the download URL if you need to match or deduplicate.
+  3. Record the asset with `asset_type: "video"`, `asset_url` set to the download URL, and `civitai_url` set to the page URL.
 
-### Important Notes for Video Assets
-
-**When user provides a Civitai image page URL for a video** (e.g., `https://civitai.com/images/106432973`):
-1. Visit that page to extract the actual video download URL
-2. Use the **download URL** as `asset_url` (this is the actual video file location)
-3. Use the **Civitai image page URL** as `civitai_url` (this is the public-facing page)
-4. Set `asset_type: "video"`
-
-**Example**:
-```json
-{
-  "asset_url": "https://image.civitai.com/video/xyz123.mp4",
-  "asset_type": "video",
-  "asset_source": "upload",
-  "civitai_id": "106432973",
-  "civitai_url": "https://civitai.com/images/106432973",
-  "post_id": "1"
-}
-```
-
-### Mapping Assets to Civitai URLs Using SHA256
-
-**Problem**: You have an asset with a local/storage URL and need to find which Civitai image page it belongs to.
-
-**Solution**: Compare SHA256 hashes to verify they're the same file.
-
-**Workflow**:
-1. Calculate SHA256 of your local asset:
-   ```json
-   calculate_sha256({path: "/local/path/video.mp4"})
-   ```
-   Returns: `sha256sum: "abc123..."`
-
-2. Visit the Civitai image page (e.g., `https://civitai.com/images/106432973`) and extract the video download URL
-
-3. Calculate SHA256 of the Civitai video:
-   ```json
-   calculate_sha256({path: "https://image.civitai.com/video/xyz123.mp4"})
-   ```
-   Returns: `sha256sum: "abc123..."`
-
-4. Compare the two SHA256 hashes:
-   - If they **match**: The asset corresponds to that Civitai URL
-   - If they **don't match**: Try the next Civitai image URL
-
-5. Once matched, update your asset with the Civitai metadata:
-   ```json
-   update_asset({
-     asset_id: "456",
-     civitai_id: "106432973",
-     civitai_url: "https://civitai.com/images/106432973"
-   })
-   ```
-
-**Example Scenario**:
-- You have 3 local videos: `video1.mp4`, `video2.mp4`, `video3.mp4`
-- Civitai post has 3 videos: `images/106432973`, `images/106432974`, `images/106432975`
-- Use SHA256 comparison to match each local video to its Civitai URL:
-  1. Hash `video1.mp4` → compare with all 3 Civitai videos → finds match with `106432974`
-  2. Hash `video2.mp4` → compare with remaining → finds match with `106432973`
-  3. Hash `video3.mp4` → compare with remaining → finds match with `106432975`
-
+Following this guide keeps the Civitai dataset consistent, deduplicated, and fully linked across prompts, assets, and posts.
