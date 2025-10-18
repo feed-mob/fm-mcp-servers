@@ -42,6 +42,7 @@ The typical workflow for tracking Civitai content follows this order:
 - `post_id`: Link to the Civitai post this asset belongs to
 - `civitai_id`/`civitai_url`: Direct Civitai metadata for the asset
 - `asset_source`: Use "generated" for AI-generated, "upload" for user uploads
+- `sha256sum`: Use to prevent duplicates - check with `find_asset` before creating
 
 **Example**:
 ```json
@@ -164,6 +165,31 @@ The typical workflow for tracking Civitai content follows this order:
 
 ## Querying Records
 
+### Find Asset (Duplicate Detection)
+**Tool**: `find_asset`
+**Required**: At least one of `asset_id` OR `sha256sum`
+**Optional**: Both parameters can be provided
+**Output**: `{found: true, asset: {...}}` or `{found: false}`
+
+**Use cases**:
+- Check if an asset with a specific SHA256 hash already exists before creating
+- Retrieve full asset details by ID
+- Prevent duplicate uploads
+
+**Example - Find by hash**:
+```json
+{
+  "sha256sum": "abc123def456..."
+}
+```
+
+**Example - Find by ID**:
+```json
+{
+  "asset_id": "456"
+}
+```
+
 ### List Posts
 **Tool**: `list_civitai_posts`
 **Filters**: `civitai_id`, `status`, `created_by`, `start_time`, `end_time`
@@ -187,6 +213,7 @@ The typical workflow for tracking Civitai content follows this order:
 5. **Extract civitai_id correctly**: From https://civitai.com/posts/23602354, the ID is "23602354"
 6. **Filter by creator**: Use `created_by` in `list_civitai_posts` to see posts from specific users
 7. **Understand the relationship**: Assets point to posts (one-to-many: one post can have many assets)
+8. **Prevent duplicates**: Use `find_asset` with `sha256sum` before creating new assets
 
 ## Error Prevention
 
