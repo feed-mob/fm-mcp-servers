@@ -1,6 +1,6 @@
 import type { ContentResult } from "fastmcp";
-import { PrismaClient } from "../generated/prisma/index.js";
 import { z } from "zod";
+import { prisma } from "../lib/prisma.js";
 
 export const updateAssetPromptParameters = z.object({
   asset_id: z
@@ -20,8 +20,6 @@ export const updateAssetPromptParameters = z.object({
 });
 
 export type UpdateAssetPromptParameters = z.infer<typeof updateAssetPromptParameters>;
-
-const prisma = new PrismaClient();
 
 export const updateAssetPromptTool = {
   name: "update_asset_prompt",
