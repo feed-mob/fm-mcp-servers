@@ -56,6 +56,7 @@ cp env.sample .env
 
 Add any required secrets as you build out the integration. Currently required:
 - `DATABASE_URL` — PostgreSQL connection string for the Civitai records database (format: `postgres://user:password@host:5432/database`).
+- `CIVITAI_ACCOUNT` — Civitai account username for post attribution (default: `c29`).
 
 The server automatically loads `.env` via `dotenv` for all npm scripts.
 
@@ -69,7 +70,8 @@ Add the server to your Claude configuration to expose the tools to Claude:
       "args": ["-y", "@feedmob/civitai-records"],
       "transport": "stdio",
       "env": {
-        "DATABASE_URL": "postgres://user:password@host:5432/database"
+        "DATABASE_URL": "postgres://user:password@host:5432/database",
+        "CIVITAI_ACCOUNT": "c29"
       }
     }
   }
