@@ -13,10 +13,6 @@ prisma generate
 echo "🔧 Compiling TypeScript..."
 tsc
 
-# Copy generated Prisma files
-echo "📋 Copying Prisma generated files..."
-cp -r src/generated dist/
-
 # Copy markdown documentation
 echo "📄 Copying markdown documentation..."
 mkdir -p dist/prompts

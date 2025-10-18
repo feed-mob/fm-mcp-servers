@@ -1,6 +1,6 @@
 import type { ContentResult } from "fastmcp";
-import { PrismaClient } from "../generated/prisma/index.js";
 import { z } from "zod";
+import { prisma } from "../lib/prisma.js";
 
 const metadataSchema = z.record(z.any()).nullable().default(null);
 
@@ -29,8 +29,6 @@ export const createAssetParameters = z.object({
 });
 
 export type CreateAssetParameters = z.infer<typeof createAssetParameters>;
-
-const prisma = new PrismaClient();
 
 export const createAssetTool = {
   name: "create_asset",

@@ -1,6 +1,6 @@
 import type { ContentResult } from "fastmcp";
-import { PrismaClient } from "../generated/prisma/index.js";
 import { z } from "zod";
+import { prisma } from "../lib/prisma.js";
 
 export const updateCivitaiPostAssetParameters = z.object({
   post_id: z
@@ -20,8 +20,6 @@ export const updateCivitaiPostAssetParameters = z.object({
 });
 
 export type UpdateCivitaiPostAssetParameters = z.infer<typeof updateCivitaiPostAssetParameters>;
-
-const prisma = new PrismaClient();
 
 export const updateCivitaiPostAssetTool = {
   name: "update_civitai_post_asset",

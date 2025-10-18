@@ -1,6 +1,6 @@
 import type { ContentResult } from "fastmcp";
-import { PrismaClient } from "../generated/prisma/index.js";
 import { z } from "zod";
+import { prisma } from "../lib/prisma.js";
 
 export const createPostAssociationParameters = z.object({
   post_id: z
@@ -17,8 +17,6 @@ export const createPostAssociationParameters = z.object({
 });
 
 export type CreatePostAssociationParameters = z.infer<typeof createPostAssociationParameters>;
-
-const prisma = new PrismaClient();
 
 export const createPostAssociationTool = {
   name: "create_post_association",

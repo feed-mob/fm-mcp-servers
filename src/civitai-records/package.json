@@ -17,6 +17,10 @@
   "author": "FeedMob",
   "license": "MIT",
   "type": "module",
+  "files": [
+    "dist/",
+    "prisma/"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.19.1",
     "@prisma/client": "^6.17.1",

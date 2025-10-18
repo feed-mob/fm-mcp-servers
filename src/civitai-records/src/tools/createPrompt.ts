@@ -1,6 +1,6 @@
 import type { ContentResult } from "fastmcp";
-import { PrismaClient } from "../generated/prisma/index.js";
 import { z } from "zod";
+import { prisma } from "../lib/prisma.js";
 
 const metadataSchema = z.record(z.any()).nullable().default(null);
 
@@ -28,8 +28,6 @@ export const createPromptParameters = z.object({
 });
 
 export type CreatePromptParameters = z.infer<typeof createPromptParameters>;
-
-const prisma = new PrismaClient();
 
 export const createPromptTool = {
   name: "create_prompt",

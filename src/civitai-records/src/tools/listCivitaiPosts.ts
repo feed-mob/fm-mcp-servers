@@ -1,6 +1,6 @@
 import type { ContentResult } from "fastmcp";
-import { PrismaClient } from "../generated/prisma/index.js";
 import { z } from "zod";
+import { prisma } from "../lib/prisma.js";
 
 export const listCivitaiPostsParameters = z.object({
   civitai_id: z
@@ -59,8 +59,6 @@ export const listCivitaiPostsParameters = z.object({
 });
 
 export type ListCivitaiPostsParameters = z.infer<typeof listCivitaiPostsParameters>;
-
-const prisma = new PrismaClient();
 
 interface WhereClauseParams {
   civitai_id: string | null;
