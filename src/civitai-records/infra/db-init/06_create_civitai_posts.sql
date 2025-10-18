@@ -9,8 +9,6 @@ CREATE TYPE civitai.post_status AS ENUM ('pending', 'published', 'failed');
 
 CREATE TABLE civitai.civitai_posts (
   id          bigserial PRIMARY KEY,
-  asset_id    bigint REFERENCES civitai.assets(id) NULL,
-  asset_type  civitai.asset_type NULL,
   title       text NULL,
   description text NULL,
   civitai_id  text NOT NULL,
