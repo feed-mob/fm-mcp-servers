@@ -8,17 +8,18 @@ SET ROLE civitai_owner;
 CREATE TYPE civitai.post_status AS ENUM ('pending', 'published', 'failed');
 
 CREATE TABLE civitai.civitai_posts (
-  id          bigserial PRIMARY KEY,
-  title       text NULL,
-  description text NULL,
-  civitai_id  text NOT NULL,
-  civitai_url text NOT NULL,
-  status      civitai.post_status NOT NULL,
-  metadata    jsonb,
-  created_by  text NOT NULL DEFAULT current_user,
-  updated_by  text NOT NULL DEFAULT current_user,
-  created_at  timestamptz NOT NULL DEFAULT now(),
-  updated_at  timestamptz NOT NULL DEFAULT now()
+  id              bigserial PRIMARY KEY,
+  title           text NULL,
+  description     text NULL,
+  civitai_id      text NOT NULL,
+  civitai_url     text NOT NULL,
+  civitai_account text NOT NULL DEFAULT 'c29',
+  status          civitai.post_status NOT NULL,
+  metadata        jsonb,
+  created_by      text NOT NULL DEFAULT current_user,
+  updated_by      text NOT NULL DEFAULT current_user,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now()
 );
 
 -- Permissive mode: any user can update any record

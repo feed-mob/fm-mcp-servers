@@ -44,10 +44,13 @@ export const createCivitaiPostTool = {
     description,
     metadata,
   }: CreateCivitaiPostParameters): Promise<ContentResult> => {
+    const accountValue = process.env.CIVITAI_ACCOUNT ?? "c29";
+    
     const post = await prisma.civitai_posts.create({
       data: {
         civitai_id,
         civitai_url,
+        civitai_account: accountValue,
         status,
         title: title ?? undefined,
         description: description ?? undefined,
@@ -63,6 +66,7 @@ export const createCivitaiPostTool = {
             post_id: post.id.toString(),
             civitai_id: post.civitai_id,
             civitai_url: post.civitai_url,
+            civitai_account: post.civitai_account,
             status: post.status,
             title: post.title,
             description: post.description,
