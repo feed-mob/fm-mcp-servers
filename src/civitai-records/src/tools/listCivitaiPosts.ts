@@ -175,16 +175,14 @@ export const listCivitaiPostsTool = {
 
     const posts = await prisma.civitai_posts.findMany({
       where,
-      ...(include_details && {
-        include: {
-          assets: {
-            include: {
-              prompts_assets_input_prompt_idToprompts: true,
-              prompts_assets_output_prompt_idToprompts: true,
-            },
+      include: include_details ? {
+        assets: {
+          include: {
+            prompts_assets_input_prompt_idToprompts: true,
+            prompts_assets_output_prompt_idToprompts: true,
           },
         },
-      }),
+      } : undefined,
       take: limit,
       skip: offset,
       orderBy: {
