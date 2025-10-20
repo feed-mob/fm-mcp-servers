@@ -115,7 +115,7 @@ function serializePost(post: any, include_details: boolean): any {
       asset_id: asset.id.toString(),
       asset_type: asset.asset_type,
       asset_source: asset.asset_source,
-      asset_url: asset.asset_url,
+      asset_url: asset.uri,
       sha256sum: asset.sha256sum,
       civitai_id: asset.civitai_id,
       civitai_url: asset.civitai_url,
@@ -173,7 +173,7 @@ export const listCivitaiPostsTool = {
       end_time,
     });
 
-    const posts = await (prisma.civitai_posts.findMany as any)({
+    const posts = await prisma.civitai_posts.findMany({
       where,
       ...(include_details && {
         include: {

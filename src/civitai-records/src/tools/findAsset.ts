@@ -50,7 +50,7 @@ export const findAssetTool = {
       whereClause.sha256sum = sha256sum.trim();
     }
 
-    const asset: any = await (prisma.assets.findFirst as any)({
+    const asset = await prisma.assets.findFirst({
       where: whereClause,
       include: {
         prompts_assets_input_prompt_idToprompts: true,
