@@ -8,16 +8,6 @@ export const listCivitaiPostsParameters = z.object({
     .nullable()
     .default(null)
     .describe("Filter posts by Civitai ID (the ID assigned by Civitai platform)."),
-  asset_id: z
-    .string()
-    .nullable()
-    .default(null)
-    .describe("Filter posts by asset ID. Shows all posts associated with a specific asset."),
-  asset_type: z
-    .enum(["image", "video"])
-    .nullable()
-    .default(null)
-    .describe("Filter posts by asset type: 'image' or 'video'."),
   status: z
     .enum(["pending", "published", "failed"])
     .nullable()
@@ -62,8 +52,6 @@ export type ListCivitaiPostsParameters = z.infer<typeof listCivitaiPostsParamete
 
 interface WhereClauseParams {
   civitai_id: string | null;
-  asset_id: string | null;
-  asset_type: "image" | "video" | null;
   status: "pending" | "published" | "failed" | null;
   created_by: string | null;
   start_time: string | null;
@@ -75,18 +63,6 @@ function buildWhereClause(params: WhereClauseParams): any {
 
   if (params.civitai_id) {
     where.civitai_id = params.civitai_id;
-  }
-
-  if (params.asset_id) {
-    try {
-      where.asset_id = BigInt(params.asset_id);
-    } catch (error) {
-      throw new Error("asset_id must be a valid integer ID");
-    }
-  }
-
-  if (params.asset_type) {
-    where.asset_type = params.asset_type;
   }
 
   if (params.status) {
@@ -118,59 +94,7 @@ function buildWhereClause(params: WhereClauseParams): any {
   return where;
 }
 
-function serializeAsset(asset: any): any {
-  const result: any = {
-    asset_id: asset.id.toString(),
-    asset_type: asset.asset_type,
-    asset_source: asset.asset_source,
-    uri: asset.uri,
-    created_by: asset.created_by,
-    metadata: asset.metadata,
-    created_at: asset.created_at.toISOString(),
-    updated_at: asset.updated_at.toISOString(),
-  };
 
-  if (asset.prompts_assets_input_prompt_idToprompts) {
-    const prompt = asset.prompts_assets_input_prompt_idToprompts;
-    result.input_prompt = {
-      prompt_id: prompt.id.toString(),
-      content: prompt.content,
-      llm_model_provider: prompt.llm_model_provider,
-      llm_model: prompt.llm_model,
-      purpose: prompt.purpose,
-      created_by: prompt.created_by,
-      metadata: prompt.metadata,
-      created_at: prompt.created_at.toISOString(),
-      updated_at: prompt.updated_at.toISOString(),
-    };
-  }
-
-  if (asset.prompts_assets_output_prompt_idToprompts) {
-    const prompt = asset.prompts_assets_output_prompt_idToprompts;
-    result.output_prompt = {
-      prompt_id: prompt.id.toString(),
-      content: prompt.content,
-      llm_model_provider: prompt.llm_model_provider,
-      llm_model: prompt.llm_model,
-      purpose: prompt.purpose,
-      created_by: prompt.created_by,
-      metadata: prompt.metadata,
-      created_at: prompt.created_at.toISOString(),
-      updated_at: prompt.updated_at.toISOString(),
-    };
-  }
-
-  return result;
-}
-
-function serializeAssociations(associations: any[]): any[] {
-  return associations.map((assoc: any) => ({
-    association_id: assoc.id.toString(),
-    associated_item_id: assoc.association_id.toString(),
-    association_type: assoc.association_type,
-    created_at: assoc.created_at.toISOString(),
-  }));
-}
 
 function serializePost(post: any, include_details: boolean): any {
   const result: any = {
@@ -178,8 +102,6 @@ function serializePost(post: any, include_details: boolean): any {
     civitai_id: post.civitai_id,
     civitai_url: post.civitai_url,
     status: post.status,
-    asset_id: post.asset_id?.toString() ?? null,
-    asset_type: post.asset_type,
     title: post.title,
     description: post.description,
     created_by: post.created_by,
@@ -188,12 +110,42 @@ function serializePost(post: any, include_details: boolean): any {
     updated_at: post.updated_at.toISOString(),
   };
 
-  if (include_details && post.assets) {
-    result.asset = serializeAsset(post.assets);
-  }
-
-  if (include_details && post.civitai_post_associations) {
-    result.associations = serializeAssociations(post.civitai_post_associations);
+  if (include_details && post.assets && post.assets.length > 0) {
+    result.assets = post.assets.map((asset: any) => ({
+      asset_id: asset.id.toString(),
+      asset_type: asset.asset_type,
+      asset_source: asset.asset_source,
+      asset_url: asset.uri,
+      sha256sum: asset.sha256sum,
+      civitai_id: asset.civitai_id,
+      civitai_url: asset.civitai_url,
+      created_by: asset.created_by,
+      metadata: asset.metadata,
+      created_at: asset.created_at.toISOString(),
+      updated_at: asset.updated_at.toISOString(),
+      input_prompt: asset.prompts_assets_input_prompt_idToprompts ? {
+        prompt_id: asset.prompts_assets_input_prompt_idToprompts.id.toString(),
+        content: asset.prompts_assets_input_prompt_idToprompts.content,
+        llm_model_provider: asset.prompts_assets_input_prompt_idToprompts.llm_model_provider,
+        llm_model: asset.prompts_assets_input_prompt_idToprompts.llm_model,
+        purpose: asset.prompts_assets_input_prompt_idToprompts.purpose,
+        metadata: asset.prompts_assets_input_prompt_idToprompts.metadata,
+        created_by: asset.prompts_assets_input_prompt_idToprompts.created_by,
+        created_at: asset.prompts_assets_input_prompt_idToprompts.created_at.toISOString(),
+        updated_at: asset.prompts_assets_input_prompt_idToprompts.updated_at.toISOString(),
+      } : null,
+      output_prompt: asset.prompts_assets_output_prompt_idToprompts ? {
+        prompt_id: asset.prompts_assets_output_prompt_idToprompts.id.toString(),
+        content: asset.prompts_assets_output_prompt_idToprompts.content,
+        llm_model_provider: asset.prompts_assets_output_prompt_idToprompts.llm_model_provider,
+        llm_model: asset.prompts_assets_output_prompt_idToprompts.llm_model,
+        purpose: asset.prompts_assets_output_prompt_idToprompts.purpose,
+        metadata: asset.prompts_assets_output_prompt_idToprompts.metadata,
+        created_by: asset.prompts_assets_output_prompt_idToprompts.created_by,
+        created_at: asset.prompts_assets_output_prompt_idToprompts.created_at.toISOString(),
+        updated_at: asset.prompts_assets_output_prompt_idToprompts.updated_at.toISOString(),
+      } : null,
+    }));
   }
 
   return result;
@@ -201,12 +153,10 @@ function serializePost(post: any, include_details: boolean): any {
 
 export const listCivitaiPostsTool = {
   name: "list_civitai_posts",
-  description: "Get a list of Civitai posts with optional filtering. Can filter by civitai_id, asset_id, asset_type, status, created_by, or time range. Supports pagination with limit and offset. Use include_details to get asset and prompt information.",
+  description: "Get a list of Civitai posts with optional filtering. Can filter by civitai_id, status, created_by, or time range. Supports pagination with limit and offset. Use include_details to get linked asset information.",
   parameters: listCivitaiPostsParameters,
   execute: async ({
     civitai_id,
-    asset_id,
-    asset_type,
     status,
     created_by,
     start_time,
@@ -217,8 +167,6 @@ export const listCivitaiPostsTool = {
   }: ListCivitaiPostsParameters): Promise<ContentResult> => {
     const where = buildWhereClause({
       civitai_id,
-      asset_id,
-      asset_type,
       status,
       created_by,
       start_time,
@@ -234,7 +182,6 @@ export const listCivitaiPostsTool = {
             prompts_assets_output_prompt_idToprompts: true,
           },
         },
-        civitai_post_associations: true,
       } : undefined,
       take: limit,
       skip: offset,
