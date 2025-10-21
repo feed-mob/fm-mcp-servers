@@ -2,8 +2,65 @@ import type { ContentResult } from "fastmcp";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { sha256 } from "../lib/sha256.js";
+import { detectRemoteAssetType, type RemoteAssetTypeResult } from "../lib/detectRemoteAssetType.js";
 
 const metadataSchema = z.record(z.any()).nullable().default(null);
+
+/**
+ * Validate that the provided asset type matches the detected type.
+ * Throws an error with a helpful message if there's a mismatch.
+ */
+function validateAssetType(
+  providedType: "image" | "video",
+  detectionResult: RemoteAssetTypeResult,
+  url: string
+): void {
+  const { assetType: detectedType, mime, from: detectionMethod } = detectionResult;
+  
+  if (!detectedType) {
+    // Unable to detect, allow the provided type
+    console.warn(`Unable to detect asset type for URL: ${url}. Accepting provided type: ${providedType}`);
+    return;
+  }
+  
+  if (detectedType === providedType) {
+    console.log(`Asset type '${providedType}' confirmed via ${detectionMethod}`);
+    return;
+  }
+  
+  // Mismatch detected - throw error with helpful message
+  const errorDetails = mime 
+    ? `Detected type: '${detectedType}' (MIME: ${mime}, via ${detectionMethod})`
+    : `Detected type: '${detectedType}' (via ${detectionMethod})`;
+  
+  throw new Error(
+    `Asset type mismatch for URL: ${url}\n` +
+    `Provided: '${providedType}'\n` +
+    `${errorDetails}\n` +
+    `Please update the asset_type parameter to '${detectedType}' and try again.`
+  );
+}
+
+/**
+ * Parse and validate an ID string parameter to BigInt.
+ * Returns null if the input is null/empty.
+ */
+function parseIdParameter(id: string | null, parameterName: string): bigint | null {
+  if (!id) {
+    return null;
+  }
+  
+  const trimmed = id.trim();
+  if (!trimmed) {
+    return null;
+  }
+  
+  try {
+    return BigInt(trimmed);
+  } catch (error) {
+    throw new Error(`Invalid ${parameterName}: must be a valid integer ID`);
+  }
+}
 
 export const createAssetParameters = z.object({
   asset_url: z
@@ -48,44 +105,17 @@ export type CreateAssetParameters = z.infer<typeof createAssetParameters>;
 
 export const createAssetTool = {
   name: "create_asset",
-  description: "Save a generated or uploaded media asset (video, image) to the database. Use this after creating content to track what was generated, where it's stored, and link it back to the original prompt that created it.",
+  description: "Save a generated or uploaded media asset (video, image) to the database. Use this after creating content to track what was generated, where it's stored, and link it back to the original prompt that created it. IMPORTANT: The asset_type parameter is validated against the actual file content by checking HTTP headers, content sniffing, and URL patterns. If there's a mismatch (e.g., you specify 'video' but the URL is an image), the tool will return an error telling you the correct type to use.",
   parameters: createAssetParameters,
   execute: async ({ asset_url, asset_type, asset_source, input_prompt_id, output_prompt_id, civitai_id, civitai_url, post_id, metadata }: CreateAssetParameters): Promise<ContentResult> => {
-    let inputPromptId: bigint | null = null;
-    if (input_prompt_id) {
-      const trimmed = input_prompt_id.trim();
-      if (trimmed) {
-        try {
-          inputPromptId = BigInt(trimmed);
-        } catch (error) {
-          throw new Error(`Invalid input_prompt_id: must be a valid integer ID`);
-        }
-      }
-    }
-
-    let outputPromptId: bigint | null = null;
-    if (output_prompt_id) {
-      const trimmed = output_prompt_id.trim();
-      if (trimmed) {
-        try {
-          outputPromptId = BigInt(trimmed);
-        } catch (error) {
-          throw new Error(`Invalid output_prompt_id: must be a valid integer ID`);
-        }
-      }
-    }
-
-    let postIdBigInt: bigint | null = null;
-    if (post_id) {
-      const trimmed = post_id.trim();
-      if (trimmed) {
-        try {
-          postIdBigInt = BigInt(trimmed);
-        } catch (error) {
-          throw new Error(`Invalid post_id: must be a valid integer ID`);
-        }
-      }
-    }
+    // Detect and validate asset type
+    const detectionResult = await detectRemoteAssetType(asset_url, { skipRemote: false, timeout: 5000 });
+    validateAssetType(asset_type, detectionResult, asset_url);
+    
+    // Parse ID parameters
+    const inputPromptId = parseIdParameter(input_prompt_id, 'input_prompt_id');
+    const outputPromptId = parseIdParameter(output_prompt_id, 'output_prompt_id');
+    const postIdBigInt = parseIdParameter(post_id, 'post_id');
 
     const sha256sum = await sha256(asset_url);
 
@@ -93,7 +123,7 @@ export const createAssetTool = {
       data: {
         uri: asset_url,
         sha256sum,
-        asset_type,
+        asset_type: asset_type,
         asset_source,
         input_prompt_id: inputPromptId,
         output_prompt_id: outputPromptId,
