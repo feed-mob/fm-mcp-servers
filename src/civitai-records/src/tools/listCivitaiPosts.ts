@@ -3,11 +3,16 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 
 export const listCivitaiPostsParameters = z.object({
+  id: z
+    .string()
+    .nullable()
+    .default(null)
+    .describe("Filter by the civitai_posts table ID."),
   civitai_id: z
     .string()
     .nullable()
     .default(null)
-    .describe("Filter posts by Civitai ID (the ID assigned by Civitai platform)."),
+    .describe("Filter posts by Civitai ID. The numeric post ID from the Civitai post URL. Extract this from URLs like https://civitai.com/posts/23602354 where the ID is 23602354."),
   status: z
     .enum(["pending", "published", "failed"])
     .nullable()
@@ -51,6 +56,7 @@ export const listCivitaiPostsParameters = z.object({
 export type ListCivitaiPostsParameters = z.infer<typeof listCivitaiPostsParameters>;
 
 interface WhereClauseParams {
+  id: string | null;
   civitai_id: string | null;
   status: "pending" | "published" | "failed" | null;
   created_by: string | null;
@@ -60,6 +66,10 @@ interface WhereClauseParams {
 
 function buildWhereClause(params: WhereClauseParams): any {
   const where: any = {};
+
+  if (params.id) {
+    where.id = BigInt(params.id);
+  }
 
   if (params.civitai_id) {
     where.civitai_id = params.civitai_id;
@@ -156,6 +166,7 @@ export const listCivitaiPostsTool = {
   description: "Get a list of Civitai posts with optional filtering. Can filter by civitai_id, status, created_by, or time range. Supports pagination with limit and offset. Use include_details to get linked asset information.",
   parameters: listCivitaiPostsParameters,
   execute: async ({
+    id,
     civitai_id,
     status,
     created_by,
@@ -166,6 +177,7 @@ export const listCivitaiPostsTool = {
     offset,
   }: ListCivitaiPostsParameters): Promise<ContentResult> => {
     const where = buildWhereClause({
+      id,
       civitai_id,
       status,
       created_by,

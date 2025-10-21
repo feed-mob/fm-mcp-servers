@@ -12,7 +12,9 @@ import { createCivitaiPostTool } from "./tools/createCivitaiPost.js";
 import { listCivitaiPostsTool } from "./tools/listCivitaiPosts.js";
 import { getWorkflowGuideTool } from "./tools/getWorkflowGuide.js";
 import { fetchCivitaiPostAssetsTool } from "./tools/fetchCivitaiPostAssets.js";
+import { getMediaEngagementGuideTool } from "./tools/getMediaEngagementGuide.js";
 import { recordCivitaiWorkflowPrompt } from "./prompts/recordCivitaiWorkflow.js";
+import { civitaiMediaEngagementPrompt } from "./prompts/civitaiMediaEngagement.js";
 
 const server = new FastMCP({
   name: "feedmob-civitai-records",
@@ -20,8 +22,10 @@ const server = new FastMCP({
 });
 
 server.addPrompt(recordCivitaiWorkflowPrompt);
+server.addPrompt(civitaiMediaEngagementPrompt);
 
 server.addTool(getWorkflowGuideTool);
+server.addTool(getMediaEngagementGuideTool);
 server.addTool(createPromptTool);
 server.addTool(createAssetTool);
 server.addTool(updateAssetTool);
