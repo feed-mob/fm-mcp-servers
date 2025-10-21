@@ -144,9 +144,9 @@ You are assisting the Civitai tracking pipeline. Follow this guide to capture pr
   - `input_prompt_id`: Prompt that generated the asset.
   - `output_prompt_id`: Prompt derived from the asset (e.g., captioning).
   - `post_id`: Civitai post containing the asset (if you already recorded it).
-  - `civitai_id` / `civitai_url`: IDs scraped from Civitai image/video pages.
+  - `civitai_id` / `civitai_url`: Identifiers returned from `fetch_civitai_post_assets` for each media item.
   - `metadata`: Any structured data you want to retain (API response, tags, metrics).
-- Tip: When the Civitai post already exists, call `fetch_civitai_post_assets` first to pull the authoritative `asset_url`, `civitai_image_id`, and engagement stats you can copy into the asset metadata.
+- Tip: When the Civitai post already exists, call `fetch_civitai_post_assets` first to pull the authoritative `asset_url`, set `civitai_id`/`civitai_url`, and capture engagement stats in `metadata` for downstream reporting.
 - The tool automatically calculates `sha256sum` from `asset_url` and includes it in the response.
 - Save the returned `asset_id` for linking or future updates.
 
