@@ -1,6 +1,7 @@
 import type { ContentResult } from "fastmcp";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
+import { handleDatabaseError } from "../lib/handleDatabaseError.js";
 
 const metadataSchema = z.record(z.any()).nullable().default(null);
 
@@ -56,7 +57,7 @@ export const createCivitaiPostTool = {
         description: description ?? undefined,
         metadata: metadata ?? undefined,
       },
-    });
+    }).catch(error => handleDatabaseError(error, `Civitai ID: ${civitai_id}`));
 
     return {
       content: [

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { sha256 } from "../lib/sha256.js";
 import { detectRemoteAssetType, type RemoteAssetTypeResult } from "../lib/detectRemoteAssetType.js";
+import { handleDatabaseError } from "../lib/handleDatabaseError.js";
 
 const metadataSchema = z.record(z.any()).nullable().default(null);
 
@@ -62,6 +63,28 @@ function parseIdParameter(id: string | null, parameterName: string): bigint | nu
   }
 }
 
+/**
+ * Parse and validate an array of ID strings to BigInt array.
+ * Returns null if the input is null/empty.
+ */
+function parseIdArrayParameter(ids: string[] | null, parameterName: string): bigint[] | null {
+  if (!ids || ids.length === 0) {
+    return null;
+  }
+  
+  try {
+    return ids.map((id, index) => {
+      const trimmed = id.trim();
+      if (!trimmed) {
+        throw new Error(`Empty ID at index ${index}`);
+      }
+      return BigInt(trimmed);
+    });
+  } catch (error) {
+    throw new Error(`Invalid ${parameterName}: ${error instanceof Error ? error.message : 'must contain valid integer IDs'}`);
+  }
+}
+
 export const createAssetParameters = z.object({
   asset_url: z
     .string()
@@ -98,6 +121,11 @@ export const createAssetParameters = z.object({
     .nullable()
     .default(null)
     .describe("The ID from the civitai_posts table that this asset is associated with. Use create_civitai_post tool to create a post first if needed."),
+  input_asset_ids: z
+    .array(z.string())
+    .nullable()
+    .default(null)
+    .describe("Array of asset IDs that were used as inputs to generate this asset. For example, if this is a video generated from multiple images, list those image asset IDs here. Leave empty for assets that weren't generated from other assets."),
   metadata: metadataSchema.describe("Additional information about this asset in JSON format. Can include technical details (resolution, duration, file size), generation parameters, quality scores, or any custom data relevant to this asset."),
 });
 
@@ -107,7 +135,7 @@ export const createAssetTool = {
   name: "create_asset",
   description: "Save a generated or uploaded media asset (video, image) to the database. Use this after creating content to track what was generated, where it's stored, and link it back to the original prompt that created it. IMPORTANT: The asset_type parameter is validated against the actual file content by checking HTTP headers, content sniffing, and URL patterns. If there's a mismatch (e.g., you specify 'video' but the URL is an image), the tool will return an error telling you the correct type to use.",
   parameters: createAssetParameters,
-  execute: async ({ asset_url, asset_type, asset_source, input_prompt_id, output_prompt_id, civitai_id, civitai_url, post_id, metadata }: CreateAssetParameters): Promise<ContentResult> => {
+  execute: async ({ asset_url, asset_type, asset_source, input_prompt_id, output_prompt_id, civitai_id, civitai_url, post_id, input_asset_ids, metadata }: CreateAssetParameters): Promise<ContentResult> => {
     // Detect and validate asset type
     const detectionResult = await detectRemoteAssetType(asset_url, { skipRemote: false, timeout: 5000 });
     validateAssetType(asset_type, detectionResult, asset_url);
@@ -116,6 +144,7 @@ export const createAssetTool = {
     const inputPromptId = parseIdParameter(input_prompt_id, 'input_prompt_id');
     const outputPromptId = parseIdParameter(output_prompt_id, 'output_prompt_id');
     const postIdBigInt = parseIdParameter(post_id, 'post_id');
+    const inputAssetIds = parseIdArrayParameter(input_asset_ids, 'input_asset_ids');
 
     const sha256sum = await sha256(asset_url);
 
@@ -130,9 +159,10 @@ export const createAssetTool = {
         civitai_id: civitai_id?.trim() || null,
         civitai_url: civitai_url?.trim() || null,
         post_id: postIdBigInt,
+        input_asset_ids: inputAssetIds ?? undefined,
         metadata: metadata ?? undefined,
       },
-    });
+    }).catch(error => handleDatabaseError(error, `URL: ${asset_url}`));
 
     return {
       content: [
@@ -149,6 +179,7 @@ export const createAssetTool = {
             post_id: asset.post_id?.toString() ?? null,
             input_prompt_id: asset.input_prompt_id?.toString() ?? null,
             output_prompt_id: asset.output_prompt_id?.toString() ?? null,
+            input_asset_ids: asset.input_asset_ids.map((id: bigint) => id.toString()),
             created_at: asset.created_at.toISOString(),
           }, null, 2),
         },
