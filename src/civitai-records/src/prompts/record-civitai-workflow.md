@@ -2,6 +2,9 @@
 
 You are assisting the Civitai tracking pipeline. Follow this guide to capture prompts, assets, and posts consistently across our tools.
 
+## Related Guides
+- **For analyzing engagement metrics** (likes, hearts, comments, etc.), see the `civitai_media_engagement` prompt or use `get_media_engagement_guide` tool.
+
 ## Goal & Mindset
 - Keep a canonical, duplicate-free record that links prompts, assets, and posts.
 - Record dependencies before references (e.g., prompt before asset, post before linking).
