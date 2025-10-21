@@ -81,6 +81,19 @@ You are assisting the Civitai tracking pipeline. Follow this guide to capture pr
       }
     }
     ```
+- `fetch_civitai_post_assets`
+  - Purpose: Retrieve live media assets and engagement stats for a Civitai post without writing to the database.
+  - Required: `post_id` (numeric string extracted from the post URL).
+  - Optional: `limit` (default 50, max 100), `page` (default 1).
+  - Returns: `{asset_count, assets:[{civitai_image_id, asset_url, engagement_stats, ...}], metadata}`.
+  - Use this to inspect performance or pull the authoritative asset URLs before creating/updating local records.
+  - Example:
+    ```json
+    {
+      "post_id": "23683656",
+      "limit": 20
+    }
+    ```
 - `update_asset`
   - Purpose: Link assets to posts, adjust prompt associations, or update metadata.
   - Required: `asset_id`.
@@ -133,6 +146,7 @@ You are assisting the Civitai tracking pipeline. Follow this guide to capture pr
   - `post_id`: Civitai post containing the asset (if you already recorded it).
   - `civitai_id` / `civitai_url`: IDs scraped from Civitai image/video pages.
   - `metadata`: Any structured data you want to retain (API response, tags, metrics).
+- Tip: When the Civitai post already exists, call `fetch_civitai_post_assets` first to pull the authoritative `asset_url`, `civitai_image_id`, and engagement stats you can copy into the asset metadata.
 - The tool automatically calculates `sha256sum` from `asset_url` and includes it in the response.
 - Save the returned `asset_id` for linking or future updates.
 
@@ -170,6 +184,17 @@ You are assisting the Civitai tracking pipeline. Follow this guide to capture pr
       "include_details": true,
       "limit": 5,
       "offset": 0
+    }
+    ```
+- `fetch_civitai_post_assets`:
+  - Supply `post_id` to get the post’s current media assets directly from Civitai along with engagement stats (likes, hearts, comments, etc.).
+  - Use when reconciling posts, validating asset URLs, or gauging performance before recording updates.
+  - Example:
+    ```json
+    {
+      "post_id": "23683656",
+      "page": 2,
+      "limit": 25
     }
     ```
 
@@ -210,7 +235,10 @@ You are assisting the Civitai tracking pipeline. Follow this guide to capture pr
 
 ### Assets First, Then Post
 1. Create each asset without `post_id`.
-2. Once the post is recorded, call `update_asset({asset_id, post_id})` for every asset.
+2. Once the post is recorded, call `fetch_civitai_post_assets` to reconcile the canonical asset list.
+3. For each matching item:
+   - `update_asset({asset_id, post_id})` to link.
+   - Optionally add engagement stats or update `civitai_id`/`civitai_url` from the API response.
 
 ### Match Local Media to a Civitai URL
 1. Hash the local file with `calculate_sha256`.
@@ -219,31 +247,22 @@ You are assisting the Civitai tracking pipeline. Follow this guide to capture pr
 4. When hashes match, call `update_asset` to store the corresponding `civitai_id` and `civitai_url`.
 
 ## Extracting Asset URLs from Civitai Posts
-1. Open the post (`https://civitai.com/posts/{POST_ID}`) and list every image/video shown.
-2. For each media item, capture the image page URL (`https://civitai.com/images/{IMAGE_ID}`).
-3. For videos, open the image page to reveal the actual download URL; use that download URL as `asset_url` and keep the page URL in `civitai_url`.
-4. Optionally hash each download URL to check for duplicates before creating assets.
+1. Call `fetch_civitai_post_assets` with the post’s numeric ID to retrieve the authoritative list of media along with their direct `asset_url`, `civitai_image_id`, and engagement stats.
+2. Use the returned payload to populate `asset_url`, `civitai_url` (if present), and any performance metadata when creating or updating assets locally.
+3. Hash the returned `asset_url` values with `calculate_sha256` when you need duplicate detection before persisting assets.
 
 ### Example: Multi-Asset Post
 For `https://civitai.com/posts/23604281` containing three images:
 
 1. `create_civitai_post({ "civitai_id": "23604281", "civitai_url": "https://civitai.com/posts/23604281" })` → `post_id: "1"`.
-2. For each image URL (`https://civitai.com/images/106433016`, `...017`, `...018`):
-   - `calculate_sha256({ "path": "<image URL or download URL>" })` → returns `sha256sum`.
-   - `find_asset({ "sha256sum": "<hash>" })`; if `found` is true, reuse the returned `asset_id` and update it if needed.
-   - If not found, `create_asset({
-       "asset_url": "<image or download URL>",
-       "asset_type": "image",
-       "asset_source": "upload",
-       "civitai_id": "<IMAGE_ID>",
-       "civitai_url": "https://civitai.com/images/<IMAGE_ID>",
-       "post_id": "1"
-     })`.
+2. Call `fetch_civitai_post_assets({ "post_id": "23604281" })` to pull the live asset list.
+3. For each item in the response:
+   - If you already have a matching asset (by SHA or URL), reuse the `asset_id`. Otherwise `create_asset` with the `asset_url`, `civitai_image_id`, and `civitai_url` (if present).
+   - Capture `engagement_stats` and other metadata in the asset record if it’s useful for reporting.
+   - Link the asset to the post with `update_asset({ "asset_id": "...", "post_id": "1" })`.
 
 ### Video-Specific Notes
-- When the user gives only the page URL (`https://civitai.com/images/106432973`):
-  1. Visit that page and copy the direct download URL (e.g., `https://image.civitai.com/video/xyz123.mp4`).
-  2. Hash the download URL if you need to match or deduplicate.
-  3. Record the asset with `asset_type: "video"`, `asset_url` set to the download URL, and `civitai_url` set to the page URL.
+- `fetch_civitai_post_assets` returns direct download URLs for videos in `asset_url`. Use those when creating or updating assets.
+- Hash the `asset_url` if you need dedupe guarantees before persisting.
 
 Following this guide keeps the Civitai dataset consistent, deduplicated, and fully linked across prompts, assets, and posts.

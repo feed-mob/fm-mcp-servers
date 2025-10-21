@@ -11,6 +11,7 @@ import { calculateSha256Tool } from "./tools/calculateSha256.js";
 import { createCivitaiPostTool } from "./tools/createCivitaiPost.js";
 import { listCivitaiPostsTool } from "./tools/listCivitaiPosts.js";
 import { getWorkflowGuideTool } from "./tools/getWorkflowGuide.js";
+import { fetchCivitaiPostAssetsTool } from "./tools/fetchCivitaiPostAssets.js";
 import { recordCivitaiWorkflowPrompt } from "./prompts/recordCivitaiWorkflow.js";
 
 const server = new FastMCP({
@@ -28,5 +29,6 @@ server.addTool(findAssetTool);
 server.addTool(calculateSha256Tool);
 server.addTool(createCivitaiPostTool);
 server.addTool(listCivitaiPostsTool);
+server.addTool(fetchCivitaiPostAssetsTool);
 
 server.start({ transportType: "stdio" });
