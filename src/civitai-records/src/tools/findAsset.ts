@@ -11,10 +11,35 @@ export const findAssetParameters = z.object({
     .string()
     .optional()
     .describe("The SHA-256 hash of the asset to find. Use this to check if an asset with this hash already exists in the database."),
+  civitai_id: z
+    .string()
+    .optional()
+    .describe(
+      "The Civitai media ID (image/video) to look up. Extract it from the Civitai URL; e.g., for 'https://civitai.com/images/106432973' the ID is '106432973'."
+    ),
+  civitai_url: z
+    .string()
+    .optional()
+    .describe(
+      "The Civitai media page URL (image/video) to look up. Example: 'https://civitai.com/images/106432973'."
+    ),
+  post_id: z
+    .string()
+    .optional()
+    .describe(
+      "The civitai_posts table ID linked to the asset. Use the ID returned from create_civitai_post or list_civitai_posts."
+    ),
 }).refine(
-  (data) => data.asset_id || data.sha256sum,
+  (data) =>
+    [
+      data.asset_id,
+      data.sha256sum,
+      data.civitai_id,
+      data.civitai_url,
+      data.post_id,
+    ].some((value) => typeof value === "string" && value.trim().length > 0),
   {
-    message: "At least one of asset_id or sha256sum must be provided",
+    message: "At least one of asset_id, sha256sum, civitai_id, civitai_url, or post_id must be provided",
   }
 );
 
@@ -24,7 +49,13 @@ export const findAssetTool = {
   name: "find_asset",
   description: "Find an asset by its ID or SHA-256 hash. Use this to check if an asset already exists in the database before creating a duplicate, or to retrieve full asset details including prompt and post associations.",
   parameters: findAssetParameters,
-  execute: async ({ asset_id, sha256sum }: FindAssetParameters): Promise<ContentResult> => {
+  execute: async ({
+    asset_id,
+    sha256sum,
+    civitai_id,
+    civitai_url,
+    post_id,
+  }: FindAssetParameters): Promise<ContentResult> => {
     let assetIdBigInt: bigint | undefined;
     if (asset_id) {
       const trimmed = asset_id.trim();
@@ -37,9 +68,24 @@ export const findAssetTool = {
       }
     }
 
+    let postIdBigInt: bigint | undefined;
+    if (post_id) {
+      const trimmed = post_id.trim();
+      if (trimmed) {
+        try {
+          postIdBigInt = BigInt(trimmed);
+        } catch (error) {
+          throw new Error("post_id must be a valid integer ID");
+        }
+      }
+    }
+
     const whereClause: {
       id?: bigint;
       sha256sum?: string;
+      civitai_id?: string;
+      civitai_url?: string;
+      post_id?: bigint | null;
     } = {};
 
     if (assetIdBigInt !== undefined) {
@@ -48,6 +94,24 @@ export const findAssetTool = {
 
     if (sha256sum) {
       whereClause.sha256sum = sha256sum.trim();
+    }
+
+    if (civitai_id) {
+      const trimmed = civitai_id.trim();
+      if (trimmed) {
+        whereClause.civitai_id = trimmed;
+      }
+    }
+
+    if (civitai_url) {
+      const trimmed = civitai_url.trim();
+      if (trimmed) {
+        whereClause.civitai_url = trimmed;
+      }
+    }
+
+    if (postIdBigInt !== undefined) {
+      whereClause.post_id = postIdBigInt;
     }
 
     const asset = await prisma.assets.findFirst({
