@@ -47,6 +47,7 @@ SET search_path TO civitai;
 - `update_civitai_post_asset` — Update the primary asset association for an existing Civitai post.
 - `create_post_association` — Create many-to-many associations between Civitai posts and assets or prompts.
 - `list_civitai_posts` — Query Civitai posts with filtering by civitai_id, asset_id, asset_type, status, created_by, or time range. Supports pagination and optional detailed asset/prompt inclusion.
+- `fetch_civitai_post_assets` — Retrieve the live media assets (images/videos) for a specific post directly from the public Civitai Images API without persisting them. Accepts the Civitai post ID plus pagination controls and returns engagement stats (likes, hearts, comments, etc.). Use this to inspect performance or get the Civitai media assets (Civitai images) for the post.
 
 ### Environment Variables
 Copy `env.sample` to `.env` if you need local configuration:
