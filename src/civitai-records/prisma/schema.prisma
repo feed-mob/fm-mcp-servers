@@ -15,10 +15,11 @@ model assets {
   asset_type                               asset_type
   asset_source                             asset_source
   uri                                      String
-  sha256sum                                String
-  civitai_id                               String?
+  sha256sum                                String         @unique
+  civitai_id                               String?        @unique
   civitai_url                              String?
   post_id                                  BigInt?
+  input_asset_ids                          BigInt[]       @default([])
   metadata                                 Json?
   created_by                               String         @default(dbgenerated("CURRENT_USER"))
   updated_by                               String         @default(dbgenerated("CURRENT_USER"))
@@ -34,7 +35,7 @@ model civitai_posts {
   id              BigInt      @id @default(autoincrement())
   title           String?
   description     String?
-  civitai_id      String
+  civitai_id      String      @unique
   civitai_url     String
   civitai_account String      @default("c29")
   status          post_status

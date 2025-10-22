@@ -1,6 +1,43 @@
 import type { ContentResult } from "fastmcp";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
+import { handleDatabaseError } from "../lib/handleDatabaseError.js";
+
+/**
+ * Parse and validate an ID string parameter to BigInt.
+ * Returns null if the input is null/empty.
+ */
+function parseIdParameter(id: string | null | undefined, parameterName: string): bigint | null | undefined {
+  if (id === undefined) return undefined;
+  if (id === null || id.trim() === "") return null;
+  
+  try {
+    return BigInt(id.trim());
+  } catch (error) {
+    throw new Error(`Invalid ${parameterName}: must be a valid integer ID`);
+  }
+}
+
+/**
+ * Parse and validate an array of ID strings to BigInt array.
+ * Returns null if the input is null/empty, undefined if not provided.
+ */
+function parseIdArrayParameter(ids: string[] | null | undefined, parameterName: string): bigint[] | null | undefined {
+  if (ids === undefined) return undefined;
+  if (ids === null || ids.length === 0) return [];
+  
+  try {
+    return ids.map((id, index) => {
+      const trimmed = id.trim();
+      if (!trimmed) {
+        throw new Error(`Empty ID at index ${index}`);
+      }
+      return BigInt(trimmed);
+    });
+  } catch (error) {
+    throw new Error(`Invalid ${parameterName}: ${error instanceof Error ? error.message : 'must contain valid integer IDs'}`);
+  }
+}
 
 export const updateAssetParameters = z.object({
   asset_id: z
@@ -32,13 +69,18 @@ export const updateAssetParameters = z.object({
     .nullable()
     .optional()
     .describe("The ID of the Civitai post this asset belongs to. References civitai_posts table. Set to null to remove the association. Leave undefined to keep current value."),
+  input_asset_ids: z
+    .array(z.string())
+    .nullable()
+    .optional()
+    .describe("Array of asset IDs that were used as inputs to generate this asset. Set to empty array [] or null to clear. Leave undefined to keep current value."),
 });
 
 export type UpdateAssetParameters = z.infer<typeof updateAssetParameters>;
 
 export const updateAssetTool = {
   name: "update_asset",
-  description: "Update an existing asset's optional fields including prompt associations (input_prompt_id, output_prompt_id), Civitai metadata (civitai_id, civitai_url), and post association (post_id). Only provided fields will be updated; undefined fields keep their current values.",
+  description: "Update an existing asset's optional fields including prompt associations (input_prompt_id, output_prompt_id), Civitai metadata (civitai_id, civitai_url), post association (post_id), and input assets (input_asset_ids). Only provided fields will be updated; undefined fields keep their current values.",
   parameters: updateAssetParameters,
   execute: async ({
     asset_id,
@@ -47,58 +89,43 @@ export const updateAssetTool = {
     civitai_id,
     civitai_url,
     post_id,
+    input_asset_ids,
   }: UpdateAssetParameters): Promise<ContentResult> => {
-    let assetIdBigInt: bigint;
-    try {
-      assetIdBigInt = BigInt(asset_id);
-    } catch (error) {
-      throw new Error("asset_id must be a valid integer ID");
+    // Parse and validate asset ID
+    const assetIdBigInt = parseIdParameter(asset_id, 'asset_id');
+    if (!assetIdBigInt) {
+      throw new Error("asset_id is required and must be a valid integer ID");
     }
 
+    // Build update data object with only provided fields
     const data: any = {};
 
-    if (input_prompt_id !== undefined) {
-      if (input_prompt_id === null || input_prompt_id.trim() === "") {
-        data.input_prompt_id = null;
-      } else {
-        try {
-          data.input_prompt_id = BigInt(input_prompt_id);
-        } catch (error) {
-          throw new Error("input_prompt_id must be a valid integer ID");
-        }
-      }
+    const inputPromptId = parseIdParameter(input_prompt_id, 'input_prompt_id');
+    if (inputPromptId !== undefined) {
+      data.input_prompt_id = inputPromptId;
     }
 
-    if (output_prompt_id !== undefined) {
-      if (output_prompt_id === null || output_prompt_id.trim() === "") {
-        data.output_prompt_id = null;
-      } else {
-        try {
-          data.output_prompt_id = BigInt(output_prompt_id);
-        } catch (error) {
-          throw new Error("output_prompt_id must be a valid integer ID");
-        }
-      }
+    const outputPromptId = parseIdParameter(output_prompt_id, 'output_prompt_id');
+    if (outputPromptId !== undefined) {
+      data.output_prompt_id = outputPromptId;
     }
 
     if (civitai_id !== undefined) {
-      data.civitai_id = civitai_id === null || civitai_id.trim() === "" ? null : civitai_id;
+      data.civitai_id = civitai_id === null || civitai_id.trim() === "" ? null : civitai_id.trim();
     }
 
     if (civitai_url !== undefined) {
-      data.civitai_url = civitai_url === null || civitai_url.trim() === "" ? null : civitai_url;
+      data.civitai_url = civitai_url === null || civitai_url.trim() === "" ? null : civitai_url.trim();
     }
 
-    if (post_id !== undefined) {
-      if (post_id === null || post_id.trim() === "") {
-        data.post_id = null;
-      } else {
-        try {
-          data.post_id = BigInt(post_id);
-        } catch (error) {
-          throw new Error("post_id must be a valid integer ID");
-        }
-      }
+    const postIdBigInt = parseIdParameter(post_id, 'post_id');
+    if (postIdBigInt !== undefined) {
+      data.post_id = postIdBigInt;
+    }
+
+    const inputAssetIds = parseIdArrayParameter(input_asset_ids, 'input_asset_ids');
+    if (inputAssetIds !== undefined) {
+      data.input_asset_ids = inputAssetIds;
     }
 
     const asset = await prisma.assets.update({
@@ -106,7 +133,7 @@ export const updateAssetTool = {
         id: assetIdBigInt,
       },
       data,
-    });
+    }).catch(error => handleDatabaseError(error, `Asset ID: ${asset_id}`));
 
     return {
       content: [
@@ -123,6 +150,7 @@ export const updateAssetTool = {
             civitai_id: asset.civitai_id,
             civitai_url: asset.civitai_url,
             post_id: asset.post_id?.toString() ?? null,
+            input_asset_ids: asset.input_asset_ids.map((id: bigint) => id.toString()),
             metadata: asset.metadata,
             updated_at: asset.updated_at.toISOString(),
           }, null, 2),

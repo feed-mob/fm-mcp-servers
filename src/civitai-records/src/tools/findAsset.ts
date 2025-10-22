@@ -153,6 +153,7 @@ export const findAssetTool = {
             post_id: asset.post_id?.toString() ?? null,
             input_prompt_id: asset.input_prompt_id?.toString() ?? null,
             output_prompt_id: asset.output_prompt_id?.toString() ?? null,
+            input_asset_ids: asset.input_asset_ids.map((id: bigint) => id.toString()),
             metadata: asset.metadata,
             created_at: asset.created_at.toISOString(),
             updated_at: asset.updated_at.toISOString(),
