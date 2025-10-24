@@ -50,6 +50,7 @@ export const createPromptTool = {
           type: "text",
           text: JSON.stringify({
             prompt_id: prompt.id.toString(),
+            prompt_text: prompt.content,
             llm_model_provider: prompt.llm_model_provider,
             llm_model: prompt.llm_model,
             created_at: prompt.created_at.toISOString(),
