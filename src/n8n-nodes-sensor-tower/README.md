@@ -12,6 +12,18 @@ npm run build
 
 在你的 n8n 实例中，以“社区节点”的方式加载该文件夹（或发布到 npm 后按包名安装）。
 
+## 安装（n8n 使用 npm 包）
+
+- 在 n8n（包括 n8n Cloud）后台，进入 Community Nodes → Install，输入包名 `@feedmob/n8n-nodes-sensor-tower` 并安装。
+- 自托管（Docker/K8s 等）可通过环境变量安装：
+
+```bash
+# 例如 Docker 环境
+-e N8N_COMMUNITY_PACKAGES="@feedmob/n8n-nodes-sensor-tower"
+```
+
+> 如在 n8n Cloud，请确保组织已启用 “Community Nodes”。
+
 ## 凭据（Credentials）
 - Base URL：可选，默认 `https://api.sensortower.com`
 - Auth Token：必填，你的 Sensor Tower API `AUTH_TOKEN`
