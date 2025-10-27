@@ -29,6 +29,11 @@ export const createCivitaiPostParameters = z.object({
     .default(null)
     .describe("The description or caption of the publication as posted to Civitai."),
   metadata: metadataSchema.describe("Additional structured data about this post in JSON format. Can include Civitai API response, engagement metrics (views, likes, comments), tags, categories, workflow details, or any custom fields relevant to tracking this post."),
+  on_behalf_of: z
+    .string()
+    .nullable()
+    .default(null)
+    .describe("The user account this action is being performed on behalf of. If not provided, defaults to the authenticated database user and can be modified later if needed."),
 });
 
 export type CreateCivitaiPostParameters = z.infer<typeof createCivitaiPostParameters>;
@@ -44,6 +49,7 @@ export const createCivitaiPostTool = {
     title,
     description,
     metadata,
+    on_behalf_of,
   }: CreateCivitaiPostParameters): Promise<ContentResult> => {
     const accountValue = process.env.CIVITAI_ACCOUNT ?? "c29";
     
@@ -56,6 +62,7 @@ export const createCivitaiPostTool = {
         title: title ?? undefined,
         description: description ?? undefined,
         metadata: metadata ?? undefined,
+        on_behalf_of: on_behalf_of ?? undefined,
       },
     }).catch(error => handleDatabaseError(error, `Civitai ID: ${civitai_id}`));
 
@@ -71,6 +78,7 @@ export const createCivitaiPostTool = {
             status: post.status,
             title: post.title,
             description: post.description,
+            on_behalf_of: post.on_behalf_of,
             created_at: post.created_at.toISOString(),
           }, null, 2),
         },

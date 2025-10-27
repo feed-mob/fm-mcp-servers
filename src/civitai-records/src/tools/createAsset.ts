@@ -127,6 +127,11 @@ export const createAssetParameters = z.object({
     .default(null)
     .describe("Array of asset IDs that were used as inputs to generate this asset. For example, if this is a video generated from multiple images, list those image asset IDs here. Leave empty for assets that weren't generated from other assets."),
   metadata: metadataSchema.describe("Additional information about this asset in JSON format. Can include technical details (resolution, duration, file size), generation parameters, quality scores, or any custom data relevant to this asset."),
+  on_behalf_of: z
+    .string()
+    .nullable()
+    .default(null)
+    .describe("The user account this action is being performed on behalf of. If not provided, defaults to the authenticated database user and can be updated later."),
 });
 
 export type CreateAssetParameters = z.infer<typeof createAssetParameters>;
@@ -135,7 +140,7 @@ export const createAssetTool = {
   name: "create_asset",
   description: "Save a generated or uploaded media asset (video, image) to the database. Use this after creating content to track what was generated, where it's stored, and link it back to the original prompt that created it. IMPORTANT: The asset_type parameter is validated against the actual file content by checking HTTP headers, content sniffing, and URL patterns. If there's a mismatch (e.g., you specify 'video' but the URL is an image), the tool will return an error telling you the correct type to use.",
   parameters: createAssetParameters,
-  execute: async ({ asset_url, asset_type, asset_source, input_prompt_id, output_prompt_id, civitai_id, civitai_url, post_id, input_asset_ids, metadata }: CreateAssetParameters): Promise<ContentResult> => {
+  execute: async ({ asset_url, asset_type, asset_source, input_prompt_id, output_prompt_id, civitai_id, civitai_url, post_id, input_asset_ids, metadata, on_behalf_of }: CreateAssetParameters): Promise<ContentResult> => {
     // Detect and validate asset type
     const detectionResult = await detectRemoteAssetType(asset_url, { skipRemote: false, timeout: 5000 });
     validateAssetType(asset_type, detectionResult, asset_url);
@@ -161,6 +166,7 @@ export const createAssetTool = {
         post_id: postIdBigInt,
         input_asset_ids: inputAssetIds ?? undefined,
         metadata: metadata ?? undefined,
+        on_behalf_of: on_behalf_of ?? undefined,
       },
     }).catch(error => handleDatabaseError(error, `URL: ${asset_url}`));
 
@@ -180,6 +186,7 @@ export const createAssetTool = {
             input_prompt_id: asset.input_prompt_id?.toString() ?? null,
             output_prompt_id: asset.output_prompt_id?.toString() ?? null,
             input_asset_ids: asset.input_asset_ids.map((id: bigint) => id.toString()),
+            on_behalf_of: asset.on_behalf_of,
             created_at: asset.created_at.toISOString(),
           }, null, 2),
         },

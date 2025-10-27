@@ -64,6 +64,11 @@ export const updateAssetParameters = z.object({
     .nullable()
     .optional()
     .describe("The full Civitai page URL (e.g., 'https://civitai.com/images/106432973'). Set to null to remove. Leave undefined to keep current value."),
+  on_behalf_of: z
+    .string()
+    .nullable()
+    .optional()
+    .describe("The user account this action is being performed on behalf of. Set to null to clear the value. Leave undefined to keep current value."),
   post_id: z
     .string()
     .nullable()
@@ -80,7 +85,7 @@ export type UpdateAssetParameters = z.infer<typeof updateAssetParameters>;
 
 export const updateAssetTool = {
   name: "update_asset",
-  description: "Update an existing asset's optional fields including prompt associations (input_prompt_id, output_prompt_id), Civitai metadata (civitai_id, civitai_url), post association (post_id), and input assets (input_asset_ids). Only provided fields will be updated; undefined fields keep their current values.",
+  description: "Update an existing asset's optional fields including prompt associations (input_prompt_id, output_prompt_id), Civitai metadata (civitai_id, civitai_url), post association (post_id), account attribution (on_behalf_of), and input assets (input_asset_ids). Only provided fields will be updated; undefined fields keep their current values.",
   parameters: updateAssetParameters,
   execute: async ({
     asset_id,
@@ -88,6 +93,7 @@ export const updateAssetTool = {
     output_prompt_id,
     civitai_id,
     civitai_url,
+    on_behalf_of,
     post_id,
     input_asset_ids,
   }: UpdateAssetParameters): Promise<ContentResult> => {
@@ -116,6 +122,10 @@ export const updateAssetTool = {
 
     if (civitai_url !== undefined) {
       data.civitai_url = civitai_url === null || civitai_url.trim() === "" ? null : civitai_url.trim();
+    }
+
+    if (on_behalf_of !== undefined) {
+      data.on_behalf_of = on_behalf_of === null || on_behalf_of.trim() === "" ? null : on_behalf_of.trim();
     }
 
     const postIdBigInt = parseIdParameter(post_id, 'post_id');
@@ -149,6 +159,7 @@ export const updateAssetTool = {
             output_prompt_id: asset.output_prompt_id?.toString() ?? null,
             civitai_id: asset.civitai_id,
             civitai_url: asset.civitai_url,
+            on_behalf_of: asset.on_behalf_of,
             post_id: asset.post_id?.toString() ?? null,
             input_asset_ids: asset.input_asset_ids.map((id: bigint) => id.toString()),
             metadata: asset.metadata,

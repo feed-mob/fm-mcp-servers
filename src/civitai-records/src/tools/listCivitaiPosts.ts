@@ -24,6 +24,12 @@ export const listCivitaiPostsParameters = z.object({
     .default(null)
     .transform((val) => val?.toLowerCase() ?? null)
     .describe("Filter posts by creator name. Default is null to load records created by all users."),
+  on_behalf_of: z
+    .string()
+    .nullable()
+    .default(null)
+    .transform((val) => val?.toLowerCase() ?? null)
+    .describe("Filter posts by the user account this action was performed on behalf of. Default is null to load records regardless of on_behalf_of value."),
   start_time: z
     .string()
     .nullable()
@@ -60,6 +66,7 @@ interface WhereClauseParams {
   civitai_id: string | null;
   status: "pending" | "published" | "failed" | null;
   created_by: string | null;
+  on_behalf_of: string | null;
   start_time: string | null;
   end_time: string | null;
 }
@@ -81,6 +88,10 @@ function buildWhereClause(params: WhereClauseParams): any {
 
   if (params.created_by) {
     where.created_by = params.created_by;
+  }
+
+  if (params.on_behalf_of) {
+    where.on_behalf_of = params.on_behalf_of;
   }
 
   if (params.start_time || params.end_time) {
@@ -170,6 +181,7 @@ export const listCivitaiPostsTool = {
     civitai_id,
     status,
     created_by,
+    on_behalf_of,
     start_time,
     end_time,
     include_details,
@@ -181,6 +193,7 @@ export const listCivitaiPostsTool = {
       civitai_id,
       status,
       created_by,
+      on_behalf_of,
       start_time,
       end_time,
     });

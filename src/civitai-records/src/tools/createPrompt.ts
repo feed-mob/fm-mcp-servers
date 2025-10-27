@@ -25,6 +25,11 @@ export const createPromptParameters = z.object({
     .default(null)
     .describe("The intended purpose or use case for this prompt (e.g., 'image_generation', 'video_creation', 'text_completion'). Leave empty if not applicable or unknown."),
   metadata: metadataSchema.describe("Additional structured data about this prompt in JSON format. Can include tags, categories, version info, or any custom fields relevant to your workflow."),
+  on_behalf_of: z
+    .string()
+    .nullable()
+    .default(null)
+    .describe("The user account this action is being performed on behalf of. If not provided, defaults to the authenticated database user and can be changed later via update tools."),
 });
 
 export type CreatePromptParameters = z.infer<typeof createPromptParameters>;
@@ -33,7 +38,7 @@ export const createPromptTool = {
   name: "create_prompt",
   description: "Save a user's text prompt to the database. Use this to store prompts that will be used for content generation, video creation, or other AI tasks.",
   parameters: createPromptParameters,
-  execute: async ({ prompt_text, llm_model_provider, llm_model, purpose, metadata }: CreatePromptParameters): Promise<ContentResult> => {
+  execute: async ({ prompt_text, llm_model_provider, llm_model, purpose, metadata, on_behalf_of }: CreatePromptParameters): Promise<ContentResult> => {
     const prompt = await prisma.prompts.create({
       data: {
         content: prompt_text,
@@ -41,6 +46,7 @@ export const createPromptTool = {
         llm_model,
         purpose,
         metadata: metadata ?? undefined,
+        on_behalf_of: on_behalf_of ?? undefined,
       },
     });
 
@@ -53,6 +59,7 @@ export const createPromptTool = {
             prompt_text: prompt.content,
             llm_model_provider: prompt.llm_model_provider,
             llm_model: prompt.llm_model,
+            on_behalf_of: prompt.on_behalf_of,
             created_at: prompt.created_at.toISOString(),
           }, null, 2),
         },
