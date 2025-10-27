@@ -29,7 +29,7 @@ export const createPromptParameters = z.object({
     .string()
     .nullable()
     .default(null)
-    .describe("The user account this action is being performed on behalf of. If not provided, defaults to the authenticated database user. This field is immutable after creation."),
+    .describe("The user account this action is being performed on behalf of. If not provided, defaults to the authenticated database user and can be changed later via update tools."),
 });
 
 export type CreatePromptParameters = z.infer<typeof createPromptParameters>;
@@ -59,6 +59,7 @@ export const createPromptTool = {
             prompt_text: prompt.content,
             llm_model_provider: prompt.llm_model_provider,
             llm_model: prompt.llm_model,
+            on_behalf_of: prompt.on_behalf_of,
             created_at: prompt.created_at.toISOString(),
           }, null, 2),
         },

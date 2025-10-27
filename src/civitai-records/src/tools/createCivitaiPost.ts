@@ -33,7 +33,7 @@ export const createCivitaiPostParameters = z.object({
     .string()
     .nullable()
     .default(null)
-    .describe("The user account this action is being performed on behalf of. If not provided, defaults to the authenticated database user. This field is immutable after creation."),
+    .describe("The user account this action is being performed on behalf of. If not provided, defaults to the authenticated database user and can be modified later if needed."),
 });
 
 export type CreateCivitaiPostParameters = z.infer<typeof createCivitaiPostParameters>;
@@ -78,6 +78,7 @@ export const createCivitaiPostTool = {
             status: post.status,
             title: post.title,
             description: post.description,
+            on_behalf_of: post.on_behalf_of,
             created_at: post.created_at.toISOString(),
           }, null, 2),
         },

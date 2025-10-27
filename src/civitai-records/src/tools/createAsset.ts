@@ -131,7 +131,7 @@ export const createAssetParameters = z.object({
     .string()
     .nullable()
     .default(null)
-    .describe("The user account this action is being performed on behalf of. If not provided, defaults to the authenticated database user. This field is immutable after creation."),
+    .describe("The user account this action is being performed on behalf of. If not provided, defaults to the authenticated database user and can be updated later."),
 });
 
 export type CreateAssetParameters = z.infer<typeof createAssetParameters>;
@@ -186,6 +186,7 @@ export const createAssetTool = {
             input_prompt_id: asset.input_prompt_id?.toString() ?? null,
             output_prompt_id: asset.output_prompt_id?.toString() ?? null,
             input_asset_ids: asset.input_asset_ids.map((id: bigint) => id.toString()),
+            on_behalf_of: asset.on_behalf_of,
             created_at: asset.created_at.toISOString(),
           }, null, 2),
         },
