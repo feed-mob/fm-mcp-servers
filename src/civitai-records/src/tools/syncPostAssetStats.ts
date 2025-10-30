@@ -2,6 +2,7 @@ import type { ContentResult } from "fastmcp";
 import { z } from "zod";
 import { PrismaClient } from "@prisma/client";
 import { fetchCivitaiPostImageStats } from "../lib/civitaiApi.js";
+import { handleDatabaseError } from "../lib/handleDatabaseError.js";
 
 const prisma = new PrismaClient();
 
@@ -93,10 +94,14 @@ export const syncPostAssetStatsTool = {
 
         syncedCount++;
       } catch (error) {
-        failed.push({
-          civitai_id: stats.civitai_id,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        try {
+          handleDatabaseError(error, `Civitai ID: ${stats.civitai_id}`);
+        } catch (handledError) {
+          failed.push({
+            civitai_id: stats.civitai_id,
+            error: handledError instanceof Error ? handledError.message : String(handledError),
+          });
+        }
       }
     }
 
