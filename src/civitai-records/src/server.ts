@@ -13,6 +13,7 @@ import { listCivitaiPostsTool } from "./tools/listCivitaiPosts.js";
 import { getWorkflowGuideTool } from "./tools/getWorkflowGuide.js";
 import { fetchCivitaiPostAssetsTool } from "./tools/fetchCivitaiPostAssets.js";
 import { getMediaEngagementGuideTool } from "./tools/getMediaEngagementGuide.js";
+import { syncPostAssetStatsTool } from "./tools/syncPostAssetStats.js";
 import { recordCivitaiWorkflowPrompt } from "./prompts/recordCivitaiWorkflow.js";
 import { civitaiMediaEngagementPrompt } from "./prompts/civitaiMediaEngagement.js";
 
@@ -34,5 +35,6 @@ server.addTool(calculateSha256Tool);
 server.addTool(createCivitaiPostTool);
 server.addTool(listCivitaiPostsTool);
 server.addTool(fetchCivitaiPostAssetsTool);
+server.addTool(syncPostAssetStatsTool);
 
 server.start({ transportType: "stdio" });

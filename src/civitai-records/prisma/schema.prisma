@@ -29,6 +29,7 @@ model assets {
   prompts_assets_input_prompt_idToprompts  prompts?       @relation("assets_input_prompt_idToprompts", fields: [input_prompt_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   prompts_assets_output_prompt_idToprompts prompts?       @relation("assets_output_prompt_idToprompts", fields: [output_prompt_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   civitai_posts                            civitai_posts? @relation(fields: [post_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  asset_stats                              asset_stats?
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -91,4 +92,21 @@ enum post_status {
   pending
   published
   failed
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model asset_stats {
+  id            BigInt   @id @default(autoincrement())
+  asset_id      BigInt   @unique
+  cry_count     BigInt   @default(0)
+  laugh_count   BigInt   @default(0)
+  like_count    BigInt   @default(0)
+  dislike_count BigInt   @default(0)
+  heart_count   BigInt   @default(0)
+  comment_count BigInt   @default(0)
+  created_by    String   @default(dbgenerated("CURRENT_USER"))
+  updated_by    String   @default(dbgenerated("CURRENT_USER"))
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime @default(now()) @db.Timestamptz(6)
+  assets        assets   @relation(fields: [asset_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
