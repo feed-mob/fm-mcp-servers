@@ -10,15 +10,6 @@ export const syncPostAssetStatsParameters = z.object({
     .string()
     .min(1)
     .describe("The Civitai post ID to sync all image stats for."),
-  limit: z
-    .number()
-    .int()
-    .positive()
-    .max(200)
-    .optional()
-    .describe(
-      "Maximum number of images to sync. Defaults to 100. Maximum is 200."
-    ),
 });
 
 export type SyncPostAssetStatsParameters = z.infer<
@@ -32,9 +23,8 @@ export const syncPostAssetStatsTool = {
   parameters: syncPostAssetStatsParameters,
   execute: async ({
     civitai_post_id,
-    limit = 100,
   }: SyncPostAssetStatsParameters): Promise<ContentResult> => {
-    const allStats = await fetchCivitaiPostImageStats(civitai_post_id, limit);
+    const allStats = await fetchCivitaiPostImageStats(civitai_post_id);
 
     if (allStats.length === 0) {
       return {
