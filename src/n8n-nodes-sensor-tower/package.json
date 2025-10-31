@@ -1,0 +1,46 @@
+{
+  "name": "@feedmob/n8n-nodes-sensor-tower",
+  "version": "0.1.0",
+  "description": "n8n nodes for Sensor Tower Reporting (wraps MCP tools)",
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n",
+    "sensor-tower",
+    "mcp"
+  ],
+  "author": "FeedMob",
+  "license": "MIT",
+  "homepage": "https://github.com/feed-mob/fm-mcp-servers",
+  "bugs": "https://github.com/feed-mob/fm-mcp-servers/issues",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc && node -e \"fs=require('fs');fs.mkdirSync('dist/nodes/SensorTower',{recursive:true});fs.copyFileSync('nodes/SensorTower/logo.svg','dist/nodes/SensorTower/logo.svg')\"",
+    "dev": "tsc --watch",
+    "prepare": "npm run build"
+  },
+  "n8n": {
+    "nodes": [
+      "./dist/nodes/SensorTower/SensorTower.node.js"
+    ],
+    "credentials": [
+      "./dist/credentials/SensorTowerApi.credentials.js"
+    ]
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "n8n-core": "^1.68.0",
+    "n8n-workflow": "^1.68.0",
+    "typescript": "^5.8.2"
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "files": [
+    "dist"
+  ]
+}
+
+
