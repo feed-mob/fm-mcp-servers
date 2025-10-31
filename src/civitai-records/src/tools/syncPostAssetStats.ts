@@ -52,7 +52,7 @@ export const syncPostAssetStatsTool = {
     const civitaiIds = allStats.map((s) => s.civitai_id);
     const assets = await prisma.assets.findMany({
       where: { civitai_id: { in: civitaiIds } },
-      select: { id: true, civitai_id: true, uri: true },
+      select: { id: true, civitai_id: true, uri: true, post_id: true, on_behalf_of: true },
     });
 
     const assetMap = new Map(assets.map((a) => [a.civitai_id, a]));
@@ -79,6 +79,10 @@ export const syncPostAssetStatsTool = {
             dislike_count: BigInt(stats.dislike_count),
             heart_count: BigInt(stats.heart_count),
             comment_count: BigInt(stats.comment_count),
+            civitai_created_at: stats.civitai_created_at ? new Date(stats.civitai_created_at) : null,
+            civitai_account: stats.civitai_account,
+            post_id: asset.post_id,
+            on_behalf_of: asset.on_behalf_of,
             updated_at: new Date(),
           },
           create: {
@@ -89,6 +93,10 @@ export const syncPostAssetStatsTool = {
             dislike_count: BigInt(stats.dislike_count),
             heart_count: BigInt(stats.heart_count),
             comment_count: BigInt(stats.comment_count),
+            civitai_created_at: stats.civitai_created_at ? new Date(stats.civitai_created_at) : null,
+            civitai_account: stats.civitai_account,
+            post_id: asset.post_id,
+            on_behalf_of: asset.on_behalf_of,
           },
         });
 
