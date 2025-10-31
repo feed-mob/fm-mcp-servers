@@ -16,6 +16,8 @@ const civitaiImageItemSchema = z.object({
   id: z.number(),
   url: z.string().url(),
   stats: civitaiImageStatsSchema,
+  createdAt: z.string().optional(),
+  username: z.string().optional(),
 });
 
 const civitaiMetadataSchema = z.object({
@@ -38,6 +40,8 @@ export type CivitaiImageStats = {
   dislike_count: number;
   heart_count: number;
   comment_count: number;
+  civitai_created_at: string | null;
+  civitai_account: string | null;
 };
 
 export async function fetchCivitaiPostImageStats(
@@ -89,6 +93,8 @@ export async function fetchCivitaiPostImageStats(
         dislike_count: stats.dislikeCount ?? 0,
         heart_count: stats.heartCount ?? 0,
         comment_count: stats.commentCount ?? 0,
+        civitai_created_at: item.createdAt ?? null,
+        civitai_account: item.username ?? null,
       });
     }
 

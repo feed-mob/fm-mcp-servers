@@ -34,20 +34,21 @@ model assets {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model civitai_posts {
-  id              BigInt      @id @default(autoincrement())
+  id              BigInt        @id @default(autoincrement())
   title           String?
   description     String?
-  civitai_id      String      @unique
+  civitai_id      String        @unique
   civitai_url     String
-  civitai_account String      @default("c29")
+  civitai_account String        @default("c29")
   status          post_status
   metadata        Json?
-  created_by      String      @default(dbgenerated("CURRENT_USER"))
-  updated_by      String      @default(dbgenerated("CURRENT_USER"))
+  created_by      String        @default(dbgenerated("CURRENT_USER"))
+  updated_by      String        @default(dbgenerated("CURRENT_USER"))
   on_behalf_of    String?
-  created_at      DateTime    @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime    @default(now()) @db.Timestamptz(6)
+  created_at      DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime      @default(now()) @db.Timestamptz(6)
   assets          assets[]
+  asset_stats     asset_stats[]
 }
 
 model events {
@@ -96,17 +97,22 @@ enum post_status {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model asset_stats {
-  id            BigInt   @id @default(autoincrement())
-  asset_id      BigInt   @unique
-  cry_count     BigInt   @default(0)
-  laugh_count   BigInt   @default(0)
-  like_count    BigInt   @default(0)
-  dislike_count BigInt   @default(0)
-  heart_count   BigInt   @default(0)
-  comment_count BigInt   @default(0)
-  created_by    String   @default(dbgenerated("CURRENT_USER"))
-  updated_by    String   @default(dbgenerated("CURRENT_USER"))
-  created_at    DateTime @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime @default(now()) @db.Timestamptz(6)
-  assets        assets   @relation(fields: [asset_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id                 BigInt         @id @default(autoincrement())
+  asset_id           BigInt         @unique
+  cry_count          BigInt         @default(0)
+  laugh_count        BigInt         @default(0)
+  like_count         BigInt         @default(0)
+  dislike_count      BigInt         @default(0)
+  heart_count        BigInt         @default(0)
+  comment_count      BigInt         @default(0)
+  civitai_created_at DateTime?      @db.Timestamptz(6)
+  civitai_account    String?
+  post_id            BigInt?
+  on_behalf_of       String?
+  created_by         String         @default(dbgenerated("CURRENT_USER"))
+  updated_by         String         @default(dbgenerated("CURRENT_USER"))
+  created_at         DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime       @default(now()) @db.Timestamptz(6)
+  assets             assets         @relation(fields: [asset_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  civitai_posts      civitai_posts? @relation(fields: [post_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
