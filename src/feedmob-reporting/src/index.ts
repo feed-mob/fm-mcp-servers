@@ -3,7 +3,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports } from "./api.js";
+import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories } from "./api.js";
 
 // Create server instance
 const server = new McpServer({
@@ -87,6 +87,64 @@ server.tool(
       console.error("Error in get_direct_spends tool:", errorMessage);
       return {
         content: [{ type: "text", text: `Error fetching direct spends data: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Agency Conversion Metrics
+server.tool(
+  "get_agency_conversion_metrics",
+  "Get agency_conversion_records metrics for one or more click URL IDs.",
+  {
+    click_url_ids: z.array(z.number()).describe("Array of click URL IDs"),
+    date: z.string().optional().describe("Optional date in YYYY-MM-DD format"),
+  },
+  async (params) => {
+    try {
+      const data = await getAgencyConversionMetrics(params.click_url_ids, params.date);
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `Agency conversion metrics data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching agency conversion metrics.";
+      console.error("Error in get_agency_conversion_metrics tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching agency conversion metrics: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Click URL Histories
+server.tool(
+  "get_click_url_histories",
+  "Get historical CPI data for click URL IDs.",
+  {
+    click_url_ids: z.array(z.number()).describe("Array of click URL IDs"),
+    date: z.string().optional().describe("Optional date in YYYY-MM-DD format"),
+  },
+  async (params) => {
+    try {
+      const data = await getClickUrlHistories(params.click_url_ids, params.date);
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `Click URL histories data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching click URL histories.";
+      console.error("Error in get_click_url_histories tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching click URL histories: ${errorMessage}` }],
         isError: true,
       };
     }
