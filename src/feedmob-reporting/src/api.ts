@@ -74,6 +74,92 @@ export async function fetchDirectSpendsData(
   }
 }
 
+export async function getAgencyConversionMetrics(
+  click_url_ids: Array<string | number>,
+  date?: string
+): Promise<any> {
+  const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/agency_conversion_metrics`);
+  click_url_ids.forEach((id) => urlObj.searchParams.append('click_url_ids[]', String(id)));
+  if (date) {
+    urlObj.searchParams.append('date', date);
+  }
+
+  const url = urlObj.toString();
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token,
+      },
+      timeout: 30000,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    console.error('Error fetching agency conversion metrics:', error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to fetch agency conversion metrics');
+  }
+}
+
+export async function getClickUrlHistories(
+  click_url_ids: Array<string | number>,
+  date?: string
+): Promise<any> {
+  const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/click_url_histories`);
+  click_url_ids.forEach((id) => urlObj.searchParams.append('click_url_ids[]', String(id)));
+  if (date) {
+    urlObj.searchParams.append('date', date);
+  }
+
+  const url = urlObj.toString();
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token,
+      },
+      timeout: 30000,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    console.error('Error fetching click URL histories:', error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to fetch click URL histories');
+  }
+}
+
 export async function getInmobiReportIds(
   start_date: string,
   end_date: string
