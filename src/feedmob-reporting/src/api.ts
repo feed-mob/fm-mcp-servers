@@ -118,7 +118,7 @@ export async function getAgencyConversionMetrics(
 }
 
 export async function getClickUrlHistories(
-  click_url_ids: Array<string | number>,
+  click_url_ids: number[],
   date?: string
 ): Promise<any> {
   const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/click_url_histories`);
