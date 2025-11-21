@@ -14,6 +14,7 @@ These community nodes wrap the FeedMob Claude Agent plugin (“direct spend visu
 cd src/n8n-nodes-feedmob-direct-spend-visualizer
 npm install
 npm run build
+npm link --global  # optional, makes this package available to n8n for local testing
 ```
 
 Load the folder as a community node inside your local n8n instance, or publish the package to npm (`@feedmob/n8n-nodes-feedmob-direct-spend-visualizer`) and install it from the UI.
@@ -56,6 +57,42 @@ Create credentials of type **FeedMob Direct Spend Visualizer** and fill the foll
 
 * `npm run build` – compile TypeScript and copy the SVG icon into `dist/`.
 * `npm run dev` – run TypeScript in watch mode during development.
+* `node scripts/setup-plugin.js` – reclone or refresh the FeedMob plugin marketplace (normally run for you during `npm install`).
+
+## Testing the node locally
+
+Follow the official n8n guidance for [running custom nodes locally](https://docs.n8n.io/integrations/creating-nodes/test/run-node-locally/):
+
+1. **Install n8n globally**
+   ```bash
+   npm install -g n8n
+   ```
+
+2. **Build and publish the node locally**
+   ```bash
+   # inside this package
+   npm install
+   npm run build
+   npm link
+   ```
+
+3. **Link the node into your local n8n installation**
+   ```bash
+   # Cd into your n8n custom nodes directory
+   # e.g. ~/.n8n/custom or ~/.n8n/<CUSTOM_NAME> if N8N_CUSTOM_EXTENSIONS was set
+   npm link @feedmob/n8n-nodes-feedmob-direct-spend-visualizer
+   ```
+
+   > If `~/.n8n/custom` doesn’t exist, create it manually and run `npm init` before linking.
+
+4. **Start n8n**
+   ```bash
+   n8n start
+   ```
+
+5. **Open the UI** (usually http://localhost:5678) and search for “Direct Spend Visualizer” in the node panel. Remember to search by *node name*, not package name.
+
+Ensure the required environment variables (AWS credentials, FeedMob API credentials) are available to the n8n process while testing so the Claude Agent SDK can authenticate with Bedrock and FeedMob.
 
 ## License
 
