@@ -1,6 +1,6 @@
 {
   "name": "@feedmob/n8n-nodes-feedmob-direct-spend-visualizer",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "n8n nodes for orchestrating FeedMob direct spend visualizations through Claude Agent SDK plugins",
   "keywords": [
     "n8n-community-node-package",
@@ -16,7 +16,7 @@
   "main": "dist/index.js",
   "scripts": {
     "postinstall": "node scripts/setup-plugin.js",
-    "build": "tsc && node -e \"fs=require('fs');fs.mkdirSync('dist/nodes/FeedmobDirectSpendVisualizer',{recursive:true});fs.copyFileSync('nodes/FeedmobDirectSpendVisualizer/logo.svg','dist/nodes/FeedmobDirectSpendVisualizer/logo.svg')\"",
+    "build": "tsc && node scripts/build-assets.js",
     "dev": "tsc --watch",
     "prepare": "npm run build"
   },
@@ -45,6 +45,7 @@
   },
   "files": [
     "dist",
-    "scripts/setup-plugin.js"
+    "scripts/setup-plugin.js",
+    "scripts/build-assets.js"
   ]
 }
