@@ -1,0 +1,49 @@
+{
+  "name": "@feedmob/n8n-nodes-feedmob-direct-spend-visualizer",
+  "version": "0.1.0",
+  "description": "n8n nodes for orchestrating FeedMob direct spend visualizations through Claude Agent SDK plugins",
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n",
+    "feedmob",
+    "direct-spend",
+    "claude-agent-sdk"
+  ],
+  "author": "FeedMob",
+  "license": "MIT",
+  "homepage": "https://github.com/feed-mob/fm-mcp-servers",
+  "bugs": "https://github.com/feed-mob/fm-mcp-servers/issues",
+  "main": "dist/index.js",
+  "scripts": {
+    "postinstall": "node scripts/setup-plugin.js",
+    "build": "tsc && node -e \"fs=require('fs');fs.mkdirSync('dist/nodes/FeedmobDirectSpendVisualizer',{recursive:true});fs.copyFileSync('nodes/FeedmobDirectSpendVisualizer/logo.svg','dist/nodes/FeedmobDirectSpendVisualizer/logo.svg')\"",
+    "dev": "tsc --watch",
+    "prepare": "npm run build"
+  },
+  "n8n": {
+    "nodes": [
+      "./dist/nodes/FeedmobDirectSpendVisualizer/FeedmobDirectSpendVisualizer.node.js"
+    ],
+    "credentials": [
+      "./dist/credentials/FeedmobDirectSpendVisualizerApi.credentials.js"
+    ]
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.1.49"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.5",
+    "n8n-core": "^1.68.0",
+    "n8n-workflow": "^1.68.0",
+    "typescript": "^5.8.2"
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "files": [
+    "dist"
+  ]
+}
