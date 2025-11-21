@@ -14,11 +14,14 @@ import type {
 } from 'n8n-workflow';
 
 type FeedmobDirectSpendVisualizerCredentials = {
-  anthropicApiKey: string;
-  model?: string;
   feedmobKey?: string;
   feedmobSecret?: string;
   feedmobApiBase?: string;
+  awsRegion?: string;
+  awsAccessKeyId?: string;
+  awsSecretAccessKey?: string;
+  anthropicModel?: string;
+  anthropicSmallModel?: string;
 };
 
 type AgentRunResult = {
@@ -86,23 +89,11 @@ export class FeedmobDirectSpendVisualizer implements INodeType {
         description: 'Single FeedMob click_url_id to visualize.',
       },
       {
-        displayName: 'Claude Model',
-        name: 'model',
-        type: 'options',
-        options: [
-          { name: 'Claude 3.5 Sonnet (latest)', value: 'claude-3-5-sonnet-latest' },
-          { name: 'Claude 3.5 Haiku (latest)', value: 'claude-3-5-haiku-latest' },
-          { name: 'Claude 3 Opus (latest)', value: 'claude-3-opus-latest' },
-        ],
-        default: 'claude-3-5-sonnet-latest',
-        description: 'Model used for Claude Agent SDK queries. Falls back to the credential default.',
-      },
-      {
         displayName: 'Max Turns',
         name: 'maxTurns',
         type: 'number',
-        default: 3,
-        typeOptions: { minValue: 1, maxValue: 8, numberStepSize: 1 },
+        default: 50,
+        typeOptions: { minValue: 1, maxValue: 100, numberStepSize: 1 },
         description: 'Number of reasoning turns allowed for the Claude Agent.',
       },
     ],
@@ -110,8 +101,8 @@ export class FeedmobDirectSpendVisualizer implements INodeType {
 
   async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
     const credentials = (await this.getCredentials('feedmobDirectSpendVisualizerApi')) as FeedmobDirectSpendVisualizerCredentials;
-    if (!credentials?.anthropicApiKey) {
-      throw new Error('Missing Anthropic API key in credentials.');
+    if (!credentials?.awsAccessKeyId || !credentials.awsSecretAccessKey) {
+      throw new Error('Missing AWS credentials in the FeedMob Direct Spend Visualizer credential.');
     }
 
     const items = this.getInputData();
@@ -129,22 +120,16 @@ export class FeedmobDirectSpendVisualizer implements INodeType {
         const endDate = this.getNodeParameter('endDate', itemIndex) as string;
         const clickUrlId = this.getNodeParameter('clickUrlId', itemIndex) as string;
         const prompt = buildPrompt(clickUrlId, startDate, endDate);
-        const maxTurns = this.getNodeParameter('maxTurns', itemIndex, 3) as number;
-        const credentialModel = credentials.model || 'claude-3-5-sonnet-latest';
-        const nodeModel = this.getNodeParameter('model', itemIndex, credentialModel) as string;
+        const maxTurns = this.getNodeParameter('maxTurns', itemIndex, 50) as number;
 
-        const agentResult = await runAgentWithPlugin(prompt, {
-          plugins: [{ type: 'local', path: pluginPath }],
-          maxTurns,
-          model: nodeModel || credentialModel,
-          env: {
-            ...process.env,
-            ANTHROPIC_API_KEY: credentials.anthropicApiKey,
-            FEEDMOB_KEY: credentials.feedmobKey ?? process.env.FEEDMOB_KEY,
-            FEEDMOB_SECRET: credentials.feedmobSecret ?? process.env.FEEDMOB_SECRET,
-            FEEDMOB_API_BASE: credentials.feedmobApiBase ?? process.env.FEEDMOB_API_BASE,
+        const agentResult = await runAgentWithPlugin(
+          prompt,
+          {
+            plugins: [{ type: 'local', path: pluginPath }],
+            maxTurns,
+            env: buildRuntimeEnv(credentials),
           },
-        });
+        );
 
         results.push({
           json: {
@@ -250,4 +235,35 @@ function tryParseJson(text?: string): unknown | undefined {
   } catch {
     return undefined;
   }
+}
+
+function buildRuntimeEnv(credentials: FeedmobDirectSpendVisualizerCredentials): NodeJS.ProcessEnv {
+  const baseEnv = { ...process.env };
+  const awsAccessKeyId = credentials.awsAccessKeyId ?? baseEnv.AWS_ACCESS_KEY_ID;
+  const awsSecretAccessKey = credentials.awsSecretAccessKey ?? baseEnv.AWS_SECRET_ACCESS_KEY;
+  if (!awsAccessKeyId || !awsSecretAccessKey) {
+    throw new Error('AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY missing. Update the credential or host environment.');
+  }
+
+  const feedmobKey = credentials.feedmobKey ?? baseEnv.FEEDMOB_KEY;
+  const feedmobSecret = credentials.feedmobSecret ?? baseEnv.FEEDMOB_SECRET;
+  const feedmobApiBase = credentials.feedmobApiBase ?? baseEnv.FEEDMOB_API_BASE;
+  if (!feedmobKey || !feedmobSecret || !feedmobApiBase) {
+    throw new Error('FeedMob API env vars (FEEDMOB_KEY/SECRET/API_BASE) are required for the plugin.');
+  }
+
+  return {
+    ...baseEnv,
+    AWS_REGION: credentials.awsRegion ?? baseEnv.AWS_REGION ?? 'us-east-1',
+    AWS_ACCESS_KEY_ID: awsAccessKeyId,
+    AWS_SECRET_ACCESS_KEY: awsSecretAccessKey,
+    AWS_RETRY_MODE: baseEnv.AWS_RETRY_MODE ?? 'adaptive',
+    AWS_MAX_ATTEMPTS: baseEnv.AWS_MAX_ATTEMPTS ?? '20',
+    CLAUDE_CODE_USE_BEDROCK: baseEnv.CLAUDE_CODE_USE_BEDROCK ?? '1',
+    ANTHROPIC_MODEL: credentials.anthropicModel ?? baseEnv.ANTHROPIC_MODEL ?? 'us.anthropic.claude-sonnet-4-20250514-v1:0',
+    ANTHROPIC_SMALL_FAST_MODEL: credentials.anthropicSmallModel ?? baseEnv.ANTHROPIC_SMALL_FAST_MODEL ?? 'us.anthropic.claude-3-5-haiku-20241022-v1:0',
+    FEEDMOB_KEY: feedmobKey,
+    FEEDMOB_SECRET: feedmobSecret,
+    FEEDMOB_API_BASE: feedmobApiBase,
+  };
 }

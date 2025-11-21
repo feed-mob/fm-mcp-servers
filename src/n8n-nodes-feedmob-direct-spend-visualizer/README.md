@@ -6,7 +6,7 @@ These community nodes wrap the FeedMob Claude Agent plugin (“direct spend visu
 
 1. `npm install` automatically clones [`feed-mob/claude-code-marketplace`](https://github.com/feed-mob/claude-code-marketplace) into `vendor/claude-code-marketplace`. Ensure `git` is available on the host.
 2. Provide the FeedMob MCP environment variables listed in the plugin README (`FEEDMOB_KEY`, `FEEDMOB_SECRET`, `FEEDMOB_API_BASE`).
-3. Supply an Anthropic API key with access to Claude 3.5 models and ensure n8n allows community nodes.
+3. Provide AWS Bedrock credentials that can invoke Anthropic Claude models (region, access key ID, secret).
 
 ## Local development
 
@@ -31,11 +31,14 @@ Create credentials of type **FeedMob Direct Spend Visualizer** and fill the foll
 
 | Field | Description |
 | --- | --- |
-| Anthropic API Key | Required. Used by the Claude Agent SDK. |
+| AWS Region | Defaults to `us-east-1`. Region used for Bedrock Claude. |
+| AWS Access Key ID | Required. Must have permissions to invoke Anthropic models via Bedrock. |
+| AWS Secret Access Key | Required. Secret for the above key. |
 | FeedMob Key | Required. Exported to `FEEDMOB_KEY` for the plugin’s MCP server. |
 | FeedMob Secret | Required. Exported to `FEEDMOB_SECRET`. |
 | FeedMob API Base | Required. Exported to `FEEDMOB_API_BASE`. |
-| Default Claude Model | Optional. Fallback model used when a node does not override the model. |
+| Anthropic Model (primary) | Defaults to `us.anthropic.claude-sonnet-4-20250514-v1:0`. |
+| Anthropic Model (fast) | Defaults to `us.anthropic.claude-3-5-haiku-20241022-v1:0`. |
 
 ## Supported operations
 
