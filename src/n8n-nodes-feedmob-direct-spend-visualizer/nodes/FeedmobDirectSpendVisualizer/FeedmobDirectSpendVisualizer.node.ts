@@ -30,16 +30,7 @@ type AgentRunResult = {
   usage?: SDKResultMessage['usage'];
 };
 
-const DEFAULT_PLUGIN_PATH = resolve(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  'vendor',
-  'claude-code-marketplace',
-  'plugins',
-  'direct-spend-visualizer',
-);
+const PLUGIN_SEGMENTS = ['vendor', 'claude-code-marketplace', 'plugins', 'direct-spend-visualizer'];
 
 const buildPrompt = (clickUrlId: string, startDate: string, endDate: string) => `
 Use the Claude agent skill "direct-spend-visualizer" to visualize FeedMob direct spend.
@@ -111,10 +102,7 @@ export class FeedmobDirectSpendVisualizer implements INodeType {
 
     for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
       try {
-        const pluginPath = DEFAULT_PLUGIN_PATH;
-        if (!existsSync(pluginPath)) {
-          throw new Error(`Plugin path "${pluginPath}" does not exist. Run npm install to clone the marketplace repository.`);
-        }
+        const pluginPath = resolvePluginPath();
 
         const startDate = this.getNodeParameter('startDate', itemIndex) as string;
         const endDate = this.getNodeParameter('endDate', itemIndex) as string;
@@ -267,4 +255,21 @@ function buildRuntimeEnv(credentials: FeedmobDirectSpendVisualizerCredentials): 
     FEEDMOB_SECRET: feedmobSecret,
     FEEDMOB_API_BASE: feedmobApiBase,
   };
+}
+
+function resolvePluginPath(): string {
+  const manualPath = process.env.CLAUDE_MARKETPLACE_PLUGIN_PATH?.trim();
+  const candidatePaths = [
+    manualPath ? resolve(manualPath) : undefined,
+    resolve(__dirname, '..', '..', ...PLUGIN_SEGMENTS),
+    resolve(__dirname, '..', '..', '..', ...PLUGIN_SEGMENTS),
+  ].filter((candidate): candidate is string => Boolean(candidate));
+
+  for (const candidate of candidatePaths) {
+    if (existsSync(candidate)) return candidate;
+  }
+
+  throw new Error(
+    'Claude marketplace plugin directory not found. Ensure the package build copied vendor plugins or set CLAUDE_MARKETPLACE_PLUGIN_PATH.',
+  );
 }
