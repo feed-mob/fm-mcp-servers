@@ -1,0 +1,7 @@
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    environment:
+      - N8N_CUSTOM_EXTENSIONS=/home/node/.n8n/custom
+    volumes:
+      - ./dist:/home/node/.n8n/custom
