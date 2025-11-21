@@ -126,6 +126,7 @@ export class FeedmobDirectSpendVisualizer implements INodeType {
           prompt,
           {
             plugins: [{ type: 'local', path: pluginPath }],
+            allowedTools: ['Skill', 'mcp__plugin_direct-spend-visualizer_feedmob__get_direct_spends'],
             maxTurns,
             env: buildRuntimeEnv(credentials),
           },
