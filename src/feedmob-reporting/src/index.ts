@@ -3,12 +3,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories } from "./api.js";
+import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports } from "./api.js";
 
 // Create server instance
 const server = new McpServer({
   name: "feedmob-reporting",
-  version: "0.0.5",
+  version: "0.0.7",
   capabilities: {
     tools: {},
     prompts: {},
@@ -304,6 +304,38 @@ server.tool(
       console.error("Error in get_adops_reports tool:", errorMessage);
       return {
         content: [{ type: "text", text: `Error fetching AdOps reports: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting Possible Finance Singular Reports
+server.tool(
+  "get_possible_finance_singular_reports",
+  "Get Possible Finance Singular API reports data via FeedMob API.",
+  {
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format"),
+  },
+  async (params) => {
+    try {
+      const data = await getPossibleFinanceSingularReports(
+        params.start_date,
+        params.end_date
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `Possible Finance Singular reports data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching Possible Finance Singular reports.";
+      console.error("Error in get_possible_finance_singular_reports tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching Possible Finance Singular reports: ${errorMessage}` }],
         isError: true,
       };
     }
