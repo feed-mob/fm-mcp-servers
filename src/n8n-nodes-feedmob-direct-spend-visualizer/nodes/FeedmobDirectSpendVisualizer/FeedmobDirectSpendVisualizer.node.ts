@@ -14,14 +14,21 @@ import type {
 } from 'n8n-workflow';
 
 type FeedmobDirectSpendVisualizerCredentials = {
+  provider?: 'aws_bedrock' | 'glm';
   feedmobKey?: string;
   feedmobSecret?: string;
   feedmobApiBase?: string;
+  // AWS
   awsRegion?: string;
   awsAccessKeyId?: string;
   awsSecretAccessKey?: string;
-  anthropicModel?: string;
-  anthropicSmallModel?: string;
+  anthropicModel?: string; // used for AWS
+  anthropicSmallModel?: string; // used for AWS
+  // GLM
+  anthropicBaseUrl?: string; // used for GLM
+  anthropicAuthToken?: string; // used for GLM
+  glmModel?: string; // used for GLM
+  glmSmallModel?: string; // used for GLM
 };
 
 type AgentRunResult = {
@@ -92,8 +99,17 @@ export class FeedmobDirectSpendVisualizer implements INodeType {
 
   async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
     const credentials = (await this.getCredentials('feedmobDirectSpendVisualizerApi')) as FeedmobDirectSpendVisualizerCredentials;
-    if (!credentials?.awsAccessKeyId || !credentials.awsSecretAccessKey) {
-      throw new Error('Missing AWS credentials in the FeedMob Direct Spend Visualizer credential.');
+    const provider = credentials.provider || 'aws_bedrock';
+
+    // Validate provider-specific credentials
+    if (provider === 'aws_bedrock') {
+      if (!credentials.awsAccessKeyId || !credentials.awsSecretAccessKey) {
+        throw new Error('Missing AWS credentials in the FeedMob Direct Spend Visualizer credential.');
+      }
+    } else if (provider === 'glm') {
+      if (!credentials.anthropicAuthToken) {
+        throw new Error('Missing GLM API Key (anthropicAuthToken) in the FeedMob Direct Spend Visualizer credential.');
+      }
     }
 
     const items = this.getInputData();
@@ -228,33 +244,58 @@ function tryParseJson(text?: string): unknown | undefined {
 
 function buildRuntimeEnv(credentials: FeedmobDirectSpendVisualizerCredentials): NodeJS.ProcessEnv {
   const baseEnv = { ...process.env };
-  const awsAccessKeyId = credentials.awsAccessKeyId ?? baseEnv.AWS_ACCESS_KEY_ID;
-  const awsSecretAccessKey = credentials.awsSecretAccessKey ?? baseEnv.AWS_SECRET_ACCESS_KEY;
-  if (!awsAccessKeyId || !awsSecretAccessKey) {
-    throw new Error('AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY missing. Update the credential or host environment.');
-  }
+  const provider = credentials.provider || 'aws_bedrock';
 
+  // Common Validations
   const feedmobKey = credentials.feedmobKey ?? baseEnv.FEEDMOB_KEY;
   const feedmobSecret = credentials.feedmobSecret ?? baseEnv.FEEDMOB_SECRET;
   const feedmobApiBase = credentials.feedmobApiBase ?? baseEnv.FEEDMOB_API_BASE;
+
   if (!feedmobKey || !feedmobSecret || !feedmobApiBase) {
     throw new Error('FeedMob API env vars (FEEDMOB_KEY/SECRET/API_BASE) are required for the plugin.');
   }
 
-  return {
+  const env: NodeJS.ProcessEnv = {
     ...baseEnv,
-    AWS_REGION: credentials.awsRegion ?? baseEnv.AWS_REGION ?? 'us-east-1',
-    AWS_ACCESS_KEY_ID: awsAccessKeyId,
-    AWS_SECRET_ACCESS_KEY: awsSecretAccessKey,
-    AWS_RETRY_MODE: baseEnv.AWS_RETRY_MODE ?? 'adaptive',
-    AWS_MAX_ATTEMPTS: baseEnv.AWS_MAX_ATTEMPTS ?? '20',
-    CLAUDE_CODE_USE_BEDROCK: baseEnv.CLAUDE_CODE_USE_BEDROCK ?? '1',
-    ANTHROPIC_MODEL: credentials.anthropicModel ?? baseEnv.ANTHROPIC_MODEL ?? 'us.anthropic.claude-sonnet-4-20250514-v1:0',
-    ANTHROPIC_SMALL_FAST_MODEL: credentials.anthropicSmallModel ?? baseEnv.ANTHROPIC_SMALL_FAST_MODEL ?? 'us.anthropic.claude-3-5-haiku-20241022-v1:0',
     FEEDMOB_KEY: feedmobKey,
     FEEDMOB_SECRET: feedmobSecret,
     FEEDMOB_API_BASE: feedmobApiBase,
   };
+
+  if (provider === 'aws_bedrock') {
+    const awsAccessKeyId = credentials.awsAccessKeyId ?? baseEnv.AWS_ACCESS_KEY_ID;
+    const awsSecretAccessKey = credentials.awsSecretAccessKey ?? baseEnv.AWS_SECRET_ACCESS_KEY;
+    if (!awsAccessKeyId || !awsSecretAccessKey) {
+      throw new Error('AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY missing.');
+    }
+
+    env.AWS_REGION = credentials.awsRegion ?? baseEnv.AWS_REGION ?? 'us-east-1';
+    env.AWS_ACCESS_KEY_ID = awsAccessKeyId;
+    env.AWS_SECRET_ACCESS_KEY = awsSecretAccessKey;
+    env.AWS_RETRY_MODE = baseEnv.AWS_RETRY_MODE ?? 'adaptive';
+    env.AWS_MAX_ATTEMPTS = baseEnv.AWS_MAX_ATTEMPTS ?? '20';
+    env.CLAUDE_CODE_USE_BEDROCK = '1';
+    env.ANTHROPIC_MODEL = credentials.anthropicModel ?? baseEnv.ANTHROPIC_MODEL ?? 'us.anthropic.claude-sonnet-4-5-20250929-v1:0';
+    env.ANTHROPIC_SMALL_FAST_MODEL = credentials.anthropicSmallModel ?? baseEnv.ANTHROPIC_SMALL_FAST_MODEL ?? 'us.anthropic.claude-haiku-4-5-20251001-v1:0';
+
+  } else if (provider === 'glm') {
+    // Force Unset Bedrock flag if it exists in baseEnv to avoid confusion
+    if (env.CLAUDE_CODE_USE_BEDROCK) {
+      delete env.CLAUDE_CODE_USE_BEDROCK;
+    }
+
+    const auth = credentials.anthropicAuthToken ?? baseEnv.ANTHROPIC_AUTH_TOKEN;
+    if (!auth) {
+      throw new Error('ANTHROPIC_AUTH_TOKEN missing for GLM provider.');
+    }
+
+    env.ANTHROPIC_BASE_URL = credentials.anthropicBaseUrl ?? 'https://open.bigmodel.cn/api/anthropic';
+    env.ANTHROPIC_AUTH_TOKEN = auth;
+    env.ANTHROPIC_MODEL = credentials.glmModel ?? 'glm-4.6';
+    env.ANTHROPIC_SMALL_FAST_MODEL = credentials.glmSmallModel ?? 'glm-4.6';
+  }
+
+  return env;
 }
 
 function resolvePluginPath(): string {
