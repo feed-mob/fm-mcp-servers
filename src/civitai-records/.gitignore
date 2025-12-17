@@ -1,3 +1,4 @@
 node_modules
+.npm-cache
 # Keep environment variables out of version control
 .env
