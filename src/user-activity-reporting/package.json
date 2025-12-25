@@ -1,0 +1,42 @@
+{
+  "name": "@anthropic/user-activity-reporting",
+  "version": "0.0.1",
+  "description": "MCP server for querying user-client relationships and activity data",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "user-activity-reporting": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/你的用户名/仓库名.git"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "user-activity",
+    "reporting"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "inspect": "npx fastmcp inspect dist/index.js",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.24.2",
+    "jsonwebtoken": "^9.0.2",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/node": "^22.13.10",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}
