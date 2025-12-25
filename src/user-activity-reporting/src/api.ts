@@ -56,7 +56,7 @@ export interface ClientQueryParams {
 }
 
 async function podRelationshipsApi(params: Record<string, string>): Promise<any> {
-  const urlObj = new URL(`${FEMINI_API_BASE}/api/unstable/user_pod_relationships`);
+  const urlObj = new URL(`${FEMINI_API_BASE}/users/pod_relationships.json`);
   Object.entries(params).forEach(([k, v]) => urlObj.searchParams.append(k, v));
 
   const response = await fetch(urlObj.toString(), {
