@@ -2,34 +2,32 @@ import { z } from "zod";
 
 const civitaiImageStatsSchema = z
   .object({
-    cryCount: z.number().int().nonnegative().optional(),
-    laughCount: z.number().int().nonnegative().optional(),
-    likeCount: z.number().int().nonnegative().optional(),
-    dislikeCount: z.number().int().nonnegative().optional(),
-    heartCount: z.number().int().nonnegative().optional(),
-    commentCount: z.number().int().nonnegative().optional(),
+    cryCountAllTime: z.number().int().nonnegative().optional(),
+    laughCountAllTime: z.number().int().nonnegative().optional(),
+    likeCountAllTime: z.number().int().nonnegative().optional(),
+    dislikeCountAllTime: z.number().int().nonnegative().optional(),
+    heartCountAllTime: z.number().int().nonnegative().optional(),
+    commentCountAllTime: z.number().int().nonnegative().optional(),
   })
   .partial()
   .optional();
 
 const civitaiImageItemSchema = z.object({
   id: z.number(),
-  url: z.string().url(),
   stats: civitaiImageStatsSchema,
   createdAt: z.string().optional(),
-  username: z.string().optional(),
+  user: z.object({ username: z.string().optional() }).optional(),
 });
 
-const civitaiMetadataSchema = z.object({
-  nextCursor: z.number().optional(),
-  currentPage: z.number().optional(),
-  pageSize: z.number().optional(),
-  nextPage: z.string().optional(),
-});
-
-const civitaiImagesResponseSchema = z.object({
-  items: z.array(civitaiImageItemSchema),
-  metadata: civitaiMetadataSchema.optional(),
+const civitaiTrpcResponseSchema = z.object({
+  result: z.object({
+    data: z.object({
+      json: z.object({
+        nextCursor: z.union([z.number(), z.string()]).nullable().optional(),
+        items: z.array(civitaiImageItemSchema),
+      }),
+    }),
+  }),
 });
 
 export type CivitaiImageStats = {
@@ -48,18 +46,36 @@ export async function fetchCivitaiPostImageStats(
   postId: string
 ): Promise<CivitaiImageStats[]> {
   const allStats: CivitaiImageStats[] = [];
-  let nextPage: string | undefined = undefined;
+  let nextCursor: number | string | null | undefined = undefined;
   let isFirstPage = true;
 
-  while (isFirstPage || nextPage) {
-    const url = nextPage
-      ? new URL(nextPage)
-      : new URL("https://civitai.com/api/v1/images");
+  while (isFirstPage || nextCursor) {
+    const input: any = {
+      json: {
+        postId: parseInt(postId),
+        pending: false,
+        browsingLevel: null,
+        withMeta: false,
+        include: [],
+        excludedTagIds: [],
+        disablePoi: true,
+        disableMinor: false,
+        cursor: nextCursor ?? null,
+      },
+      meta: {
+        values: {
+          browsingLevel: ["undefined"],
+          cursor: ["undefined"],
+        },
+      },
+    };
 
-    if (!nextPage) {
-      url.searchParams.set("postId", postId);
-      url.searchParams.set("limit", "200");
+    if (nextCursor) {
+      delete input.meta.values.cursor;
     }
+
+    const url = new URL("https://civitai.com/api/trpc/image.getInfinite");
+    url.searchParams.set("input", JSON.stringify(input));
 
     const response = await fetch(url, {
       method: "GET",
@@ -70,7 +86,7 @@ export async function fetchCivitaiPostImageStats(
 
     if (!response.ok) {
       throw new Error(
-        `Failed to fetch post images from Civitai (status ${response.status} ${response.statusText})`
+        `Failed to fetch post images from Civitai TRPC (status ${response.status} ${response.statusText})`
       );
     }
 
@@ -81,24 +97,25 @@ export async function fetchCivitaiPostImageStats(
       throw new Error("Civitai response was not valid JSON");
     }
 
-    const parsed = civitaiImagesResponseSchema.parse(json);
+    const parsed = civitaiTrpcResponseSchema.parse(json);
+    const items = parsed.result.data.json.items;
 
-    for (const item of parsed.items) {
+    for (const item of items) {
       const stats = item.stats ?? {};
       allStats.push({
         civitai_id: item.id.toString(),
-        cry_count: stats.cryCount ?? 0,
-        laugh_count: stats.laughCount ?? 0,
-        like_count: stats.likeCount ?? 0,
-        dislike_count: stats.dislikeCount ?? 0,
-        heart_count: stats.heartCount ?? 0,
-        comment_count: stats.commentCount ?? 0,
+        cry_count: stats.cryCountAllTime ?? 0,
+        laugh_count: stats.laughCountAllTime ?? 0,
+        like_count: stats.likeCountAllTime ?? 0,
+        dislike_count: stats.dislikeCountAllTime ?? 0,
+        heart_count: stats.heartCountAllTime ?? 0,
+        comment_count: stats.commentCountAllTime ?? 0,
         civitai_created_at: item.createdAt ?? null,
-        civitai_account: item.username ?? null,
+        civitai_account: item.user?.username ?? null,
       });
     }
 
-    nextPage = parsed.metadata?.nextPage;
+    nextCursor = parsed.result.data.json.nextCursor;
     isFirstPage = false;
   }
 
