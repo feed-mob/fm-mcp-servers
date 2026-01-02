@@ -1,392 +1,206 @@
+import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const FEMINI_API_BASE = process.env.FEMINI_API_BASE;
-const FEMINI_BEARER_TOKEN = process.env.FEMINI_BEARER_TOKEN;
+const API_BASE = process.env.FEEDMOB_API_BASE;
+const API_KEY = process.env.FEEDMOB_KEY;
+const API_SECRET = process.env.FEEDMOB_SECRET;
 
-if (!FEMINI_BEARER_TOKEN) {
-  console.error("Error: FEMINI_BEARER_TOKEN environment variable must be set.");
+if (!API_KEY || !API_SECRET) {
+  console.error("Error: FEEDMOB_KEY and FEEDMOB_SECRET must be set.");
   process.exit(1);
 }
 
-// ============ User Pod Relationships API ============
-
-export interface PodUser {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  pod_id: number;
+function genToken(): string {
+  const exp = new Date();
+  exp.setDate(exp.getDate() + 7);
+  return jwt.sign({ key: API_KEY, expired_at: exp.toISOString().split('T')[0] }, API_SECRET!, { algorithm: 'HS256' });
 }
 
-export interface PodClient {
-  id: number;
-  legacy_id: number;
-  name: string;
-  active: boolean;
+function buildUrl(path: string, params: Record<string, string>): string {
+  const url = new URL(`${API_BASE}${path}`);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
+  return url.toString();
 }
 
-export interface Pod {
-  id: number;
-  name: string;
-}
-
-export interface UserQueryResult {
-  user: PodUser;
-  pod: Pod;
-  clients: PodClient[];
-}
-
-export interface ClientQueryResult {
-  client: PodClient;
-  pod: Pod;
-  users: PodUser[];
-}
-
-export interface UserQueryParams {
-  id?: number;
-  email?: string;
-  name?: string;
-}
-
-export interface ClientQueryParams {
-  id?: number;
-  name?: string;
-}
-
-async function podRelationshipsApi(params: Record<string, string>): Promise<any> {
-  const urlObj = new URL(`${FEMINI_API_BASE}/users/pod_relationships.json`);
-  Object.entries(params).forEach(([k, v]) => urlObj.searchParams.append(k, v));
-
-  const response = await fetch(urlObj.toString(), {
+async function apiGet(path: string, params: Record<string, string> = {}): Promise<any> {
+  const res = await fetch(buildUrl(path, params), {
     headers: {
-      'Authorization': `Bearer ${FEMINI_BEARER_TOKEN}`,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
+      'Content-Type': 'application/json', 'Accept': 'application/json',
+      'FEEDMOB-KEY': API_KEY!, 'FEEDMOB-TOKEN': genToken()
     },
     signal: AbortSignal.timeout(30000)
   });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `API request failed: ${response.status} ${response.statusText}`);
+  if (res.status === 401) throw new Error('Unauthorized: Invalid API Key or Token');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `API error: ${res.status}`);
   }
 
-  return response.json();
+  const r = await res.json();
+  if (r.status === 404) throw new Error(r.error || 'Not found');
+  if (r.status === 400) throw new Error(r.error || 'Bad request');
+  return r.data;
 }
 
-export async function getUserPodRelationships(params: UserQueryParams): Promise<UserQueryResult> {
-  const queryParams: Record<string, string> = { type: 'user' };
-  
-  if (params.id) queryParams.id = String(params.id);
-  if (params.email) queryParams.email = params.email;
-  if (params.name) queryParams.name = params.name;
+export type ValidRole = 'aa' | 'am' | 'ae' | 'pm' | 'pa' | 'ao';
 
-  return podRelationshipsApi(queryParams);
+export interface ClientContact {
+  client_id: number;
+  client_name: string;
+  month?: string;
+  pod?: string;
+  aa?: string;
+  am?: string;
+  ae?: string;
+  pm?: string;
+  pa?: string;
+  ao?: string;
 }
 
-export async function getClientPodRelationships(params: ClientQueryParams): Promise<ClientQueryResult> {
-  const queryParams: Record<string, string> = { type: 'client' };
-  
-  if (params.id) queryParams.id = String(params.id);
-  if (params.name) queryParams.name = params.name;
+export interface ListResult { month: string; total: number; clients: ClientContact[]; }
+export interface PodResult { pod: string; month: string; count: number; client_names: string[]; }
+export interface RoleResult { role: string; name: string; month: string; count: number; client_names: string[]; }
+export interface NameResult { name: string; month: string; results: Record<string, string[]>; }
 
-  return podRelationshipsApi(queryParams);
+export async function getAllContacts(month?: string): Promise<ListResult> {
+  return apiGet('/ai/api/client_contacts', month ? { month } : {});
 }
 
-
-// ============ Slack API ============
-
-const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
-
-// ============ HubSpot API ============
-
-const HUBSPOT_ACCESS_TOKEN = process.env.HUBSPOT_ACCESS_TOKEN;
-
-export interface HubSpotTicket {
-  id: string;
-  subject: string;
-  content?: string;
-  status: string;
-  priority?: string;
-  priorityAdvanced?: string;
-  createdAt: string;
-  updatedAt: string;
-  dueDate?: string;
-  ticketOwner?: string;
-  createdBy?: string;
-  aoRequestType?: string;
-  partnersRequestType?: string;
+export async function getContactByClient(name: string, month?: string): Promise<ClientContact> {
+  const p: Record<string, string> = { client_name: name };
+  if (month) p.month = month;
+  return apiGet('/ai/api/client_contacts', p);
 }
 
-export interface HubSpotTicketsParams {
-  status?: string;
-  start_date?: string;
-  end_date?: string;
-  limit?: number;
+export async function getClientsByPod(pod: string, month?: string): Promise<PodResult> {
+  const p: Record<string, string> = { pod };
+  if (month) p.month = month;
+  return apiGet('/ai/api/client_contacts', p);
 }
 
-async function hubspotApi(endpoint: string, options: RequestInit = {}): Promise<any> {
-  if (!HUBSPOT_ACCESS_TOKEN) {
-    throw new Error('HUBSPOT_ACCESS_TOKEN environment variable is not set');
-  }
-
-  const response = await fetch(`https://api.hubapi.com${endpoint}`, {
-    ...options,
-    headers: {
-      'Authorization': `Bearer ${HUBSPOT_ACCESS_TOKEN}`,
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`HubSpot API error: ${response.status} - ${errorText}`);
-  }
-
-  return response.json();
+export async function getClientsByRole(role: ValidRole, name: string, month?: string): Promise<RoleResult> {
+  const p: Record<string, string> = { role, name };
+  if (month) p.month = month;
+  return apiGet('/ai/api/client_contacts', p);
 }
 
-export async function getHubSpotTickets(params: HubSpotTicketsParams): Promise<HubSpotTicket[]> {
-  // Build search filters for date range
-  const filters: any[] = [];
-
-  if (params.start_date) {
-    filters.push({
-      propertyName: 'createdate',
-      operator: 'GTE',
-      value: new Date(params.start_date).getTime()
-    });
-  }
-
-  if (params.end_date) {
-    filters.push({
-      propertyName: 'createdate',
-      operator: 'LTE',
-      value: new Date(params.end_date).getTime()
-    });
-  }
-
-  if (params.status) {
-    filters.push({
-      propertyName: 'hs_pipeline_stage',
-      operator: 'EQ',
-      value: params.status
-    });
-  }
-
-  const searchBody: any = {
-    properties: ['subject', 'content', 'hs_pipeline_stage', 'hs_ticket_priority', 'createdate', 'hs_lastmodifieddate', 'hs_created_by_user_id'],
-    limit: params.limit || 50,
-    sorts: [{ propertyName: 'createdate', direction: 'DESCENDING' }]
-  };
-
-  if (filters.length > 0) {
-    searchBody.filterGroups = [{ filters }];
-  }
-
-  const data = await hubspotApi('/crm/v3/objects/tickets/search', {
-    method: 'POST',
-    body: JSON.stringify(searchBody)
-  });
-
-  return (data.results || []).map((t: any) => ({
-    id: t.id,
-    subject: t.properties.subject || 'No Subject',
-    content: t.properties.content,
-    status: t.properties.hs_pipeline_stage || 'unknown',
-    priority: t.properties.hs_ticket_priority,
-    createdAt: t.properties.createdate,
-    updatedAt: t.properties.hs_lastmodifieddate,
-    createdBy: t.properties.hs_created_by_user_id
-  }));
+export async function getClientsByName(name: string, month?: string): Promise<NameResult> {
+  const p: Record<string, string> = { name };
+  if (month) p.month = month;
+  return apiGet('/ai/api/client_contacts', p);
 }
 
-export interface HubSpotTicketsByUserParams {
-  user_name?: string;
-  email?: string;
-  limit?: number;
-}
+const SLACK_TOKEN = process.env.SLACK_BOT_TOKEN;
+const HUBSPOT_TOKEN = process.env.HUBSPOT_ACCESS_TOKEN;
 
-export async function getHubSpotTicketsByUser(params: HubSpotTicketsByUserParams): Promise<HubSpotTicket[]> {
-  // First, get all HubSpot owners to find matching user
-  const ownersData = await hubspotApi('/crm/v3/owners');
-  const owners = ownersData.results || [];
-  
-  const searchTerm = (params.user_name || params.email || '').toLowerCase();
-  
-  // Find matching owner(s) by name or email
-  const matchingOwners = owners.filter((owner: any) => {
-    const firstName = (owner.firstName || '').toLowerCase();
-    const lastName = (owner.lastName || '').toLowerCase();
-    const email = (owner.email || '').toLowerCase();
-    const fullName = `${firstName} ${lastName}`;
-    
-    return firstName.includes(searchTerm) ||
-           lastName.includes(searchTerm) ||
-           fullName.includes(searchTerm) ||
-           email.includes(searchTerm);
-  });
+export interface SlackMsg { ts: string; text: string; user: string; channel: string; permalink?: string; }
+export interface SlackUser { id: string; name: string; real_name: string; email?: string; }
 
-  if (matchingOwners.length === 0) {
-    return [];
-  }
-
-  // Search tickets owned by or created by these users
-  const ownerIds = matchingOwners.map((o: any) => o.id);
-  
-  const searchBody: any = {
-    properties: ['subject', 'content', 'hs_pipeline_stage', 'hs_ticket_priority', 'createdate', 'hs_lastmodifieddate', 'hs_created_by_user_id', 'hubspot_owner_id'],
-    limit: params.limit || 50,
-    sorts: [{ propertyName: 'createdate', direction: 'DESCENDING' }],
-    filterGroups: [{
-      filters: [{
-        propertyName: 'hubspot_owner_id',
-        operator: 'IN',
-        values: ownerIds
-      }]
-    }]
-  };
-
-  const data = await hubspotApi('/crm/v3/objects/tickets/search', {
-    method: 'POST',
-    body: JSON.stringify(searchBody)
-  });
-
-  // Map owner IDs to names for display
-  const ownerMap = new Map(owners.map((o: any) => [o.id, `${o.firstName || ''} ${o.lastName || ''}`.trim() || o.email]));
-
-  return (data.results || []).map((t: any) => ({
-    id: t.id,
-    subject: t.properties.subject || 'No Subject',
-    content: t.properties.content,
-    status: t.properties.hs_pipeline_stage || 'unknown',
-    priority: t.properties.hs_ticket_priority,
-    createdAt: t.properties.createdate,
-    updatedAt: t.properties.hs_lastmodifieddate,
-    createdBy: t.properties.hs_created_by_user_id,
-    ticketOwner: ownerMap.get(t.properties.hubspot_owner_id) || t.properties.hubspot_owner_id
-  }));
-}
-
-export async function getHubSpotTicketById(ticketId: string): Promise<HubSpotTicket | null> {
-  const properties = [
-    'subject', 'content', 'hs_pipeline_stage', 'hs_ticket_priority',
-    'createdate', 'hs_lastmodifieddate', 'hs_created_by_user_id',
-    'hubspot_owner_id', 'hs_ticket_priority_advanced', 'hs_due_date',
-    'ao_request_type', 'partners_request_type'
-  ].join(',');
-  
-  const data = await hubspotApi(`/crm/v3/objects/tickets/${ticketId}?properties=${properties}`);
-  
-  if (!data) return null;
-
-  return {
-    id: data.id,
-    subject: data.properties.subject || 'No Subject',
-    content: data.properties.content,
-    status: data.properties.hs_pipeline_stage || 'unknown',
-    priority: data.properties.hs_ticket_priority,
-    priorityAdvanced: data.properties.hs_ticket_priority_advanced,
-    createdAt: data.properties.createdate,
-    updatedAt: data.properties.hs_lastmodifieddate,
-    dueDate: data.properties.hs_due_date,
-    ticketOwner: data.properties.hubspot_owner_id,
-    createdBy: data.properties.hs_created_by_user_id,
-    aoRequestType: data.properties.ao_request_type,
-    partnersRequestType: data.properties.partners_request_type
-  };
-}
-
-export interface SlackMessage {
-  ts: string;
-  text: string;
-  user: string;
-  channel: string;
-  permalink?: string;
-}
-
-export interface SlackUser {
-  id: string;
-  name: string;
-  real_name: string;
-  email?: string;
-}
-
-async function slackApi(method: string, params: Record<string, string> = {}): Promise<any> {
-  if (!SLACK_BOT_TOKEN) {
-    throw new Error('SLACK_BOT_TOKEN environment variable is not set');
-  }
-
+async function slackGet(method: string, params: Record<string, string> = {}): Promise<any> {
+  if (!SLACK_TOKEN) throw new Error('SLACK_BOT_TOKEN not set');
   const url = new URL(`https://slack.com/api/${method}`);
   Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
-
-  const response = await fetch(url.toString(), {
-    headers: {
-      'Authorization': `Bearer ${SLACK_BOT_TOKEN}`,
-      'Content-Type': 'application/x-www-form-urlencoded'
-    }
-  });
-
-  const data = await response.json();
-  if (!data.ok) {
-    throw new Error(`Slack API error: ${data.error}`);
-  }
-  return data;
+  const r = await (await fetch(url.toString(), {
+    headers: { 'Authorization': `Bearer ${SLACK_TOKEN}`, 'Content-Type': 'application/x-www-form-urlencoded' }
+  })).json();
+  if (!r.ok) throw new Error(`Slack error: ${r.error}`);
+  return r;
 }
 
-export async function findSlackUserByName(name: string): Promise<SlackUser | null> {
-  const data = await slackApi('users.list');
-  const users = data.members || [];
-  
-  const lowerName = name.toLowerCase();
-  const user = users.find((u: any) => 
-    u.real_name?.toLowerCase().includes(lowerName) ||
-    u.name?.toLowerCase().includes(lowerName) ||
-    u.profile?.display_name?.toLowerCase().includes(lowerName)
+export async function findSlackUser(name: string): Promise<SlackUser | null> {
+  const { members = [] } = await slackGet('users.list');
+  const n = name.toLowerCase();
+  const u = members.find((m: any) =>
+    m.real_name?.toLowerCase().includes(n) || m.name?.toLowerCase().includes(n) || m.profile?.display_name?.toLowerCase().includes(n)
   );
+  return u ? { id: u.id, name: u.name, real_name: u.real_name || u.name, email: u.profile?.email } : null;
+}
 
-  if (!user) return null;
+export async function searchSlackMsgs(userName: string, query?: string, limit = 20): Promise<SlackMsg[]> {
+  const user = await findSlackUser(userName);
+  if (!user) throw new Error(`Slack user not found: ${userName}`);
+  const q = query ? `from:${user.name} ${query}` : `from:${user.name}`;
+  const { messages } = await slackGet('search.messages', { query: q, count: String(limit), sort: 'timestamp', sort_dir: 'desc' });
+  return (messages?.matches || []).map((m: any) => ({
+    ts: m.ts, text: m.text, user: m.username || user.name,
+    channel: m.channel?.name || m.channel?.id || 'unknown', permalink: m.permalink
+  }));
+}
 
+export interface Ticket {
+  id: string; subject: string; content?: string; status: string;
+  priority?: string; createdAt: string; updatedAt: string; owner?: string;
+}
+
+async function hsPost(endpoint: string, body: any): Promise<any> {
+  if (!HUBSPOT_TOKEN) throw new Error('HUBSPOT_ACCESS_TOKEN not set');
+  const res = await fetch(`https://api.hubapi.com${endpoint}`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${HUBSPOT_TOKEN}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(`HubSpot error: ${res.status} - ${await res.text()}`);
+  return res.json();
+}
+
+async function hsGet(endpoint: string): Promise<any> {
+  if (!HUBSPOT_TOKEN) throw new Error('HUBSPOT_ACCESS_TOKEN not set');
+  const res = await fetch(`https://api.hubapi.com${endpoint}`, {
+    headers: { 'Authorization': `Bearer ${HUBSPOT_TOKEN}`, 'Content-Type': 'application/json' }
+  });
+  if (!res.ok) throw new Error(`HubSpot error: ${res.status} - ${await res.text()}`);
+  return res.json();
+}
+
+function mapTicket(t: any): Ticket {
+  const p = t.properties;
   return {
-    id: user.id,
-    name: user.name,
-    real_name: user.real_name || user.name,
-    email: user.profile?.email
+    id: t.id, subject: p.subject || 'No Subject', content: p.content,
+    status: p.hs_pipeline_stage || 'unknown', priority: p.hs_ticket_priority,
+    createdAt: p.createdate, updatedAt: p.hs_lastmodifieddate, owner: p.hubspot_owner_id
   };
 }
 
-export async function searchSlackMessages(
-  userName: string,
-  query?: string,
-  limit: number = 20
-): Promise<SlackMessage[]> {
-  // First find the user
-  const user = await findSlackUserByName(userName);
-  if (!user) {
-    throw new Error(`Slack user not found: ${userName}`);
-  }
+export async function getTickets(opts: { status?: string; startDate?: string; endDate?: string; limit?: number } = {}): Promise<Ticket[]> {
+  const filters: any[] = [];
+  if (opts.startDate) filters.push({ propertyName: 'createdate', operator: 'GTE', value: new Date(opts.startDate).getTime() });
+  if (opts.endDate) filters.push({ propertyName: 'createdate', operator: 'LTE', value: new Date(opts.endDate).getTime() });
+  if (opts.status) filters.push({ propertyName: 'hs_pipeline_stage', operator: 'EQ', value: opts.status });
 
-  // Search messages from this user
-  const searchQuery = query 
-    ? `from:${user.name} ${query}`
-    : `from:${user.name}`;
+  const body: any = {
+    properties: ['subject', 'content', 'hs_pipeline_stage', 'hs_ticket_priority', 'createdate', 'hs_lastmodifieddate'],
+    limit: opts.limit || 50, sorts: [{ propertyName: 'createdate', direction: 'DESCENDING' }]
+  };
+  if (filters.length) body.filterGroups = [{ filters }];
 
-  const data = await slackApi('search.messages', {
-    query: searchQuery,
-    count: String(limit),
-    sort: 'timestamp',
-    sort_dir: 'desc'
+  const { results = [] } = await hsPost('/crm/v3/objects/tickets/search', body);
+  return results.map(mapTicket);
+}
+
+export async function getTicketById(id: string): Promise<Ticket | null> {
+  const props = 'subject,content,hs_pipeline_stage,hs_ticket_priority,createdate,hs_lastmodifieddate';
+  const data = await hsGet(`/crm/v3/objects/tickets/${id}?properties=${props}`);
+  return data ? mapTicket(data) : null;
+}
+
+export async function getTicketsByUser(opts: { userName?: string; email?: string; limit?: number }): Promise<Ticket[]> {
+  const { results: owners = [] } = await hsGet('/crm/v3/owners');
+  const term = (opts.userName || opts.email || '').toLowerCase();
+  const matched = owners.filter((o: any) => {
+    const fn = (o.firstName || '').toLowerCase(), ln = (o.lastName || '').toLowerCase();
+    return fn.includes(term) || ln.includes(term) || `${fn} ${ln}`.includes(term) || (o.email || '').toLowerCase().includes(term);
   });
+  if (!matched.length) return [];
 
-  const matches = data.messages?.matches || [];
-  return matches.map((m: any) => ({
-    ts: m.ts,
-    text: m.text,
-    user: m.username || user.name,
-    channel: m.channel?.name || m.channel?.id || 'unknown',
-    permalink: m.permalink
-  }));
+  const body = {
+    properties: ['subject', 'content', 'hs_pipeline_stage', 'hs_ticket_priority', 'createdate', 'hs_lastmodifieddate', 'hubspot_owner_id'],
+    limit: opts.limit || 50, sorts: [{ propertyName: 'createdate', direction: 'DESCENDING' }],
+    filterGroups: [{ filters: [{ propertyName: 'hubspot_owner_id', operator: 'IN', values: matched.map((o: any) => o.id) }] }]
+  };
+  const { results = [] } = await hsPost('/crm/v3/objects/tickets/search', body);
+  const ownerMap = new Map(owners.map((o: any) => [o.id, `${o.firstName || ''} ${o.lastName || ''}`.trim() || o.email]));
+  return results.map((t: any) => ({ ...mapTicket(t), owner: ownerMap.get(t.properties.hubspot_owner_id) }));
 }
