@@ -12,10 +12,58 @@ const FEMINI_API_URL = process.env.FEMINI_API_URL;
 const FEMINI_API_TOKEN = process.env.FEMINI_API_TOKEN;
 
 server.addTool({
-  name: "query_google_drive_files",
-  description: "根据用户的问题从 Femini 系统中的 Google Drive 文件中查询相关信息，对查询出的数据进行分析和筛选，最后给出答案。",
+  name: "create_or_update_google_drive_files",
+  description: "Create or update Google Drive files in the Femini system. By providing a list of Google Drive file IDs, the system will fetch their metadata and store them in the database.",
   parameters: z.object({
-    query: z.string().describe("用户的完整问题"),
+    google_file_ids: z.array(z.string()).describe("Array of Google Drive file IDs, e.g., ['1abc123', '2def456']")
+  }),
+  execute: async (args, { log }) => {
+    try {
+      const apiUrl = `${FEMINI_API_URL}/api/unstable/mcp/google_drive_files`;
+      
+      log.info("Sending create/update request", { 
+        url: apiUrl,
+        fileCount: args.google_file_ids.length 
+      });
+
+      // Send HTTP POST request
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': "Bearer " + FEMINI_API_TOKEN
+        },
+        body: JSON.stringify({
+          google_file_ids: args.google_file_ids
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Successfully processed ${args.google_file_ids.length} Google Drive file(s).\n\nFile ID list:\n${args.google_file_ids.map((id, index) => `${index + 1}. ${id}`).join('\n')}\n\nThese files have been created or updated in the Femini system.`,
+          },
+        ],
+      };
+    } catch (error: unknown) {
+      throw new Error(`Failed to create/update files: ${(error as Error).message}`);
+    }
+  },
+});
+
+server.addTool({
+  name: "query_google_drive_files",
+  description: "Query relevant information from Google Drive files in the Femini system based on user questions, analyze and filter the queried data, and provide answers.",
+  parameters: z.object({
+    query: z.string().describe("The complete user question"),
     start_date: z.string().optional().describe("Start date (YYYY-MM-DD format), defaults to 30 days ago"),
     end_date: z.string().optional().describe("End date (YYYY-MM-DD format), defaults to yesterday")
   }),
@@ -48,90 +96,90 @@ server.addTool({
 
       const data = await response.json();
 
-      let prompt = `你是一个数据分析助手，你的任务是根据用户的问题从提供的 Google Drive 文件数据中查询、分析和提取相关信息。
+      let prompt = `You are a data analysis assistant. Your task is to query, analyze, and extract relevant information from the provided Google Drive file data based on user questions.
 
-## 数据结构说明
-你将收到一个 JSON 数组，其中包含多个文件对象。每个文件对象包含以下关键字段：
-- id: 文件的唯一标识符
-- file_name: 文件名称
-- file_url: 文件的 Google Drive 访问链接
-- file_extension: 文件类型（xlsx、pdf、md、txt 等）
-- mime_type: MIME 类型
-- ai_summary: AI 生成的文件内容摘要（可能为 null）
-- created_at: 文件创建时间
-- modified_at: 文件最后修改时间
-- owner_email: 文件所有者邮箱
+## Data Structure Description
+You will receive a JSON array containing multiple file objects. Each file object includes the following key fields:
+- id: Unique identifier of the file
+- file_name: File name
+- file_url: Google Drive access link for the file
+- file_extension: File type (xlsx, pdf, md, txt, etc.)
+- mime_type: MIME type
+- ai_summary: AI-generated content summary of the file (may be null)
+- created_at: File creation time
+- modified_at: File last modification time
+- owner_email: File owner's email
 
-## 你的任务流程
+## Your Task Workflow
 
-### 第一步：理解用户查询
-1. 仔细阅读用户的问题，识别关键信息需求
-2. 确定需要查找的数据类型（销售数据、活动数据、员工数据等）
-3. 识别需要应用的过滤条件（日期范围、特定人员、特定客户等）
+### Step 1: Understand User Query
+1. Carefully read the user's question and identify key information needs
+2. Determine the type of data to search for (sales data, activity data, employee data, etc.)
+3. Identify filtering conditions to apply (date range, specific personnel, specific clients, etc.)
 
-### 第二步：数据搜索与匹配
-1. 根据文件名称、ai_summary 内容和文件类型搜索相关文件
-2. 优先查看 ai_summary 字段中的数据摘要来快速定位相关信息
-3. 对于包含表格数据的文件（xlsx、csv），查看摘要中的数据内容
-4. 匹配多个相关文件以获得完整的答案
+### Step 2: Data Search and Matching
+1. Search for relevant files based on file name, ai_summary content, and file type
+2. Prioritize checking the ai_summary field for data summaries to quickly locate relevant information
+3. For files containing tabular data (xlsx, csv), review the data content in the summary
+4. Match multiple relevant files to obtain complete answers
 
-### 第三步：数据分析与提取
-1. 从 ai_summary 中提取相关的数据点
-2. 进行必要的数据计算（求和、平均、比较等）
-3. 按照用户的具体要求进行数据筛选和排序
-4. 识别数据之间的关联关系
+### Step 3: Data Analysis and Extraction
+1. Extract relevant data points from ai_summary
+2. Perform necessary data calculations (sum, average, comparison, etc.)
+3. Filter and sort data according to user's specific requirements
+4. Identify relationships between data
 
-### 第四步：构建答案
-1. 清晰地陈述你的发现
-2. 提供具体的数据和数字作为支持
-3. 对每个相关的文件，包含以下信息：
-   - 文件名称
-   - 文件 URL（file_url）
-   - 为什么这个文件与查询相关（简要说明）
-   - 从该文件中提取的具体数据或信息
+### Step 4: Construct Answer
+1. Clearly state your findings
+2. Provide specific data and numbers as support
+3. For each relevant file, include the following information:
+   - File name
+   - File URL (file_url)
+   - Why this file is relevant (brief explanation)
+   - Specific data or information extracted from the file
 
-## 输出格式要求
+## Output Format Requirements
 
-请按照以下格式组织你的答案：
+Please organize your answer in the following format:
 
-### 查询结果
+### Query Results
 
-**问题理解：** [简要说明你理解的用户问题]
+**Question Understanding:** [Brief explanation of your understanding of the user's question]
 
-**分析过程：** [说明你如何从数据中找到答案]
+**Analysis Process:** [Explain how you found the answer from the data]
 
-**主要发现：**
-[具体的数据和分析结果]
+**Main Findings:**
+[Specific data and analysis results]
 
-**相关文件：**
-1. **文件名称**
+**Relevant Files:**
+1. **File Name**
    - URL: [file_url]
-   - 相关性: [说明为什么这个文件相关]
-   - 关键数据: [从该文件提取的相关数据]
+   - Relevance: [Explain why this file is relevant]
+   - Key Data: [Relevant data extracted from this file]
 
-2. **文件名称**
+2. **File Name**
    - URL: [file_url]
-   - 相关性: [说明为什么这个文件相关]
-   - 关键数据: [从该文件提取的相关数据]
+   - Relevance: [Explain why this file is relevant]
+   - Key Data: [Relevant data extracted from this file]
 
-[继续列出所有相关文件]
+[Continue listing all relevant files]
 
-## 重要提示
+## Important Notes
 
-1. **准确性优先**：如果数据不清楚或不完整，请明确说明
-2. **完整性**：确保回答用户问题的所有部分
-3. **可追溯性**：始终提供文件 URL 和数据来源
-4. **数据验证**：如果发现多个文件中的数据不一致，请指出并解释
-5. **上下文理解**：理解 FeedMob 的业务背景（营销、销售、活动管理等）
-6. **日期处理**：注意文件的修改日期和创建日期，优先使用最新的数据
+1. **Accuracy First**: If data is unclear or incomplete, clearly state this
+2. **Completeness**: Ensure all parts of the user's question are answered
+3. **Traceability**: Always provide file URLs and data sources
+4. **Data Validation**: If inconsistencies are found in data from multiple files, point them out and explain
+5. **Context Understanding**: Understand FeedMob's business context (marketing, sales, activity management, etc.)
+6. **Date Handling**: Pay attention to file modification and creation dates, prioritize using the latest data
 
-## 可用的 Google Drive 文件数据
+## Available Google Drive File Data
 
-以下是系统中当前可用的 Google Drive 文件列表：
+The following is a list of currently available Google Drive files in the system:
 
 ${JSON.stringify(data, null, 2)}
 
-现在，请根据用户的查询问题，从提供的 Google Drive 文件数据中找到答案。`
+Now, please find the answer from the provided Google Drive file data based on the user's query question.`
 
       return {
         content: [
