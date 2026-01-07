@@ -11,10 +11,33 @@
 
 ### NPX
 
+
+```
+cd src/feedmob-reporting && npm run build
+```
+
 ```json
 {
   "mcpServers": {
     "feedmob": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/path/fm-mcp-servers/src/feedmob-reporting/dist/index.js"
+      ],
+      "env": {
+        "FEEDMOB_KEY": "FEEDMOB_KEY",
+        "FEEDMOB_SECRET": "FEEDMOB_SECRET",
+        "FEEDMOB_API_BASE": "FEEDMOB_API_BASE"
+      }
+    }
+  }
+}
+
+{
+  "mcpServers": {
+    "feedmob": {
+      "type": "stdio",
       "command": "npx",
       "args": [ "-y", "@feedmob/feedmob-reporting" ],
       "env": {

@@ -3,12 +3,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports } from "./api.js";
+import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets } from "./api.js";
 
 // Create server instance
 const server = new McpServer({
   name: "feedmob-reporting",
-  version: "0.0.7",
+  version: "0.0.8",
   capabilities: {
     tools: {},
     prompts: {},
@@ -342,6 +342,146 @@ server.tool(
   }
 );
 
+// Tool Definition for Getting User Infos
+server.tool(
+  "get_user_infos",
+  "Get all user_infos information via FeedMob API. Returns user information including: email, feedmob_user_id, feedmob_username, hubspot_user_id, hubspot_firstname, hubspot_lastname, github_name, github_username, slack_user_id, slack_username, slack_user_realname.",
+  {},
+  async () =>
+  {
+    try {
+      const data = await getUserInfos();
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `User infos data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching user_infos.";
+      console.error("Error in get_user_infos tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching user_infos: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Searching User Infos
+server.tool(
+  "search_user_infos",
+  "Search user_infos by username via FeedMob API. Returns user information including: email, feedmob_user_id, feedmob_username, hubspot_user_id, hubspot_firstname, hubspot_lastname, github_name, github_username, slack_user_id, slack_username, slack_user_realname.",
+  {
+    username: z.string().describe("Username to search for"),
+  },
+  async (params) =>
+  {
+    try {
+      const data = await searchUserInfos(params.username);
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `User info search results for username '${params.username}':\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while searching user_infos.";
+      console.error("Error in search_user_infos tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error searching user_infos: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting Direct Spend Requests
+server.tool(
+  "get_direct_spend_requests",
+  "Get direct spend requests via FeedMob API. At least one of the following parameters must be provided: feedmob_user_id, client_id, vendor_id, or click_url_id.",
+  {
+    feedmob_user_id: z.number().optional().describe("FeedMob user ID"),
+    client_id: z.number().optional().describe("Client ID"),
+    vendor_id: z.number().optional().describe("Vendor ID"),
+    click_url_id: z.number().optional().describe("Click URL ID"),
+    start_date: z.string().optional().describe("Start date in YYYY-MM-DD format"),
+  },
+  async (params) =>
+  {
+    try {
+      // Validate at least one parameter is provided
+      if (params.feedmob_user_id === undefined &&
+          params.client_id === undefined &&
+          params.vendor_id === undefined &&
+          params.click_url_id === undefined) {
+        throw new Error("至少需要提供一个参数：feedmob_user_id, client_id, vendor_id 或 click_url_id");
+      }
+
+      const data = await getDirectSpendRequests(
+        params.feedmob_user_id,
+        params.client_id,
+        params.vendor_id,
+        params.click_url_id,
+        params.start_date
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `Direct spend requests data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching direct spend requests.";
+      console.error("Error in get_direct_spend_requests tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching direct spend requests: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting HubSpot Tickets
+server.tool(
+  "get_hubspot_tickets",
+  "Get HubSpot tickets via FeedMob API. Can filter by hubspot_user_id and/or createdate_start. At least one parameter must be provided.",
+  {
+    hubspot_user_id: z.number().optional().describe("HubSpot user ID"),
+    createdate_start: z.string().optional().describe("Creation date start in YYYY-MM-DD format"),
+  },
+  async (params) =>
+  {
+    try {
+      // Validate at least one parameter is provided
+      if (params.hubspot_user_id === undefined && params.createdate_start === undefined) {
+        throw new Error("至少需要提供一个参数：hubspot_user_id 或 createdate_start");
+      }
+
+      const data = await getHubspotTickets(
+        params.hubspot_user_id,
+        params.createdate_start
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `HubSpot tickets data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching HubSpot tickets.";
+      console.error("Error in get_hubspot_tickets tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching HubSpot tickets: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
 
 // Prompt Definition
 server.prompt(

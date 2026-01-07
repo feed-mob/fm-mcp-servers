@@ -483,3 +483,179 @@ export async function getPossibleFinanceSingularReports(
     throw new Error('Failed to fetch Possible Finance Singular reports');
   }
 }
+
+export async function getUserInfos(): Promise<any> {
+  const url = `${FEEDMOB_API_BASE}/ai/api/user_infos`;
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token
+      },
+      timeout: 30000,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    console.error("Error fetching user_infos:", error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to fetch user_infos');
+  }
+}
+
+export async function searchUserInfos(username: string): Promise<any> {
+  const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/user_infos/search`);
+  urlObj.searchParams.append('username', username);
+  const url = urlObj.toString();
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token
+      },
+      timeout: 30000,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    console.error("Error searching user_infos:", error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to search user_infos');
+  }
+}
+
+export async function getDirectSpendRequests(
+  feedmob_user_id?: number,
+  client_id?: number,
+  vendor_id?: number,
+  click_url_id?: number,
+  start_date?: string
+): Promise<any> {
+  const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/direct_spend_requests`);
+
+  // Add query parameters if provided
+  if (feedmob_user_id !== undefined) {
+    urlObj.searchParams.append('feedmob_user_id', String(feedmob_user_id));
+  }
+  if (client_id !== undefined) {
+    urlObj.searchParams.append('client_id', String(client_id));
+  }
+  if (vendor_id !== undefined) {
+    urlObj.searchParams.append('vendor_id', String(vendor_id));
+  }
+  if (click_url_id !== undefined) {
+    urlObj.searchParams.append('click_url_id', String(click_url_id));
+  }
+  if (start_date !== undefined) {
+    urlObj.searchParams.append('start_date', start_date);
+  }
+
+  const url = urlObj.toString();
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token
+      },
+      timeout: 30000,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    console.error("Error fetching direct spend requests:", error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to fetch direct spend requests');
+  }
+}
+
+export async function getHubspotTickets(
+  hubspot_user_id?: number,
+  createdate_start?: string
+): Promise<any> {
+  const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/hubspot_tickets`);
+
+  // Add query parameters if provided
+  if (hubspot_user_id !== undefined) {
+    urlObj.searchParams.append('hubspot_user_id', String(hubspot_user_id));
+  }
+  if (createdate_start !== undefined) {
+    urlObj.searchParams.append('createdate_start', createdate_start);
+  }
+
+  const url = urlObj.toString();
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token
+      },
+      timeout: 30000,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    console.error("Error fetching HubSpot tickets:", error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to fetch HubSpot tickets');
+  }
+}
