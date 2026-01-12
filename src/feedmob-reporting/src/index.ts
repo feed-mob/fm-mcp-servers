@@ -3,12 +3,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets } from "./api.js";
+import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports } from "./api.js";
 
 // Create server instance
 const server = new McpServer({
   name: "feedmob-reporting",
-  version: "0.0.8",
+  version: "0.0.9",
   capabilities: {
     tools: {},
     prompts: {},
@@ -477,6 +477,38 @@ server.tool(
       console.error("Error in get_hubspot_tickets tool:", errorMessage);
       return {
         content: [{ type: "text", text: `Error fetching HubSpot tickets: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting Privacy Hawk Singular Reports
+server.tool(
+  "get_privacy_hawk_singular_reports",
+  "Get Privacy Hawk Singular API reports data via FeedMob API.",
+  {
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format"),
+  },
+  async (params) => {
+    try {
+      const data = await getPrivacyHawkSingularReports(
+        params.start_date,
+        params.end_date
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `Privacy Hawk Singular reports data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching Privacy Hawk Singular reports.";
+      console.error("Error in get_privacy_hawk_singular_reports tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching Privacy Hawk Singular reports: ${errorMessage}` }],
         isError: true,
       };
     }
