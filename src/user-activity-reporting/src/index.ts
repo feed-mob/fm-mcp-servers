@@ -8,7 +8,7 @@ import * as api from './api.js';
 
 dotenv.config();
 
-const server = new McpServer({ name: 'user-activity-reporting', version: '0.0.3' });
+const server = new McpServer({ name: 'user-activity-reporting', version: '0.0.4' });
 
 const errMsg = (e: unknown) => e instanceof Error ? e.message : 'Unknown error';
 const errResp = (msg: string) => ({ content: [{ type: 'text' as const, text: `Error: ${msg}` }], isError: true });
@@ -36,13 +36,23 @@ server.tool('get_client_team_members', 'Query team members for a client. Returns
   } catch (e) { return errResp(errMsg(e)); }
 });
 
-server.tool('get_clients_by_pod', 'Query clients in a POD team.', {
-  pod: z.string().describe('POD name (fuzzy match)'),
+server.tool('get_clients_by_pod', 'Query clients in a POD team (AllyPod/KeyPod/Seapod). Returns full client info with all team members.', {
+  pod: z.string().describe('POD name (AllyPod/KeyPod/Seapod)'),
   month: z.string().optional().describe('Month in YYYY-MM format'),
 }, async (args) => {
   try {
     const d = await api.getClientsByPod(args.pod, args.month);
-    return textResp(`# Clients in POD: ${d.pod}\n\nMonth: ${d.month} | Count: ${d.count}\n\n${d.client_names.map(c => `- ${c}`).join('\n')}`);
+    const clients = d.clients || [];
+    const total = d.total || clients.length;
+    if (total === 0 && d.note) {
+      return textResp(`# Clients in POD: ${d.pod}\n\nRequested month: ${d.requested_month}\n\n${d.note}`);
+    }
+    if (total === 0) {
+      return textResp(`# Clients in POD: ${d.pod}\n\nNo clients found for month: ${d.month || args.month || 'latest'}`);
+    }
+    const preview = clients.slice(0, 15);
+    const more = total > 15 ? `\n... and ${total - 15} more clients` : '';
+    return textResp(`# Clients in POD: ${d.pod}\n\nMonth: ${d.month} | Total: ${total}\n\n\`\`\`json\n${JSON.stringify(preview, null, 2)}\n\`\`\`${more}`);
   } catch (e) { return errResp(errMsg(e)); }
 });
 

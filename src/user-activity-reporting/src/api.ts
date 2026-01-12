@@ -61,7 +61,7 @@ export interface ClientContact {
 }
 
 export interface ListResult { month: string; total: number; clients: ClientContact[]; }
-export interface PodResult { pod: string; month: string; count: number; client_names: string[]; }
+export interface PodResult { pod: string; month: string; total: number; clients: ClientContact[]; requested_month?: string; note?: string; }
 export interface RoleResult { role: string; name: string; month: string; count: number; client_names: string[]; }
 export interface NameResult { name: string; month: string; results: Record<string, string[]>; }
 
