@@ -32,7 +32,10 @@ server.addTool({
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'Authorization': "Bearer " + FEMINI_API_TOKEN
+          'Authorization': "Bearer " + FEMINI_API_TOKEN,
+          'Sec-Fetch-Site': 'same-origin',
+          'Sec-Fetch-Mode': 'cors',
+          'Sec-Fetch-Dest': 'empty'
         },
         body: JSON.stringify({
           google_file_ids: args.google_file_ids
@@ -40,10 +43,17 @@ server.addTool({
       });
 
       if (!response.ok) {
-        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(`API request failed: ${response.status} ${response.statusText}\nResponse: ${errorText}`);
       }
 
-      const result = await response.json();
+      const responseText = await response.text();
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (e) {
+        throw new Error(`Invalid JSON response: ${responseText.substring(0, 500)}`);
+      }
 
       return {
         content: [
