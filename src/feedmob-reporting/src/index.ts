@@ -255,6 +255,8 @@ server.tool(
     end_date: z.string().describe("End date in YYYY-MM-DD format"),
     click_url_ids: z.array(z.string()).optional().describe("Array of click URL IDs (optional)"),
     af_app_ids: z.array(z.string()).optional().describe("Array of AppsFlyer app IDs (optional)"),
+    client_ids: z.array(z.string()).optional().describe("Array of client IDs (optional)"),
+    campaign_ids: z.array(z.string()).optional().describe("Array of campaign IDs (optional)"),
   },
   async (params) => {
     try {
@@ -262,7 +264,9 @@ server.tool(
         params.start_date,
         params.end_date,
         params.click_url_ids,
-        params.af_app_ids
+        params.af_app_ids,
+        params.client_ids,
+        params.campaign_ids
       );
       const formattedData = JSON.stringify(data, null, 2);
       return {
