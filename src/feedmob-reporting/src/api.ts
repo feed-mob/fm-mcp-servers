@@ -802,3 +802,185 @@ export async function getClients(
     throw new Error('Failed to fetch clients');
   }
 }
+
+export async function getCampaigns(
+  client_id?: number
+): Promise<any> {
+  const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/campaigns`);
+
+  // Add optional parameter
+  if (client_id !== undefined) {
+    urlObj.searchParams.append('client_id', String(client_id));
+  }
+
+  const url = urlObj.toString();
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token
+      },
+      timeout: 30000,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    console.error("Error fetching campaigns:", error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to fetch campaigns');
+  }
+}
+
+export async function getVendors(
+  vendor_name?: string
+): Promise<any> {
+  const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/vendors`);
+
+  // Add optional parameter
+  if (vendor_name !== undefined) {
+    urlObj.searchParams.append('vendor_name', vendor_name);
+  }
+
+  const url = urlObj.toString();
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token
+      },
+      timeout: 30000,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    console.error("Error fetching vendors:", error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to fetch vendors');
+  }
+}
+
+export async function getJamppReports(
+  client_id: number,
+  start_date: string,
+  end_date: string
+): Promise<any> {
+  const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/jampp_reports`);
+
+  // Add required parameters
+  urlObj.searchParams.append('client_id', String(client_id));
+  urlObj.searchParams.append('start_date', start_date);
+  urlObj.searchParams.append('end_date', end_date);
+
+  const url = urlObj.toString();
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token
+      },
+      timeout: 30000,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    console.error("Error fetching Jampp reports:", error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to fetch Jampp reports');
+  }
+}
+
+export async function getDirectSpendJobStats(
+  client_id?: number,
+  vendor_id?: number,
+  click_url_id?: number
+): Promise<any> {
+  const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/direct_spend_job_stats`);
+
+  // Add query parameters if provided
+  if (client_id !== undefined) {
+    urlObj.searchParams.append('client_id', String(client_id));
+  }
+  if (vendor_id !== undefined) {
+    urlObj.searchParams.append('vendor_id', String(vendor_id));
+  }
+  if (click_url_id !== undefined) {
+    urlObj.searchParams.append('click_url_id', String(click_url_id));
+  }
+
+  const url = urlObj.toString();
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token
+      },
+      timeout: 30000,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    console.error("Error fetching direct spend job stats:", error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to fetch direct spend job stats');
+  }
+}

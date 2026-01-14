@@ -3,7 +3,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getTextnowAdjustReports } from "./api.js";
+import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getDirectSpendJobStats } from "./api.js";
 
 // Create server instance
 const server = new McpServer({
@@ -62,7 +62,7 @@ server.tool(
 // Tool Definition for Getting Direct Spends
 server.tool(
   "get_direct_spends",
-  "Get direct spends data via FeedMob API.",
+  "Get direct spends data via FeedMob API. ⚠️ Use 'feedmob-reporting-skills' skill for spend comparison workflows.",
   {
     start_date: z.string().describe("Start date in YYYY-MM-DD format"),
     end_date: z.string().describe("End date in YYYY-MM-DD format"),
@@ -96,7 +96,7 @@ server.tool(
 // Tool Definition for Agency Conversion Metrics
 server.tool(
   "get_agency_conversion_metrics",
-  "Get agency_conversion_records metrics for one or more click URL IDs.",
+  "Get agency_conversion_records metrics for one or more click URL IDs. ⚠️ Use 'feedmob-reporting-skills' skill for conversion analysis workflows.",
   {
     click_url_ids: z.array(z.number()).describe("Array of click URL IDs"),
     date: z.string().optional().describe("Optional date in YYYY-MM-DD format"),
@@ -125,7 +125,7 @@ server.tool(
 // Tool Definition for Click URL Histories
 server.tool(
   "get_click_url_histories",
-  "Get historical CPI data for click URL IDs.",
+  "Get historical CPI/gross rates for click URL IDs. ⚠️ CRITICAL: Use 'feedmob-reporting-skills' skill - this data is required to calculate expected gross spend (purchases × gross_rate).",
   {
     click_url_ids: z.array(z.number()).describe("Array of click URL IDs"),
     date: z.string().optional().describe("Optional date in YYYY-MM-DD format"),
@@ -154,7 +154,7 @@ server.tool(
 // Tool Definition for Inmobi Report IDs
 server.tool(
   "get_inmobi_report_ids",
-  "Get Inmobi report IDs for a date range. next step must use tool check_inmobi_report_id_status to check skan_report_id and non_skan_report_id available",
+  "Get Inmobi report IDs for a date range. ⚠️ Use 'feedmob-reporting-skills' skill for complete InMobi workflow. Next: check_inmobi_report_status → get_inmobi_reports → get_direct_spends.",
   {
     start_date: z.string().describe("Start date in YYYY-MM-DD format"),
     end_date: z.string().describe("End date in YYYY-MM-DD format"),
@@ -183,7 +183,7 @@ server.tool(
 // Tool Definition for Checking Report Status
 server.tool(
   "check_inmobi_report_status",
-  "Check the status of an Inmobi report.",
+  "Check the status of an Inmobi report. ⚠️ Use 'feedmob-reporting-skills' skill for proper InMobi workflow sequence.",
   {
     start_date: z.string().describe("Start date in YYYY-MM-DD format"),
     end_date: z.string().describe("End date in YYYY-MM-DD format"),
@@ -213,7 +213,7 @@ server.tool(
 // Tool Definition for Getting Reports
 server.tool(
   "get_inmobi_reports",
-  "Get Inmobi reports data. next step should check direct spend from feedmob",
+  "Get Inmobi reports data. ⚠️ Use 'feedmob-reporting-skills' skill for complete analysis. Next: compare with get_direct_spends.",
   {
     start_date: z.string().describe("Start date in YYYY-MM-DD format"),
     end_date: z.string().describe("End date in YYYY-MM-DD format"),
@@ -249,7 +249,7 @@ server.tool(
 // Tool Definition for Getting AppsFlyer Reports
 server.tool(
   "get_appsflyer_reports",
-  "Get AppsFlyer reports data via FeedMob API.",
+  "Get AppsFlyer reports data via FeedMob API. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
   {
     start_date: z.string().describe("Start date in YYYY-MM-DD format"),
     end_date: z.string().describe("End date in YYYY-MM-DD format"),
@@ -317,7 +317,7 @@ server.tool(
 // Tool Definition for Getting Possible Finance Singular Reports
 server.tool(
   "get_possible_finance_singular_reports",
-  "Get Possible Finance Singular API reports data via FeedMob API.",
+  "Get Possible Finance Singular API reports. ⚠️ IMPORTANT: Use 'feedmob-reporting-skills' skill for structured workflows - this is part of a 5-step spend verification process.",
   {
     start_date: z.string().describe("Start date in YYYY-MM-DD format"),
     end_date: z.string().describe("End date in YYYY-MM-DD format"),
@@ -545,6 +545,165 @@ server.tool(
       console.error("Error in get_textnow_adjust_reports tool:", errorMessage);
       return {
         content: [{ type: "text", text: `Error fetching TextNow Adjust reports: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting Clients
+server.tool(
+  "get_clients",
+  "Get clients information via FeedMob API. Can filter by client_name (optional).",
+  {
+    client_name: z.string().optional().describe("Client name to search for (optional)"),
+  },
+  async (params) => {
+    try {
+      const data = await getClients(params.client_name);
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `Clients data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching clients.";
+      console.error("Error in get_clients tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching clients: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting Campaigns
+server.tool(
+  "get_campaigns",
+  "Get campaigns information via FeedMob API. Can filter by client_id (optional).",
+  {
+    client_id: z.number().optional().describe("Client ID to filter campaigns (optional)"),
+  },
+  async (params) => {
+    try {
+      const data = await getCampaigns(params.client_id);
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `Campaigns data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching campaigns.";
+      console.error("Error in get_campaigns tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching campaigns: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting Vendors
+server.tool(
+  "get_vendors",
+  "Get vendors information via FeedMob API. Can filter by vendor_name (optional).",
+  {
+    vendor_name: z.string().optional().describe("Vendor name to search for (optional)"),
+  },
+  async (params) => {
+    try {
+      const data = await getVendors(params.vendor_name);
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `Vendors data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching vendors.";
+      console.error("Error in get_vendors tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching vendors: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting Jampp Reports
+server.tool(
+  "get_jampp_reports",
+  "Get Jampp reports data via FeedMob API.",
+  {
+    client_id: z.number().describe("Client ID (required)"),
+    start_date: z.string().describe("Start date in YYYY-MM-DD format (required)"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format (required)"),
+  },
+  async (params) => {
+    try {
+      const data = await getJamppReports(
+        params.client_id,
+        params.start_date,
+        params.end_date
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `Jampp reports data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching Jampp reports.";
+      console.error("Error in get_jampp_reports tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching Jampp reports: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting Direct Spend Job Stats
+server.tool(
+  "get_direct_spend_job_stats",
+  "Get direct spend job stats via FeedMob API. At least one of the following parameters must be provided: client_id, vendor_id, or click_url_id.",
+  {
+    client_id: z.number().optional().describe("Client ID"),
+    vendor_id: z.number().optional().describe("Vendor ID"),
+    click_url_id: z.number().optional().describe("Click URL ID"),
+  },
+  async (params) => {
+    try {
+      // Validate at least one parameter is provided
+      if (params.client_id === undefined &&
+          params.vendor_id === undefined &&
+          params.click_url_id === undefined) {
+        throw new Error("至少需要提供一个参数：client_id, vendor_id 或 click_url_id");
+      }
+
+      const data = await getDirectSpendJobStats(
+        params.client_id,
+        params.vendor_id,
+        params.click_url_id
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `Direct spend job stats data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching direct spend job stats.";
+      console.error("Error in get_direct_spend_job_stats tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching direct spend job stats: ${errorMessage}` }],
         isError: true,
       };
     }
