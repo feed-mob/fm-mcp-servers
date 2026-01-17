@@ -1,7 +1,7 @@
 {
-  "name": "@anthropic/user-activity-reporting",
-  "version": "0.0.1",
-  "description": "MCP server for querying user-client relationships and activity data",
+  "name": "@feedmob/user-activity-reporting",
+  "version": "0.0.3",
+  "description": "MCP server for querying client contacts, Slack messages, and HubSpot tickets",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -12,8 +12,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/你的用户名/仓库名.git"
+    "url": "git+https://github.com/feed-mob/fm-mcp-servers.git",
+    "directory": "src/user-activity-reporting"
   },
+  "homepage": "https://github.com/feed-mob/fm-mcp-servers/tree/main/src/user-activity-reporting#readme",
   "keywords": [
     "mcp",
     "model-context-protocol",
