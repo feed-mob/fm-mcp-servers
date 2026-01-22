@@ -3,7 +3,8 @@
     "allow": [
       "mcp__zen__chat",
       "Bash(npm run build)",
-      "mcp__zen__analyze"
+      "mcp__zen__analyze",
+      "Bash(grep:*)"
     ],
     "deny": []
   }
