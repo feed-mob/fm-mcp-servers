@@ -1,6 +1,8 @@
 import axios from "axios";
 import jwt from 'jsonwebtoken';
 import dotenv from "dotenv";
+import { writeFileSync, mkdirSync, existsSync } from "fs";
+import { join } from "path";
 
 dotenv.config(); // Load environment variables from .env file
 
@@ -26,20 +28,76 @@ function generateToken(key: string, secret: string): string {
   return jwt.sign(payload, secret, { algorithm: 'HS256' });
 }
 
+// Helper function to convert JSON array to CSV and save to file
+function saveDataToCsv(data: any[], filename: string): string {
+  if (!data || data.length === 0) {
+    throw new Error('No data to save to CSV');
+  }
+
+  // Get all unique keys from all objects
+  const allKeys = new Set<string>();
+  data.forEach(row => {
+    Object.keys(row).forEach(key => allKeys.add(key));
+  });
+  const headers = Array.from(allKeys);
+
+  // Create CSV content
+  const csvRows: string[] = [];
+
+  // Add header row
+  csvRows.push(headers.map(header => `"${header}"`).join(','));
+
+  // Add data rows
+  data.forEach(row => {
+    const values = headers.map(header => {
+      const value = row[header];
+      if (value === null || value === undefined) {
+        return '""';
+      }
+      // Escape double quotes and wrap in quotes
+      const stringValue = String(value).replace(/"/g, '""');
+      return `"${stringValue}"`;
+    });
+    csvRows.push(values.join(','));
+  });
+
+  const csvContent = csvRows.join('\n');
+
+  // Ensure ./tmp directory exists
+  const tmpDirectory = join(process.cwd(), 'tmp');
+  if (!existsSync(tmpDirectory)) {
+    mkdirSync(tmpDirectory, { recursive: true });
+  }
+
+  // Save to file in ./tmp directory
+  const filePath = join(tmpDirectory, filename);
+  writeFileSync(filePath, csvContent, 'utf-8');
+
+  return filePath;
+}
+
 // Helper Function for API Call
 export async function fetchDirectSpendsData(
   start_date: string,
   end_date: string,
-  click_url_ids: string[]
+  click_url_ids?: string[],
+  client_id?: number
 ): Promise<any> {
   const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/direct_spends`);
 
   // Add query parameters
   urlObj.searchParams.append('start_date', start_date);
   urlObj.searchParams.append('end_date', end_date);
-  click_url_ids.forEach(id => {
-    urlObj.searchParams.append('click_url_ids[]', id);
-  });
+
+  if (click_url_ids && click_url_ids.length > 0) {
+    click_url_ids.forEach(id => {
+      urlObj.searchParams.append('click_url_ids[]', id);
+    });
+  }
+
+  if (client_id !== undefined) {
+    urlObj.searchParams.append('client_id', String(client_id));
+  }
 
   const url = urlObj.toString();
 
@@ -54,7 +112,23 @@ export async function fetchDirectSpendsData(
       },
       timeout: 30000,
     });
-    return response.data;
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `direct_spends_${start_date}_to_${end_date}_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
   } catch (error: unknown) {
     console.error("Error fetching direct spends data from FeedMob API:", error);
     if (error && typeof error === 'object' && 'response' in error) {
@@ -97,7 +171,24 @@ export async function getAgencyConversionMetrics(
       },
       timeout: 30000,
     });
-    return response.data;
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const dateStr = date ? `_${date}` : '';
+      const filename = `agency_conversion_metrics${dateStr}_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
   } catch (error: unknown) {
     console.error('Error fetching agency conversion metrics:', error);
     if (error && typeof error === 'object' && 'response' in error) {
@@ -119,13 +210,13 @@ export async function getAgencyConversionMetrics(
 
 export async function getClickUrlHistories(
   click_url_ids: number[],
-  date?: string
+  start_date: string,
+  end_date: string
 ): Promise<any> {
   const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/click_url_histories`);
   click_url_ids.forEach((id) => urlObj.searchParams.append('click_url_ids[]', String(id)));
-  if (date) {
-    urlObj.searchParams.append('date', date);
-  }
+  urlObj.searchParams.append('start_date', start_date);
+  urlObj.searchParams.append('end_date', end_date);
 
   const url = urlObj.toString();
 
@@ -140,7 +231,23 @@ export async function getClickUrlHistories(
       },
       timeout: 30000,
     });
-    return response.data;
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `click_url_histories_${start_date}_to_${end_date}_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
   } catch (error: unknown) {
     console.error('Error fetching click URL histories:', error);
     if (error && typeof error === 'object' && 'response' in error) {
@@ -322,7 +429,23 @@ export async function getInmobiReports(
       },
       timeout: 30000,
     });
-    return response.data;
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `inmobi_reports_${start_date}_to_${end_date}_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
   } catch (error: unknown) {
     console.error("Error fetching Inmobi reports:", error);
     if (error && typeof error === 'object' && 'response' in error) {
@@ -394,7 +517,23 @@ export async function getAppsflyerReports(
       },
       timeout: 30000,
     });
-    return response.data;
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `appsflyer_reports_${start_date}_to_${end_date}_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
   } catch (error: unknown) {
     console.error("Error fetching AppsFlyer reports:", error);
     if (error && typeof error === 'object' && 'response' in error) {
@@ -435,7 +574,23 @@ export async function getAdopsReports(
       },
       timeout: 30000,
     });
-    return response.data;
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `adops_reports_${month}_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
   } catch (error: unknown) {
     console.error("Error fetching AdOps reports:", error);
     if (error && typeof error === 'object' && 'response' in error) {
@@ -478,7 +633,18 @@ export async function getPossibleFinanceSingularReports(
       },
       timeout: 30000,
     });
-    return response.data;
+
+    const responseData = response.data;
+
+    // Save data to CSV if status is 200 and data array exists
+    if (responseData.status === 200 && responseData.data && Array.isArray(responseData.data)) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `possible_finance_singular_reports_${start_date}_to_${end_date}_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
   } catch (error: unknown) {
     console.error("Error fetching Possible Finance Singular reports:", error);
     if (error && typeof error === 'object' && 'response' in error) {
@@ -512,7 +678,23 @@ export async function getUserInfos(): Promise<any> {
       },
       timeout: 30000,
     });
-    return response.data;
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `user_infos_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
   } catch (error: unknown) {
     console.error("Error fetching user_infos:", error);
     if (error && typeof error === 'object' && 'response' in error) {
@@ -548,7 +730,23 @@ export async function searchUserInfos(username: string): Promise<any> {
       },
       timeout: 30000,
     });
-    return response.data;
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `user_infos_search_${username}_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
   } catch (error: unknown) {
     console.error("Error searching user_infos:", error);
     if (error && typeof error === 'object' && 'response' in error) {
@@ -607,7 +805,23 @@ export async function getDirectSpendRequests(
       },
       timeout: 30000,
     });
-    return response.data;
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `direct_spend_requests_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
   } catch (error: unknown) {
     console.error("Error fetching direct spend requests:", error);
     if (error && typeof error === 'object' && 'response' in error) {
@@ -654,7 +868,23 @@ export async function getHubspotTickets(
       },
       timeout: 30000,
     });
-    return response.data;
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `hubspot_tickets_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
   } catch (error: unknown) {
     console.error("Error fetching HubSpot tickets:", error);
     if (error && typeof error === 'object' && 'response' in error) {
@@ -697,7 +927,18 @@ export async function getPrivacyHawkSingularReports(
       },
       timeout: 30000,
     });
-    return response.data;
+
+    const responseData = response.data;
+
+    // Save data to CSV if status is 200 and data array exists
+    if (responseData.status === 200 && responseData.data && Array.isArray(responseData.data)) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `privacy_hawk_singular_reports_${start_date}_to_${end_date}_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
   } catch (error: unknown) {
     console.error("Error fetching Privacy Hawk Singular reports:", error);
     if (error && typeof error === 'object' && 'response' in error) {
@@ -740,7 +981,18 @@ export async function getTextnowAdjustReports(
       },
       timeout: 30000,
     });
-    return response.data;
+
+    const responseData = response.data;
+
+    // Save data to CSV if status is 200 and data array exists
+    if (responseData.status === 200 && responseData.data && Array.isArray(responseData.data)) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `textnow_adjust_reports_${start_date}_to_${end_date}_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
   } catch (error: unknown) {
     console.error("Error fetching TextNow Adjust reports:", error);
     if (error && typeof error === 'object' && 'response' in error) {
@@ -783,7 +1035,23 @@ export async function getClients(
       },
       timeout: 30000,
     });
-    return response.data;
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `clients_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
   } catch (error: unknown) {
     console.error("Error fetching clients:", error);
     if (error && typeof error === 'object' && 'response' in error) {
@@ -826,7 +1094,23 @@ export async function getCampaigns(
       },
       timeout: 30000,
     });
-    return response.data;
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `campaigns_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
   } catch (error: unknown) {
     console.error("Error fetching campaigns:", error);
     if (error && typeof error === 'object' && 'response' in error) {
@@ -869,7 +1153,23 @@ export async function getVendors(
       },
       timeout: 30000,
     });
-    return response.data;
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `vendors_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
   } catch (error: unknown) {
     console.error("Error fetching vendors:", error);
     if (error && typeof error === 'object' && 'response' in error) {
@@ -914,7 +1214,23 @@ export async function getJamppReports(
       },
       timeout: 30000,
     });
-    return response.data;
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `jampp_reports_${start_date}_to_${end_date}_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
   } catch (error: unknown) {
     console.error("Error fetching Jampp reports:", error);
     if (error && typeof error === 'object' && 'response' in error) {
@@ -965,7 +1281,23 @@ export async function getDirectSpendJobStats(
       },
       timeout: 30000,
     });
-    return response.data;
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `direct_spend_job_stats_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
   } catch (error: unknown) {
     console.error("Error fetching direct spend job stats:", error);
     if (error && typeof error === 'object' && 'response' in error) {
@@ -982,5 +1314,77 @@ export async function getDirectSpendJobStats(
       }
     }
     throw new Error('Failed to fetch direct spend job stats');
+  }
+}
+
+export async function getAgencyConversionRecords(
+  start_date: string,
+  end_date: string,
+  client_id?: number,
+  click_url_ids?: number[]
+): Promise<any> {
+  const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/agency_conversion_records`);
+
+  // Add required parameters
+  urlObj.searchParams.append('start_date', start_date);
+  urlObj.searchParams.append('end_date', end_date);
+
+  // Add optional parameters
+  if (client_id !== undefined) {
+    urlObj.searchParams.append('client_id', String(client_id));
+  }
+
+  if (click_url_ids && click_url_ids.length > 0) {
+    click_url_ids.forEach((id) => {
+      urlObj.searchParams.append('click_url_ids[]', String(id));
+    });
+  }
+
+  const url = urlObj.toString();
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token
+      },
+      timeout: 30000,
+    });
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `agency_conversion_records_${start_date}_to_${end_date}_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
+  } catch (error: unknown) {
+    console.error("Error fetching agency conversion records:", error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to fetch agency conversion records');
   }
 }

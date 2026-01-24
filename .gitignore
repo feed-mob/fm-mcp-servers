@@ -300,3 +300,6 @@ cython_debug/
 #.idea/
 
 .claude/settings.local.json
+
+# CSV tmp files
+src/feedmob-reporting/tmp/
