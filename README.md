@@ -6,7 +6,7 @@ This repository contains a collection of [MCP](https://modelcontextprotocol.io) 
 
 MCP (Model Context Protocol) servers provide structured data and context to AI models, enabling them to better understand and interact with specific domains and data sources.
 
-## 🚀 Available Servers (26)
+## 🚀 Available Servers (27)
 
 ### 📊 Advertising Platform Reporting
 
@@ -105,6 +105,15 @@ MCP (Model Context Protocol) servers provide structured data and context to AI m
 - **[Work Journals](src/work-journals)** - Query, create, and update work journals
   - Team member filtering
   - Date-based journal management
+
+### 🔒 Security & Infrastructure
+
+- **[IPLocate](src/iplocate)** - IP geolocation and fraud detection API integration
+  - Single and batch IP geolocation lookup (up to 100 IPs)
+  - Single and batch fraud/reputation checks (up to 50 IPs)
+  - Fraud score (0-100) with risk assessment
+  - Proxy/VPN/Tor detection
+  - API quota monitoring and management
 
 ### 🎨 Content & Media Management
 
