@@ -1,0 +1,41 @@
+{
+  "name": "@feedmob/iplocate",
+  "version": "0.0.1",
+  "description": "MCP Server for IPLocate API - IP geolocation and fraud detection",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "iplocate": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc && shx chmod +x dist/*.js",
+    "prepare": "npm run build",
+    "watch": "tsc --watch"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "keywords": [
+    "mcp",
+    "iplocate",
+    "ip-geolocation",
+    "fraud-detection",
+    "ip-reputation"
+  ],
+  "author": "FeedMob",
+  "homepage": "https://github.com/feed-mob/fm-mcp-servers",
+  "bugs": "https://github.com/feed-mob/fm-mcp-servers/issues",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.7.0",
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "typescript": "^5.5.2",
+    "shx": "^0.3.4"
+  }
+}
