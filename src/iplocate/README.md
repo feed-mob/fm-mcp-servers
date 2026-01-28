@@ -157,16 +157,6 @@ Force refresh the quota cache to get the latest quota information.
 refresh_quota
 ```
 
-## Fraud Score Interpretation
-
-| Score Range | Risk Level | Recommendation |
-|-------------|------------|----------------|
-| 0-24 | Low Risk | Safe, allow |
-| 25-49 | Medium-Low Risk | Generally safe, additional verification recommended |
-| 50-74 | Medium-High Risk | Manual review required |
-| 75-89 | High Risk | Recommend blocking |
-| 90-100 | Very High Risk | Strongly recommend blocking |
-
 ## Rate Limits and Quotas
 
 - **GeoIP Lookup**: Maximum 100 IPs per batch request, no rate limiting
@@ -176,11 +166,6 @@ refresh_quota
   - GeoIP lookups: No cache (real-time)
   - Fraud checks: 24-hour cache
   - Quota status: 5-minute cache
-
-## API Documentation
-
-Full API documentation is available at:
-`/Users/mandywang/work/iplocate-api/API_DOCUMENTATION.md`
 
 ## Support
 
