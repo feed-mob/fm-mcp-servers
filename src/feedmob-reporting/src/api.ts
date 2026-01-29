@@ -119,13 +119,13 @@ export async function getAgencyConversionMetrics(
 
 export async function getClickUrlHistories(
   click_url_ids: number[],
-  date?: string
+  start_date: string,
+  end_date: string
 ): Promise<any> {
   const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/click_url_histories`);
   click_url_ids.forEach((id) => urlObj.searchParams.append('click_url_ids[]', String(id)));
-  if (date) {
-    urlObj.searchParams.append('date', date);
-  }
+  urlObj.searchParams.append('start_date', start_date);
+  urlObj.searchParams.append('end_date', end_date);
 
   const url = urlObj.toString();
 
