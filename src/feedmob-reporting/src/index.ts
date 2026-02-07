@@ -3,12 +3,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getDirectSpendJobStats } from "./api.js";
+import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getDirectSpendJobStats, getAgencyConversionRecords } from "./api.js";
 
 // Create server instance
 const server = new McpServer({
   name: "feedmob-reporting",
-  version: "0.0.9",
+  version: "0.0.10",
   capabilities: {
     tools: {},
     prompts: {},
@@ -62,24 +62,33 @@ server.tool(
 // Tool Definition for Getting Direct Spends
 server.tool(
   "get_direct_spends",
-  "Get direct spends data via FeedMob API. ⚠️ Use 'feedmob-reporting-skills' skill for spend comparison workflows.",
+  "Get direct spends data via FeedMob API. Can filter by click_url_ids and/or client_id. ⚠️ Use 'feedmob-reporting-skills' skill for spend comparison workflows.",
   {
     start_date: z.string().describe("Start date in YYYY-MM-DD format"),
     end_date: z.string().describe("End date in YYYY-MM-DD format"),
-    click_url_ids: z.array(z.string()).describe("Array of click URL IDs"),
+    click_url_ids: z.array(z.string()).optional().describe("Array of click URL IDs (optional)"),
+    client_id: z.number().optional().describe("Client ID (optional)"),
   },
   async (params) => {
     try {
       const spendData = await fetchDirectSpendsData(
         params.start_date,
         params.end_date,
-        params.click_url_ids
+        params.click_url_ids,
+        params.client_id
       );
       const formattedData = JSON.stringify(spendData, null, 2);
+
+      let responseText = `Direct spends data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (spendData.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${spendData.csv_file_path}`;
+      }
+
       return {
         content: [{
           type: "text",
-          text: `Direct spends data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+          text: responseText,
         }],
       };
     } catch (error: unknown) {
@@ -125,19 +134,27 @@ server.tool(
 // Tool Definition for Click URL Histories
 server.tool(
   "get_click_url_histories",
-  "Get historical CPI/gross rates for click URL IDs. ⚠️ CRITICAL: Use 'feedmob-reporting-skills' skill - this data is required to calculate expected gross spend (purchases × gross_rate).",
+  "Get historical CPI/gross rates for click URL IDs. ⚠️ CRITICAL: Use 'feedmob-reporting-skills' skill - this data is required to calculate expected gross spend.",
   {
     click_url_ids: z.array(z.number()).describe("Array of click URL IDs"),
-    date: z.string().optional().describe("Optional date in YYYY-MM-DD format"),
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format"),
   },
   async (params) => {
     try {
-      const data = await getClickUrlHistories(params.click_url_ids, params.date);
+      const data = await getClickUrlHistories(params.click_url_ids, params.start_date, params.end_date);
       const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Click URL histories data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
       return {
         content: [{
           type: "text",
-          text: `Click URL histories data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+          text: responseText,
         }],
       };
     } catch (error: unknown) {
@@ -229,10 +246,17 @@ server.tool(
         params.non_skan_report_id
       );
       const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Inmobi reports data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
       return {
         content: [{
           type: "text",
-          text: `Inmobi reports data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+          text: responseText,
         }],
       };
     } catch (error: unknown) {
@@ -269,10 +293,17 @@ server.tool(
         params.campaign_ids
       );
       const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `AppsFlyer reports data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
       return {
         content: [{
           type: "text",
-          text: `AppsFlyer reports data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+          text: responseText,
         }],
       };
     } catch (error: unknown) {
@@ -297,10 +328,17 @@ server.tool(
     try {
       const data = await getAdopsReports(params.month);
       const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `AdOps reports data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
       return {
         content: [{
           type: "text",
-          text: `AdOps reports data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+          text: responseText,
         }],
       };
     } catch (error: unknown) {
@@ -329,10 +367,17 @@ server.tool(
         params.end_date
       );
       const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Possible Finance Singular reports data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
       return {
         content: [{
           type: "text",
-          text: `Possible Finance Singular reports data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+          text: responseText,
         }],
       };
     } catch (error: unknown) {
@@ -356,10 +401,17 @@ server.tool(
     try {
       const data = await getUserInfos();
       const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `User infos data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
       return {
         content: [{
           type: "text",
-          text: `User infos data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+          text: responseText,
         }],
       };
     } catch (error: unknown) {
@@ -385,10 +437,17 @@ server.tool(
     try {
       const data = await searchUserInfos(params.username);
       const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `User info search results for username '${params.username}':\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
       return {
         content: [{
           type: "text",
-          text: `User info search results for username '${params.username}':\n\`\`\`json\n${formattedData}\n\`\`\``,
+          text: responseText,
         }],
       };
     } catch (error: unknown) {
@@ -432,10 +491,17 @@ server.tool(
         params.start_date
       );
       const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Direct spend requests data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
       return {
         content: [{
           type: "text",
-          text: `Direct spend requests data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+          text: responseText,
         }],
       };
     } catch (error: unknown) {
@@ -470,10 +536,17 @@ server.tool(
         params.createdate_start
       );
       const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `HubSpot tickets data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
       return {
         content: [{
           type: "text",
-          text: `HubSpot tickets data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+          text: responseText,
         }],
       };
     } catch (error: unknown) {
@@ -490,7 +563,7 @@ server.tool(
 // Tool Definition for Getting Privacy Hawk Singular Reports
 server.tool(
   "get_privacy_hawk_singular_reports",
-  "Get Privacy Hawk Singular API reports data via FeedMob API.",
+  "Get Privacy Hawk Singular API reports data via FeedMob API. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
   {
     start_date: z.string().describe("Start date in YYYY-MM-DD format"),
     end_date: z.string().describe("End date in YYYY-MM-DD format"),
@@ -502,10 +575,17 @@ server.tool(
         params.end_date
       );
       const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Privacy Hawk Singular reports data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
       return {
         content: [{
           type: "text",
-          text: `Privacy Hawk Singular reports data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+          text: responseText,
         }],
       };
     } catch (error: unknown) {
@@ -522,7 +602,7 @@ server.tool(
 // Tool Definition for Getting TextNow Adjust Reports
 server.tool(
   "get_textnow_adjust_reports",
-  "Get TextNow Adjust reports data via FeedMob API.",
+  "Get TextNow Adjust reports data via FeedMob API. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
   {
     start_date: z.string().describe("Start date in YYYY-MM-DD format"),
     end_date: z.string().describe("End date in YYYY-MM-DD format"),
@@ -534,10 +614,17 @@ server.tool(
         params.end_date
       );
       const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `TextNow Adjust reports data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
       return {
         content: [{
           type: "text",
-          text: `TextNow Adjust reports data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+          text: responseText,
         }],
       };
     } catch (error: unknown) {
@@ -554,7 +641,7 @@ server.tool(
 // Tool Definition for Getting Clients
 server.tool(
   "get_clients",
-  "Get clients information via FeedMob API. Can filter by client_name (optional).",
+  "Get clients information via FeedMob API. Can filter by client_name (optional), if search client = Uber means client_name = Uber Technologies.",
   {
     client_name: z.string().optional().describe("Client name to search for (optional)"),
   },
@@ -562,10 +649,17 @@ server.tool(
     try {
       const data = await getClients(params.client_name);
       const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Clients data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
       return {
         content: [{
           type: "text",
-          text: `Clients data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+          text: responseText,
         }],
       };
     } catch (error: unknown) {
@@ -590,10 +684,17 @@ server.tool(
     try {
       const data = await getCampaigns(params.client_id);
       const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Campaigns data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
       return {
         content: [{
           type: "text",
-          text: `Campaigns data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+          text: responseText,
         }],
       };
     } catch (error: unknown) {
@@ -618,10 +719,17 @@ server.tool(
     try {
       const data = await getVendors(params.vendor_name);
       const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Vendors data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
       return {
         content: [{
           type: "text",
-          text: `Vendors data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+          text: responseText,
         }],
       };
     } catch (error: unknown) {
@@ -638,7 +746,7 @@ server.tool(
 // Tool Definition for Getting Jampp Reports
 server.tool(
   "get_jampp_reports",
-  "Get Jampp reports data via FeedMob API.",
+  "Get Jampp reports data via FeedMob API. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
   {
     client_id: z.number().describe("Client ID (required)"),
     start_date: z.string().describe("Start date in YYYY-MM-DD format (required)"),
@@ -652,10 +760,17 @@ server.tool(
         params.end_date
       );
       const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Jampp reports data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
       return {
         content: [{
           type: "text",
-          text: `Jampp reports data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+          text: responseText,
         }],
       };
     } catch (error: unknown) {
@@ -693,10 +808,17 @@ server.tool(
         params.click_url_id
       );
       const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Direct spend job stats data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
       return {
         content: [{
           type: "text",
-          text: `Direct spend job stats data:\n\`\`\`json\n${formattedData}\n\`\`\``,
+          text: responseText,
         }],
       };
     } catch (error: unknown) {
@@ -704,6 +826,49 @@ server.tool(
       console.error("Error in get_direct_spend_job_stats tool:", errorMessage);
       return {
         content: [{ type: "text", text: `Error fetching direct spend job stats: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting Agency Conversion Records
+server.tool(
+  "get_agency_conversion_records",
+  "Get agency_conversion_records data via FeedMob API. Can filter by client_id and/or click_url_ids array. ⚠️ Use 'feedmob-reporting-skills' skill for conversion analysis workflows.",
+  {
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format"),
+    client_id: z.number().optional().describe("Client ID (optional)"),
+    click_url_ids: z.array(z.number()).optional().describe("Array of click URL IDs (optional)"),
+  },
+  async (params) => {
+    try {
+      const data = await getAgencyConversionRecords(
+        params.start_date,
+        params.end_date,
+        params.client_id,
+        params.click_url_ids
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Agency conversion records data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
+      return {
+        content: [{
+          type: "text",
+          text: responseText,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching agency conversion records.";
+      console.error("Error in get_agency_conversion_records tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching agency conversion records: ${errorMessage}` }],
         isError: true,
       };
     }
