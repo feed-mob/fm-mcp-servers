@@ -20,7 +20,7 @@ if (!APPSAMURAI_API_KEY) {
 // Create server instance
 const server = new McpServer({
   name: "appsamurai-reporting",
-  version: "0.0.6",
+  version: "0.0.7",
   capabilities: {
     tools: {},
     prompts: {},

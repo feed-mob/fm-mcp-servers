@@ -1,6 +1,6 @@
 {
   "name": "@feedmob/n8n-nodes-sensor-tower",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "n8n nodes for Sensor Tower Reporting (wraps MCP tools)",
   "keywords": [
     "n8n-community-node-package",

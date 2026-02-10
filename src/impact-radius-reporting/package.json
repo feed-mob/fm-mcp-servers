@@ -1,6 +1,6 @@
 {
   "name": "@feedmob/impact-radius-reporting",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "MCP server for Impact Radius Reporting",
   "main": "dist/index.js",
   "author": "FeedMob",

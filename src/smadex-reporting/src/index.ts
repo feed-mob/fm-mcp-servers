@@ -10,7 +10,7 @@ dotenv.config();
 
 const server = new McpServer({
   name: "Smadex Reporting MCP Server",
-  version: "0.0.2"
+  version: "0.0.3"
 });
 
 const SMADEX_API_BASE_URL = process.env.SMADEX_API_BASE_URL || '';

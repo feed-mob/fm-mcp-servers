@@ -11,7 +11,7 @@ dotenv.config();
 
 const server = new McpServer({
   name: "RTB House Reporting MCP Server",
-  version: "0.0.3"
+  version: "0.0.4"
 });
 
 // --- RTB House Configuration ---

@@ -10,7 +10,7 @@ dotenv.config();
 
 const server = new McpServer({
   name: "IronSource Reporting MCP Server",
-  version: "0.0.2"
+  version: "0.0.3"
 });
 
 const IRONSOURCE_API_BASE_URL = "https://api.ironsrc.com/advertisers/v2/reports";

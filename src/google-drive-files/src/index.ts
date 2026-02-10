@@ -5,7 +5,7 @@ import { Schema, z } from "zod";
 
 const server = new FastMCP({
   name: "google-drive-files",
-  version: "0.0.2"
+  version: "0.0.3"
 });
 
 const FEMINI_API_URL = process.env.FEMINI_API_URL;
