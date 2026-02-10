@@ -984,3 +984,93 @@ export async function getDirectSpendJobStats(
     throw new Error('Failed to fetch direct spend job stats');
   }
 }
+
+export async function previewCampaign(
+  campaign_name: string,
+  app_info_id: number,
+  os: string,
+  client_uuid: string
+): Promise<any> {
+  const url = `${FEEDMOB_API_BASE}/ai/api/campaigns/preview`;
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.post(url, {
+      name: campaign_name,
+      app_info_id,
+      os,
+      client_uuid
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token
+      },
+      timeout: 30000,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    console.error("Error previewing campaign:", error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to preview campaign');
+  }
+}
+
+export async function createCampaign(
+  campaign_name: string,
+  app_info_id: number,
+  os: string,
+  client_id: number,
+  client_uuid: string
+): Promise<any> {
+  const url = `${FEEDMOB_API_BASE}/ai/api/campaigns`;
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.post(url, {
+      name: campaign_name,
+      app_info_id,
+      os,
+      client_id,
+      client_uuid
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token
+      },
+      timeout: 30000,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    console.error("Error creating campaign:", error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to create campaign');
+  }
+}

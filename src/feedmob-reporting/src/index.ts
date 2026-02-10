@@ -3,12 +3,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getDirectSpendJobStats } from "./api.js";
+import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getDirectSpendJobStats, previewCampaign, createCampaign } from "./api.js";
 
 // Create server instance
 const server = new McpServer({
   name: "feedmob-reporting",
-  version: "0.0.11",
+  version: "0.0.13",
   capabilities: {
     tools: {},
     prompts: {},
@@ -704,6 +704,80 @@ server.tool(
       console.error("Error in get_direct_spend_job_stats tool:", errorMessage);
       return {
         content: [{ type: "text", text: `Error fetching direct spend job stats: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Previewing Campaign
+server.tool(
+  "preview_campaign",
+  "Preview a campaign before creation via FeedMob API. Returns campaign details including estimated click URLs and settings that will be created.",
+  {
+    campaign_name: z.string().describe("Campaign name"),
+    app_info_id: z.number().describe("App info ID"),
+    os: z.string().describe("Operating system: 'Android', 'iOS', or 'Universal'"),
+    client_uuid: z.string().describe("Client UUID"),
+  },
+  async (params) => {
+    try {
+      const data = await previewCampaign(
+        params.campaign_name,
+        params.app_info_id,
+        params.os,
+        params.client_uuid
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `Campaign preview:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while previewing campaign.";
+      console.error("Error in preview_campaign tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error previewing campaign: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Creating Campaign
+server.tool(
+  "create_campaign",
+  "Create a new campaign via FeedMob API. This will generate click URLs and campaign structure based on the provided parameters.",
+  {
+    campaign_name: z.string().describe("Campaign name"),
+    app_info_id: z.number().describe("App info ID"),
+    os: z.string().describe("Operating system: 'Android', 'iOS', or 'Universal'"),
+    client_id: z.number().describe("Client ID"),
+    client_uuid: z.string().describe("Client UUID"),
+  },
+  async (params) => {
+    try {
+      const data = await createCampaign(
+        params.campaign_name,
+        params.app_info_id,
+        params.os,
+        params.client_id,
+        params.client_uuid
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `Campaign created successfully:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while creating campaign.";
+      console.error("Error in create_campaign tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error creating campaign: ${errorMessage}` }],
         isError: true,
       };
     }
