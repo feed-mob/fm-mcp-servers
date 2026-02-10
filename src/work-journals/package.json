@@ -1,6 +1,6 @@
 {
   "name": "@feedmob/work-journals",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "This is an MCP server for querying and managing work journals.",
   "main": "src/index.ts",
   "homepage": "https://github.com/feed-mob/fm-mcp-servers",

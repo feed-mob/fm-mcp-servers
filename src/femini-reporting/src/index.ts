@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken';
 // Create FastMCP server instance
 const server = new FastMCP({
   name: "femini-reporting",
-  version: "0.0.5",
+  version: "0.0.6",
   instructions: `
 This is a customized MCP server for the Feedmob project, specifically for querying and analyzing ad spend data.
 

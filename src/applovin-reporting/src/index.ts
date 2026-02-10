@@ -10,7 +10,7 @@ dotenv.config();
 
 const server = new McpServer({
   name: "AppLovin Reporting MCP Server",
-  version: "0.0.1"
+  version: "0.0.2"
 });
 
 const APPLOVIN_API_BASE_URL = "https://r.applovin.com/report";

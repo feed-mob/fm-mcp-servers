@@ -1,6 +1,6 @@
 {
   "name": "@feedmob/ironsource-aura-reporting",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "MCP server for IronSource Aura API",
   "main": "dist/index.js",
   "author": "FeedMob",

@@ -12,7 +12,7 @@ import { createUploadFileTool } from "./tools/uploadFile.js";
 
 const server = new FastMCP({
   name: "feedmob-imagekit",
-  version: "1.0.0",
+  version: "1.0.3",
 });
 
 const imageKitPrivateKey = process.env.IMAGEKIT_PRIVATE_KEY;

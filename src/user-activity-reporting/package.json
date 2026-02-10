@@ -1,6 +1,6 @@
 {
   "name": "@feedmob/user-activity-reporting",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "MCP server for querying client contacts, Slack messages, and HubSpot tickets",
   "type": "module",
   "main": "dist/index.js",
