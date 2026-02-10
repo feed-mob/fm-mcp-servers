@@ -1,6 +1,6 @@
 {
   "name": "@feedmob/n8n-nodes-feedmob-direct-spend-visualizer",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "n8n nodes for orchestrating FeedMob direct spend visualizations through Claude Agent SDK plugins",
   "keywords": [
     "n8n-community-node-package",

@@ -1,6 +1,6 @@
 {
   "name": "@feedmob/civitai-records",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "description": "FeedMob FastMCP server scaffold for Civitai record utilities.",
   "main": "dist/server.js",
   "bin": "dist/server.js",

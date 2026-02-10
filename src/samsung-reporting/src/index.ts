@@ -11,7 +11,7 @@ dotenv.config();
 
 const server = new McpServer({
   name: "Samsung Reporting MCP Server",
-  version: "0.1.3"
+  version: "0.1.4"
 });
 
 // Configuration constants

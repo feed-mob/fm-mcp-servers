@@ -21,7 +21,7 @@ if (!impactRadiusSid || !impactRadiusToken) {
 // Create MCP server
 const server = new McpServer({
   name: "Impact Radius MCP Server",
-  version: "0.0.2",
+  version: "0.0.3",
 });
 
 // Define the params for Impact Radius FCO reporting

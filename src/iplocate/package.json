@@ -1,6 +1,6 @@
 {
   "name": "@feedmob/iplocate",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "MCP Server for IPLocate API - IP geolocation and fraud detection",
   "main": "dist/index.js",
   "type": "module",
