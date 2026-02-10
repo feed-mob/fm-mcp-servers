@@ -32,5 +32,9 @@
   "devDependencies": {
     "shx": "^0.3.4",
     "typescript": "^5.6.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/feed-mob/fm-mcp-servers"
   }
 }
