@@ -125,14 +125,15 @@ server.tool(
 // Tool Definition for Click URL Histories
 server.tool(
   "get_click_url_histories",
-  "Get historical CPI/gross rates for click URL IDs. ⚠️ CRITICAL: Use 'feedmob-reporting-skills' skill - this data is required to calculate expected gross spend (purchases × gross_rate).",
+  "Get historical CPI/gross rates for click URL IDs. ⚠️ CRITICAL: Use 'feedmob-reporting-skills' skill - this data is required to calculate expected gross spend.",
   {
     click_url_ids: z.array(z.number()).describe("Array of click URL IDs"),
-    date: z.string().optional().describe("Optional date in YYYY-MM-DD format"),
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format"),
   },
   async (params) => {
     try {
-      const data = await getClickUrlHistories(params.click_url_ids, params.date);
+      const data = await getClickUrlHistories(params.click_url_ids, params.start_date, params.end_date);
       const formattedData = JSON.stringify(data, null, 2);
       return {
         content: [{
@@ -490,7 +491,7 @@ server.tool(
 // Tool Definition for Getting Privacy Hawk Singular Reports
 server.tool(
   "get_privacy_hawk_singular_reports",
-  "Get Privacy Hawk Singular API reports data via FeedMob API.",
+  "Get Privacy Hawk Singular API reports data via FeedMob API. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
   {
     start_date: z.string().describe("Start date in YYYY-MM-DD format"),
     end_date: z.string().describe("End date in YYYY-MM-DD format"),
@@ -522,7 +523,7 @@ server.tool(
 // Tool Definition for Getting TextNow Adjust Reports
 server.tool(
   "get_textnow_adjust_reports",
-  "Get TextNow Adjust reports data via FeedMob API.",
+  "Get TextNow Adjust reports data via FeedMob API. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
   {
     start_date: z.string().describe("Start date in YYYY-MM-DD format"),
     end_date: z.string().describe("End date in YYYY-MM-DD format"),
@@ -638,7 +639,7 @@ server.tool(
 // Tool Definition for Getting Jampp Reports
 server.tool(
   "get_jampp_reports",
-  "Get Jampp reports data via FeedMob API.",
+  "Get Jampp reports data via FeedMob API. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
   {
     client_id: z.number().describe("Client ID (required)"),
     start_date: z.string().describe("Start date in YYYY-MM-DD format (required)"),
