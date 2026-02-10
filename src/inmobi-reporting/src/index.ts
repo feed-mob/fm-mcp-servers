@@ -10,7 +10,7 @@ dotenv.config();
 
 const server = new McpServer({
   name: "Inmobi Reporting MCP Server",
-  version: "0.0.1"
+  version: "0.0.2"
 });
 
 const INMOBI_AUTH_URL = process.env.INMOBI_AUTH_URL || "";

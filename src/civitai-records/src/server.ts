@@ -19,7 +19,7 @@ import { civitaiMediaEngagementPrompt } from "./prompts/civitaiMediaEngagement.j
 
 const server = new FastMCP({
   name: "feedmob-civitai-records",
-  version: "0.1.0",
+  version: "0.1.15",
 });
 
 server.addPrompt(recordCivitaiWorkflowPrompt);

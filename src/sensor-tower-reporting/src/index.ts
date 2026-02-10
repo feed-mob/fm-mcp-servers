@@ -10,7 +10,7 @@ dotenv.config();
 
 const server = new McpServer({
   name: "Sensor Tower Reporting MCP Server",
-  version: "0.1.2"
+  version: "0.1.3"
 });
 
 const SENSOR_TOWER_BASE_URL = process.env.SENSOR_TOWER_BASE_URL || 'https://api.sensortower.com';

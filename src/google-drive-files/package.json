@@ -1,6 +1,6 @@
 {
   "name": "@feedmob/google-drive-files",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "MCP Server for querying Google Drive files from Femini system",
   "main": "dist/index.js",
   "type": "module",
