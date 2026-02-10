@@ -47,5 +47,9 @@
     "dist",
     "scripts/setup-plugin.js",
     "scripts/build-assets.js"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/feed-mob/fm-mcp-servers"
+  }
 }
