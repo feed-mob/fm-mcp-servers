@@ -35,7 +35,7 @@ npm run build
 
 ### Example MCP Client Config (stdio)
 
-**Recommended (avoids completions capability issue):** run from the built artifact when you have the repo. After `npm run build` in `src/github-issues/`:
+**Optional:** run from the built artifact when you have the repo. After `npm run build` in `src/github-issues/`:
 
 ```json
 {
@@ -54,7 +54,7 @@ npm run build
 }
 ```
 
-Alternatively, use `npx` (do **not** use `npm install -g @feedmob/github-issues`; global install ignores the package’s SDK override and can cause the “Server does not support completions” error):
+Alternatively, use `npx` (avoid global install so the correct dependencies are used):
 
 ```json
 {
@@ -151,23 +151,6 @@ npx tsx index.ts
 - Provides the schema definition for `search_issues`.
 
 ## Troubleshooting
-
-### `Server does not support completions (required for completion/complete)`
-
-Cursor (and other MCP clients using protocol 2025-11-25) may request the `completion/complete` capability. FastMCP 2.1 uses `@modelcontextprotocol/sdk`; SDK **1.22.0+** requires the server to advertise the completions capability when registering a completion handler, but FastMCP does not set it, so the server crashes on start.
-
-**Fix:**
-
-1. **Preferred:** Run from the repo so the package’s SDK pin is used. In Cursor MCP config, use the built server instead of `npx` or a global install:
-   ```json
-   "command": "node",
-   "args": ["/absolute/path/to/fm-mcp-servers/src/github-issues/dist/index.js"]
-   ```
-   Run `npm install` and `npm run build` in `src/github-issues/` first.
-
-2. **If you use npx:** Avoid `npm install -g @feedmob/github-issues`. npm applies `overrides` only from the root project; a global install has no root `package.json`, so the pin is ignored and the crash can occur. Use `npx -y @feedmob/github-issues` (npx uses the package as root so the override applies), or switch to the local path above.
-
-3. **Local dev:** This package pins the SDK to **1.21.2** via `overrides` and a direct dependency. After pulling, run `npm install` in `src/github-issues/` so the pin is applied.
 
 ### `SyntaxError: Unexpected token ':'` with JSON on stdin
 
