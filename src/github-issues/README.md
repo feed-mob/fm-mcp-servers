@@ -35,17 +35,33 @@ npm run build
 
 ### Example MCP Client Config (stdio)
 
-Use the built artifact (`dist/index.js`) after `npm run build`:
+**Recommended (avoids completions capability issue):** run from the built artifact when you have the repo. After `npm run build` in `src/github-issues/`:
+
+```json
+{
+  "mcpServers": {
+    "feedmob-github-issues": {
+      "command": "node",
+      "args": ["/absolute/path/to/fm-mcp-servers/src/github-issues/dist/index.js"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_xxx",
+        "GITHUB_DEFAULT_OWNER": "feedmob",
+        "AI_API_URL": "https://your-feedmob-api.example.com",
+        "AI_API_TOKEN": "your-feedmob-api-token"
+      }
+    }
+  }
+}
+```
+
+Alternatively, use `npx` (do **not** use `npm install -g @feedmob/github-issues`; global install ignores the package’s SDK override and can cause the “Server does not support completions” error):
 
 ```json
 {
   "mcpServers": {
     "feedmob-github-issues": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@feedmob/github-issues"
-      ],
+      "args": ["-y", "@feedmob/github-issues"],
       "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_xxx",
         "GITHUB_DEFAULT_OWNER": "feedmob",
@@ -140,7 +156,18 @@ npx tsx index.ts
 
 Cursor (and other MCP clients using protocol 2025-11-25) may request the `completion/complete` capability. FastMCP 2.1 uses `@modelcontextprotocol/sdk`; SDK **1.22.0+** requires the server to advertise the completions capability when registering a completion handler, but FastMCP does not set it, so the server crashes on start.
 
-**Fix:** This package pins the SDK to **1.21.2** via `overrides` in `package.json`. After pulling, run `npm install` in `src/github-issues/` so the override is applied. If you use `npx -y @feedmob/github-issues`, reinstall or use the local build: `node /path/to/fm-mcp-servers/src/github-issues/dist/index.js`.
+**Fix:**
+
+1. **Preferred:** Run from the repo so the package’s SDK pin is used. In Cursor MCP config, use the built server instead of `npx` or a global install:
+   ```json
+   "command": "node",
+   "args": ["/absolute/path/to/fm-mcp-servers/src/github-issues/dist/index.js"]
+   ```
+   Run `npm install` and `npm run build` in `src/github-issues/` first.
+
+2. **If you use npx:** Avoid `npm install -g @feedmob/github-issues`. npm applies `overrides` only from the root project; a global install has no root `package.json`, so the pin is ignored and the crash can occur. Use `npx -y @feedmob/github-issues` (npx uses the package as root so the override applies), or switch to the local path above.
+
+3. **Local dev:** This package pins the SDK to **1.21.2** via `overrides` and a direct dependency. After pulling, run `npm install` in `src/github-issues/` so the pin is applied.
 
 ### `SyntaxError: Unexpected token ':'` with JSON on stdin
 
