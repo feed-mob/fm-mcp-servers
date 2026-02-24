@@ -5,16 +5,21 @@ This MCP server provides tools to interact with the [Sensor Tower API](https://s
 ## Features
 
 - **Tools**:
-  - [`get_app_metadata`](src/index.ts:929): Fetch app metadata including name, publisher, categories, description, screenshots, and ratings
-  - [`get_top_in_app_purchases`](src/index.ts:981): Fetch top in-app purchases for iOS apps
-  - [`get_compact_sales_report_estimates`](src/index.ts:1030): Get download and revenue estimates in compact format (revenues in cents)
-  - [`get_active_users`](src/index.ts:1119): Fetch active user estimates (DAU/WAU/MAU) by country and date
-  - [`get_category_history`](src/index.ts:1194): Get detailed category ranking history for apps
-  - [`get_category_ranking_summary`](src/index.ts:1274): Fetch today's category ranking summary
-  - [`get_network_analysis`](src/index.ts:1329): Get impressions share of voice (SOV) time series
-  - [`get_network_analysis_rank`](src/index.ts:1405): Fetch network analysis ranking data
-  - [`get_retention`](src/index.ts:1481): Get app retention data (day 1 to day 90)
-  - [`get_downloads_by_sources`](src/index.ts:1551): Fetch app downloads by sources (organic, paid, browser)
+  - [`get_app_metadata`](src/index.ts:1040): Fetch app metadata including name, publisher, categories, description, screenshots, and ratings
+  - [`get_top_in_app_purchases`](src/index.ts:1092): Fetch top in-app purchases for iOS apps
+  - [`get_compact_sales_report_estimates`](src/index.ts:1141): Get download and revenue estimates in compact format (revenues in cents)
+  - [`get_active_users`](src/index.ts:1230): Fetch active user estimates (DAU/WAU/MAU) by country and date
+  - [`get_category_history`](src/index.ts:1305): Get detailed category ranking history for apps
+  - [`get_category_ranking_summary`](src/index.ts:1385): Fetch today's category ranking summary
+  - [`get_network_analysis`](src/index.ts:1440): Get impressions share of voice (SOV) time series
+  - [`get_network_analysis_rank`](src/index.ts:1516): Fetch network analysis ranking data
+  - [`get_retention`](src/index.ts:1592): Get app retention data (day 1 to day 90)
+  - [`get_downloads_by_sources`](src/index.ts:1662): Fetch app downloads by sources (organic, paid, browser)
+  - [`find_apps_by_metric_threshold`](src/index.ts:1733): Discover apps exceeding a download/revenue threshold over a given time period and geography
+
+- **Data Files**:
+  - [`data/category_ids.json`](src/data/category_ids.json): Category ID reference for iOS and Android
+  - [`data/country_ids.json`](src/data/country_ids.json): Country code reference
 
 ## Setup
 
@@ -118,6 +123,9 @@ npm run dev
 - **Network Analysis**: Share of voice (SOV) for advertising networks
 - **Network Rankings**: Ranking data across countries and networks
 - **Downloads by Sources**: Organic vs paid download attribution
+
+### Market Research
+- **Find Apps by Metric Threshold**: Discover apps exceeding a download or revenue threshold in a given time range, category, and geography. OS defaults to iOS when not specified.
 
 ## Error Handling
 
