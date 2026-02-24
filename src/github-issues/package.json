@@ -1,6 +1,6 @@
 {
   "name": "@feedmob/github-issues",
-  "version": "0.0.9",
+  "version": "1.0.0",
   "description": "MCP server for using the GitHub API",
   "license": "MIT",
   "author": "FeedMob",
