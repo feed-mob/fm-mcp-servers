@@ -705,7 +705,7 @@ class SensorTowerApiService {
       if (!dateRegex.test(startDate)) {
         throw new SensorTowerApiError('Start date must be in YYYY-MM-DD format.');
       }
-      
+
       if (endDate && !dateRegex.test(endDate)) {
         throw new SensorTowerApiError('End date must be in YYYY-MM-DD format.');
       }
@@ -830,6 +830,93 @@ class SensorTowerApiService {
       throw new SensorTowerApiError(`Failed to fetch downloads by sources: ${error.message}`);
     }
   }
+
+  /**
+   * Fetch top apps by download or revenue estimates
+   * Uses the sales_report_estimates_comparison_attributes endpoint
+   */
+  async fetchTopAndTrendingApps(
+    os: string,
+    comparisonAttribute: string,
+    timeRange: string,
+    measure: string,
+    category: string,
+    date: string,
+    deviceType?: string,
+    endDate?: string,
+    regions?: string[],
+    limit?: number,
+    dataModel?: string
+  ): Promise<any> {
+    try {
+      if (!['ios', 'android', 'unified'].includes(os.toLowerCase())) {
+        throw new SensorTowerApiError('Invalid OS. Must be "ios", "android", or "unified".');
+      }
+
+      if (!['absolute', 'delta', 'transformed_delta'].includes(comparisonAttribute)) {
+        throw new SensorTowerApiError('Invalid comparison_attribute. Must be "absolute", "delta", or "transformed_delta".');
+      }
+
+      if (!['day', 'week', 'month', 'quarter', 'year'].includes(timeRange)) {
+        throw new SensorTowerApiError('Invalid time_range. Must be "day", "week", "month", "quarter", or "year".');
+      }
+
+      if (!['units', 'revenue'].includes(measure)) {
+        throw new SensorTowerApiError('Invalid measure. Must be "units" or "revenue".');
+      }
+
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(date)) {
+        throw new SensorTowerApiError('Date must be in YYYY-MM-DD format.');
+      }
+      if (endDate && !dateRegex.test(endDate)) {
+        throw new SensorTowerApiError('end_date must be in YYYY-MM-DD format.');
+      }
+
+      const queryParams = new URLSearchParams();
+      queryParams.append('comparison_attribute', comparisonAttribute);
+      queryParams.append('time_range', timeRange);
+      queryParams.append('measure', measure);
+      queryParams.append('category', category);
+      queryParams.append('date', date);
+      queryParams.append('limit', String(limit ?? 2000));
+      queryParams.append('auth_token', AUTH_TOKEN!);
+
+      if (deviceType) {
+        queryParams.append('device_type', deviceType);
+      }
+      if (endDate) {
+        queryParams.append('end_date', endDate);
+      }
+      if (regions && regions.length > 0) {
+        regions.forEach(r => queryParams.append('regions[]', r));
+      }
+      if (dataModel) {
+        queryParams.append('data_model', dataModel);
+      }
+
+      const url = `${SENSOR_TOWER_BASE_URL}/v1/${os.toLowerCase()}/sales_report_estimates_comparison_attributes?${queryParams.toString()}`;
+      console.error(`Fetching top and trending apps for ${os}, time_range: ${timeRange}, measure: ${measure}, category: ${category}, date: ${date}`);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorBody}`);
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      console.error('Error fetching top and trending apps:', error);
+      throw new SensorTowerApiError(`Failed to fetch top and trending apps: ${error.message}`);
+    }
+  }
 }
 
 // Input validation schemas
@@ -894,7 +981,7 @@ const dateGranularityDownloadsSchema = z.string().optional()
 
 // Schemas for category history
 const categorySchema = z.string()
-  .describe("Category ID to return results for");
+  .describe("Category ID. Use '0' for all categories on iOS, 'all' for all categories on Android. See data/category_ids.json for specific category IDs.");
 
 const chartTypeIdsSchema = z.string()
   .describe("IDs of the Chart Type, separated by commas");
@@ -925,6 +1012,30 @@ const retentionDateGranularitySchema = z.string()
   .refine(val => ['all_time', 'quarterly'].includes(val), "Date granularity must be 'all_time' or 'quarterly'")
   .describe("Aggregate estimates by granularity (use 'all_time', or 'quarterly')");
 
+// Schemas for find_apps_by_metric_threshold
+const osWithUnifiedSchema = z.string()
+  .refine(val => ['ios', 'android', 'unified'].includes(val.toLowerCase()), "OS must be 'ios', 'android', or 'unified'")
+  .describe("Operating System ('ios', 'android', or 'unified')");
+
+const comparisonAttributeSchema = z.string()
+  .refine(val => ['absolute', 'delta', 'transformed_delta'].includes(val), "Must be 'absolute', 'delta', or 'transformed_delta'")
+  .default('absolute')
+  .describe("Comparison attribute: 'absolute' (total), 'delta' (growth), or 'transformed_delta' (growth ratio). Defaults to 'absolute'.");
+
+const timeRangeSchema = z.string()
+  .refine(val => ['day', 'week', 'month', 'quarter', 'year'].includes(val), "Must be 'day', 'week', 'month', 'quarter', or 'year'")
+  .describe("Time range: 'day', 'week', 'month', 'quarter', or 'year'");
+
+const measureSchema = z.string()
+  .refine(val => ['units', 'revenue'].includes(val), "Must be 'units' or 'revenue'")
+  .describe("Metric: 'units' (downloads) or 'revenue' (in cents)");
+
+const minValueSchema = z.number().optional()
+  .describe("Minimum threshold for the metric. Apps below this value are excluded. E.g. 7000 to find apps with at least 7,000 downloads.");
+
+const limitLargeSchema = z.number().min(1).max(2000).optional().default(100)
+  .describe("Max number of apps to fetch from the API (1–2000). Defaults to 100. Use higher values with min_value to filter large result sets.");
+
 // Tool: Get App Metadata
 server.tool("get_app_metadata",
   "Fetch app metadata from Sensor Tower API, such as app name, publisher, categories, description, screenshots, rating, etc.",
@@ -936,11 +1047,11 @@ server.tool("get_app_metadata",
   async ({ os, appIds, country = 'US' }) => {
     try {
       console.error(`Fetching app metadata for ${os}, app IDs: ${appIds}, country: ${country}`);
-      
+
       const appIdsArray = appIds.split(',').map(id => id.trim());
       const sensorTowerService = new SensorTowerApiService();
       const metadata = await sensorTowerService.fetchAppMetadata(os, appIdsArray, country);
-      
+
       return {
         content: [
           {
@@ -957,7 +1068,7 @@ server.tool("get_app_metadata",
     } catch (error: any) {
       const errorMessage = `Error fetching app metadata: ${error.message}`;
       console.error(errorMessage);
-      
+
       return {
         content: [
           {
@@ -987,11 +1098,11 @@ server.tool("get_top_in_app_purchases",
   async ({ appIds, country = 'US' }) => {
     try {
       console.error(`Fetching top in-app purchases for app IDs: ${appIds}, country: ${country}`);
-      
+
       const appIdsArray = appIds.split(',').map(id => id.trim());
       const sensorTowerService = new SensorTowerApiService();
       const inAppPurchasesData = await sensorTowerService.fetchTopInAppPurchases(appIdsArray, country);
-      
+
       return {
         content: [
           {
@@ -1007,7 +1118,7 @@ server.tool("get_top_in_app_purchases",
     } catch (error: any) {
       const errorMessage = `Error fetching top in-app purchases: ${error.message}`;
       console.error(errorMessage);
-      
+
       return {
         content: [
           {
@@ -1044,13 +1155,13 @@ server.tool("get_compact_sales_report_estimates",
   async ({ os, startDate, endDate, appIds, publisherIds, unifiedAppIds, unifiedPublisherIds, categories, dateGranularity, dataModel }) => {
     try {
       console.error(`Fetching compact sales report estimates for ${os}, start date: ${startDate}, end date: ${endDate}`);
-      
+
       // Process string inputs into arrays
       const appIdsArray = appIds ? appIds.split(',').map(id => id.trim()) : undefined;
       const unifiedAppIdsArray = unifiedAppIds ? unifiedAppIds.split(',').map(id => id.trim()) : undefined;
       const unifiedPublisherIdsArray = unifiedPublisherIds ? unifiedPublisherIds.split(',').map(id => id.trim()) : undefined;
       const categoriesArray = categories ? categories.split(',').map(category => category.trim()) : undefined;
-      
+
       const sensorTowerService = new SensorTowerApiService();
       const reportData = await sensorTowerService.fetchCompactSalesReportEstimates(
         os,
@@ -1064,7 +1175,7 @@ server.tool("get_compact_sales_report_estimates",
         dateGranularity,
         dataModel
       );
-      
+
       return {
         content: [
           {
@@ -1088,7 +1199,7 @@ server.tool("get_compact_sales_report_estimates",
     } catch (error: any) {
       const errorMessage = `Error fetching compact sales report estimates: ${error.message}`;
       console.error(errorMessage);
-      
+
       return {
         content: [
           {
@@ -1130,11 +1241,11 @@ server.tool("get_active_users",
   async ({ os, appIds, timePeriod, startDate, endDate, countries, dataModel }) => {
     try {
       console.error(`Fetching active users for ${os}, app IDs: ${appIds}, time period: ${timePeriod}, start date: ${startDate}, end date: ${endDate}`);
-      
+
       // Process string inputs into arrays
       const appIdsArray = appIds.split(',').map(id => id.trim());
       const countriesArray = countries ? countries.split(',').map(country => country.trim()) : undefined;
-      
+
       const sensorTowerService = new SensorTowerApiService();
       const activeUsersData = await sensorTowerService.fetchActiveUsers(
         os,
@@ -1145,7 +1256,7 @@ server.tool("get_active_users",
         countriesArray,
         dataModel
       );
-      
+
       return {
         content: [
           {
@@ -1166,7 +1277,7 @@ server.tool("get_active_users",
     } catch (error: any) {
       const errorMessage = `Error fetching active users: ${error.message}`;
       console.error(errorMessage);
-      
+
       return {
         content: [
           {
@@ -1206,12 +1317,12 @@ server.tool("get_category_history",
   async ({ os, appIds, category, chartTypeIds, countries, startDate, endDate, isHourly }) => {
     try {
       console.error(`Fetching category history for ${os}, app IDs: ${appIds}, category: ${category}, chart types: ${chartTypeIds}, countries: ${countries}`);
-      
+
       // Process string inputs into arrays
       const appIdsArray = appIds.split(',').map(id => id.trim());
       const chartTypeIdsArray = chartTypeIds.split(',').map(id => id.trim());
       const countriesArray = countries.split(',').map(country => country.trim());
-      
+
       const sensorTowerService = new SensorTowerApiService();
       const categoryHistoryData = await sensorTowerService.fetchCategoryHistory(
         os,
@@ -1223,7 +1334,7 @@ server.tool("get_category_history",
         endDate,
         isHourly
       );
-      
+
       return {
         content: [
           {
@@ -1245,7 +1356,7 @@ server.tool("get_category_history",
     } catch (error: any) {
       const errorMessage = `Error fetching category history: ${error.message}`;
       console.error(errorMessage);
-      
+
       return {
         content: [
           {
@@ -1281,14 +1392,14 @@ server.tool("get_category_ranking_summary",
   async ({ os, appId, country }) => {
     try {
       console.error(`Fetching category ranking summary for ${os}, app ID: ${appId}, country: ${country}`);
-      
+
       const sensorTowerService = new SensorTowerApiService();
       const rankingSummaryData = await sensorTowerService.fetchCategoryRankingSummary(
         os,
         appId,
         country
       );
-      
+
       return {
         content: [
           {
@@ -1305,7 +1416,7 @@ server.tool("get_category_ranking_summary",
     } catch (error: any) {
       const errorMessage = `Error fetching category ranking summary: ${error.message}`;
       console.error(errorMessage);
-      
+
       return {
         content: [
           {
@@ -1340,12 +1451,12 @@ server.tool("get_network_analysis",
   async ({ os, appIds, startDate, endDate, period, networks, countries }) => {
     try {
       console.error(`Fetching network analysis for ${os}, app IDs: ${appIds}, start date: ${startDate}, end date: ${endDate}`);
-      
+
       // Process string inputs into arrays
       const appIdsArray = appIds.split(',').map(id => id.trim());
       const networksArray = networks ? networks.split(',').map(network => network.trim()) : undefined;
       const countriesArray = countries ? countries.split(',').map(country => country.trim()) : undefined;
-      
+
       const sensorTowerService = new SensorTowerApiService();
       const networkAnalysisData = await sensorTowerService.fetchNetworkAnalysis(
         os,
@@ -1356,7 +1467,7 @@ server.tool("get_network_analysis",
         networksArray,
         countriesArray
       );
-      
+
       return {
         content: [
           {
@@ -1377,7 +1488,7 @@ server.tool("get_network_analysis",
     } catch (error: any) {
       const errorMessage = `Error fetching network analysis: ${error.message}`;
       console.error(errorMessage);
-      
+
       return {
         content: [
           {
@@ -1416,12 +1527,12 @@ server.tool("get_network_analysis_rank",
   async ({ os, appIds, startDate, endDate, period, networks, countries }) => {
     try {
       console.error(`Fetching network analysis rank for ${os}, app IDs: ${appIds}, start date: ${startDate}, end date: ${endDate}`);
-      
+
       // Process string inputs into arrays
       const appIdsArray = appIds.split(',').map(id => id.trim());
       const networksArray = networks ? networks.split(',').map(network => network.trim()) : undefined;
       const countriesArray = countries ? countries.split(',').map(country => country.trim()) : undefined;
-      
+
       const sensorTowerService = new SensorTowerApiService();
       const networkAnalysisRankData = await sensorTowerService.fetchNetworkAnalysisRank(
         os,
@@ -1432,7 +1543,7 @@ server.tool("get_network_analysis_rank",
         networksArray,
         countriesArray
       );
-      
+
       return {
         content: [
           {
@@ -1453,7 +1564,7 @@ server.tool("get_network_analysis_rank",
     } catch (error: any) {
       const errorMessage = `Error fetching network analysis rank: ${error.message}`;
       console.error(errorMessage);
-      
+
       return {
         content: [
           {
@@ -1491,10 +1602,10 @@ server.tool("get_retention",
   async ({ os, appIds, date_granularity, start_date, end_date, country }) => {
     try {
       console.error(`Fetching retention data for ${os}, app IDs: ${appIds}, date granularity: ${date_granularity}, start date: ${start_date}${end_date ? `, end date: ${end_date}` : ''}${country ? `, country: ${country}` : ''}`);
-      
+
       // Process string inputs into arrays
       const appIdsArray = appIds.split(',').map(id => id.trim());
-      
+
       const sensorTowerService = new SensorTowerApiService();
       const retentionData = await sensorTowerService.fetchRetention(
         os,
@@ -1504,7 +1615,7 @@ server.tool("get_retention",
         end_date,
         country
       );
-      
+
       return {
         content: [
           {
@@ -1524,7 +1635,7 @@ server.tool("get_retention",
     } catch (error: any) {
       const errorMessage = `Error fetching retention data: ${error.message}`;
       console.error(errorMessage);
-      
+
       return {
         content: [
           {
@@ -1561,11 +1672,11 @@ server.tool("get_downloads_by_sources",
   async ({ os, app_ids, countries, start_date, end_date, date_granularity }) => {
     try {
       console.error(`Fetching downloads by sources for ${os}, app IDs: ${app_ids}, countries: ${countries}, start date: ${start_date}, end date: ${end_date}`);
-      
+
       // Process string inputs into arrays
       const appIdsArray = app_ids.split(',').map(id => id.trim());
       const countriesArray = countries.split(',').map(country => country.trim());
-      
+
       const sensorTowerService = new SensorTowerApiService();
       const downloadsBySourcesData = await sensorTowerService.fetchDownloadsBySources(
         os,
@@ -1575,7 +1686,7 @@ server.tool("get_downloads_by_sources",
         end_date,
         date_granularity
       );
-      
+
       return {
         content: [
           {
@@ -1595,7 +1706,7 @@ server.tool("get_downloads_by_sources",
     } catch (error: any) {
       const errorMessage = `Error fetching downloads by sources: ${error.message}`;
       console.error(errorMessage);
-      
+
       return {
         content: [
           {
@@ -1608,6 +1719,132 @@ server.tool("get_downloads_by_sources",
               start_date,
               end_date,
               date_granularity,
+              timestamp: new Date().toISOString()
+            }, null, 2)
+          }
+        ],
+        isError: true
+      };
+    }
+  }
+);
+
+// Tool: Find Apps by Metric Threshold
+server.tool("find_apps_by_metric_threshold",
+  "Discovers apps that meet or exceed a download or revenue threshold over a given time period and geography. " +
+  "Ideal for market research questions like 'What apps have over 7,000 downloads daily in the US?' " +
+  "Use measure='units' for downloads and measure='revenue' for revenue (in cents). " +
+  "Set category='0' for all categories if ios. " +
+  "Set category='all' for all categories if android.",
+  {
+    os: osSchema.optional().describe("Operating System ('ios' or 'android'). Defaults to 'ios' if not provided."),
+    time_range: timeRangeSchema,
+    measure: measureSchema,
+    category: categorySchema,
+    date: dateSchema,
+    comparison_attribute: comparisonAttributeSchema,
+    end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional()
+      .describe("Optional end date (YYYY-MM-DD) for multi-period aggregation."),
+    countries: countriesSchema,
+    device_type: z.string().optional()
+      .describe("Device type for iOS only: 'iphone', 'ipad', or 'total'. Leave blank for Android."),
+    min_value: minValueSchema,
+    limit: limitLargeSchema,
+    data_model: dataModelSchema
+  },
+  async ({ os: rawOs, time_range, measure, category, date, comparison_attribute, end_date, countries, device_type, min_value, limit, data_model }) => {
+    const osDefaulted = !rawOs;
+    const os = rawOs ?? 'ios';
+    try {
+      console.error(`Finding apps by metric threshold: os=${os}${osDefaulted ? ' (defaulted)' : ''}, time_range=${time_range}, measure=${measure}, category=${category}, date=${date}, min_value=${min_value}`);
+
+      const regionsArray = countries ? countries.split(',').map(c => c.trim()).filter(Boolean) : undefined;
+
+      const sensorTowerService = new SensorTowerApiService();
+      const rawData: any[] = await sensorTowerService.fetchTopAndTrendingApps(
+        os,
+        comparison_attribute,
+        time_range,
+        measure,
+        category,
+        date,
+        device_type,
+        end_date,
+        regionsArray,
+        limit,
+        data_model
+      );
+
+      const metricField = measure === 'units' ? 'units_absolute' : 'revenue_absolute';
+      const filteredData = min_value !== undefined
+        ? rawData.filter(app => (app[metricField] ?? 0) >= min_value)
+        : rawData;
+
+      // Project only essential fields to keep response size manageable for LLM context
+      const compactData = filteredData.map(app => ({
+        app_id: app.app_id,
+        name: app.name,
+        publisher_name: app.publisher_name,
+        publisher_id: app.publisher_id,
+        icon_url: app.icon_url,
+        os: app.os,
+        category: app.category,
+        units_absolute: app.units_absolute,
+        units_delta: app.units_delta,
+        revenue_absolute: app.revenue_absolute,
+        revenue_delta: app.revenue_delta,
+        date: app.date,
+      }));
+
+      // Cap output at 200 records to prevent exceeding LLM context limits
+      const maxOutput = 200;
+      const truncated = compactData.length > maxOutput;
+      const outputData = truncated ? compactData.slice(0, maxOutput) : compactData;
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              ...(osDefaulted ? { notice: "No OS specified; defaulted to 'ios'. Set os='android' if you need Android data." } : {}),
+              query: {
+                os,
+                time_range,
+                measure,
+                category,
+                date,
+                comparison_attribute,
+                end_date,
+                countries: regionsArray,
+                device_type,
+                min_value,
+                limit
+              },
+              total_fetched: rawData.length,
+              total_matching: filteredData.length,
+              total_returned: outputData.length,
+              truncated,
+              data: outputData
+            }, null, 2)
+          }
+        ]
+      };
+    } catch (error: any) {
+      const errorMessage = `Error finding apps by metric threshold: ${error.message}`;
+      console.error(errorMessage);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              error: errorMessage,
+              os,
+              time_range,
+              measure,
+              category,
+              date,
+              min_value,
               timestamp: new Date().toISOString()
             }, null, 2)
           }
