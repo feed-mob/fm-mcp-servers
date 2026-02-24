@@ -1,6 +1,6 @@
 {
   "name": "@feedmob/github-issues",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "MCP server for using the GitHub API",
   "license": "MIT",
   "author": "FeedMob",
@@ -35,5 +35,8 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/feed-mob/fm-mcp-servers"
+  },
+  "overrides": {
+    "@modelcontextprotocol/sdk": "1.21.2"
   }
 }
