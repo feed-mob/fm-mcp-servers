@@ -133,3 +133,15 @@ npx tsx index.ts
 
 ### `issues/search_schema`
 - Provides the schema definition for `search_issues`.
+
+## Troubleshooting
+
+### `Server does not support completions (required for completion/complete)`
+
+Cursor (and other MCP clients using protocol 2025-11-25) may request the `completion/complete` capability. FastMCP 2.1 uses `@modelcontextprotocol/sdk`; SDK **1.22.0+** requires the server to advertise the completions capability when registering a completion handler, but FastMCP does not set it, so the server crashes on start.
+
+**Fix:** This package pins the SDK to **1.21.2** via `overrides` in `package.json`. After pulling, run `npm install` in `src/github-issues/` so the override is applied. If you use `npx -y @feedmob/github-issues`, reinstall or use the local build: `node /path/to/fm-mcp-servers/src/github-issues/dist/index.js`.
+
+### `SyntaxError: Unexpected token ':'` with JSON on stdin
+
+If you see Node parsing the MCP `initialize` JSON as JavaScript (e.g. `Expected ';', '}' or <eof>`), the process is likely being run with **stdin as script** (e.g. `node -`). The server must be started with **stdio** so that stdin is the MCP channel, not script input. In Cursor MCP config, use a plain command such as `node /absolute/path/to/dist/index.js` or `npx -y @feedmob/github-issues` with no `-` or stdin-eval.
