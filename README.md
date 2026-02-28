@@ -93,10 +93,6 @@ MCP (Model Context Protocol) servers provide structured data and context to AI m
   - Team-based filtering (Star, Mighty teams)
   - Issue creation, updates, and comments
 
-- **[Google Drive Files](src/google-drive-files)** - AI-powered file querying and content analysis
-  - File search and content extraction
-  - Femini system integration
-
 - **[User Activity Reporting](src/user-activity-reporting)** - Client contacts, Slack messages, and HubSpot tickets
   - Client team member management (AA, AM, AE, PM, PA, AO roles)
   - Slack message history search
