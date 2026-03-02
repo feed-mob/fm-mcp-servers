@@ -13,17 +13,28 @@ This script automates the installation of the FeedMob Sensor Tower MCP Server in
 
 ## Quick Start
 
-### Option 1: Run Locally
+### Option 1: Run Locally (Recommended)
 ```bash
 bash scripts/install.sh
 ```
 
-### Option 2: Download and Run (requires git repository access)
+### Option 2: Download and Run from GitHub
 ```bash
 curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/main/scripts/install.sh | bash
 ```
 
-> **Note**: The curl method requires the repository to be public and the script to be published on GitHub main branch.
+> **Security Note**: The curl method downloads the script from the GitHub repository. For enhanced security, you can:
+>
+> - **Verify with Git**: Clone the repo and run locally (Option 1)
+> - **Pin a specific version**: Replace `main` with a release tag
+>   ```bash
+>   curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/v1.0.0/scripts/install.sh | bash
+>   ```
+> - **Review before running**:
+>   ```bash
+>   curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/main/scripts/install.sh | less
+>   # Then copy and paste into terminal after review
+>   ```
 
 ## What the Script Does
 

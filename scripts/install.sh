@@ -11,7 +11,6 @@ NC='\033[0m' # No Color
 
 # Configuration
 CONFIG_FILE="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
-SERVER_NAME="sensor-tower"
 NPM_PACKAGE="@feedmob/sensor-tower-reporting"
 SERVER_KEY="sensor-tower-reporting"
 
@@ -229,7 +228,7 @@ update_config() {
   print_section "Step 6: Updating configuration file"
 
   TMP_FILE=$(mktemp)
-  trap "rm -f '$TMP_FILE'" EXIT
+  trap "rm -f '$TMP_FILE' '${TMP_FILE}.new'" EXIT
 
   cp "$CONFIG_FILE" "$TMP_FILE"
 
