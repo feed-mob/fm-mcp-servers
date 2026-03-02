@@ -132,6 +132,9 @@ check_claude_desktop() {
   # Validate JSON format
   if ! jq empty "$CONFIG_FILE" 2>/dev/null; then
     print_error "Config file has invalid JSON format"
+    echo ""
+    echo "Diagnostic info:"
+    jq empty "$CONFIG_FILE" 2>&1 | sed 's/^/  /'
     exit 1
   fi
   print_success "Config file JSON format is valid"
@@ -232,7 +235,8 @@ update_config() {
 
   # Use jq to safely merge JSON configs
   # jq --arg automatically escapes all special characters
-  jq \
+  local jq_output
+  jq_output=$(jq \
     --arg key "$SERVER_KEY" \
     --arg cmd "$NPX_PATH" \
     --arg pkg "$NPM_PACKAGE" \
@@ -246,14 +250,22 @@ update_config() {
         "SENSOR_TOWER_BASE_URL": $url,
         "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
       }
-    }' "$TMP_FILE" > "${TMP_FILE}.new" || {
+    }' "$TMP_FILE" 2>&1) || {
     print_error "Config generation failed"
+    echo ""
+    echo "Diagnostic info:"
+    echo "$jq_output" | sed 's/^/  /'
     exit 1
   }
+
+  echo "$jq_output" > "${TMP_FILE}.new"
 
   # Validate generated JSON format
   if ! jq empty "${TMP_FILE}.new" 2>/dev/null; then
     print_error "Generated config file has invalid JSON format"
+    echo ""
+    echo "Diagnostic info:"
+    jq empty "${TMP_FILE}.new" 2>&1 | sed 's/^/  /'
     exit 1
   fi
 
