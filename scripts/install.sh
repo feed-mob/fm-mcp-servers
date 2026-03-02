@@ -149,7 +149,7 @@ collect_env_vars() {
   # AUTH_TOKEN (required, hidden)
   while true; do
     echo -n -e "${YELLOW}Enter AUTH_TOKEN (required, input will be hidden):${NC} "
-    read -s AUTH_TOKEN
+    read -s AUTH_TOKEN < /dev/tty
     echo ""
 
     if [ -z "$AUTH_TOKEN" ]; then
@@ -204,7 +204,7 @@ show_preview() {
   echo ""
 
   echo -n "Confirm installation? (y/n): "
-  read -r CONFIRM
+  read -r CONFIRM < /dev/tty
   if [[ ! $CONFIRM =~ ^[Yy]$ ]]; then
     print_error "Installation cancelled by user"
     exit 0
