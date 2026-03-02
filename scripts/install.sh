@@ -225,12 +225,9 @@ backup_config() {
 update_config() {
   print_section "Step 6: Updating configuration file"
 
-  # Create temporary file for new config
   TMP_FILE=$(mktemp)
-  # Ensure cleanup on exit
   trap "rm -f '$TMP_FILE'" EXIT
 
-  # Copy current config to temp file
   cp "$CONFIG_FILE" "$TMP_FILE"
 
   # Use jq to safely merge JSON configs
@@ -249,12 +246,10 @@ update_config() {
         "SENSOR_TOWER_BASE_URL": $url,
         "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
       }
-    }' "$TMP_FILE" > "${TMP_FILE}.new" 2>/dev/null
-
-  if [ $? -ne 0 ]; then
+    }' "$TMP_FILE" > "${TMP_FILE}.new" || {
     print_error "Config generation failed"
     exit 1
-  fi
+  }
 
   # Validate generated JSON format
   if ! jq empty "${TMP_FILE}.new" 2>/dev/null; then
