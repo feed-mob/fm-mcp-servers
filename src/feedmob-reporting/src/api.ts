@@ -1115,3 +1115,50 @@ export async function getApps(
     throw new Error('Failed to fetch apps');
   }
 }
+
+export async function getAdopsSpendCheckReports(
+  month: string,
+  client_id?: number
+): Promise<any> {
+  const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/adops_reports/spend_check_reports`);
+
+  // Add required parameter
+  urlObj.searchParams.append('month', month);
+
+  // Add optional parameter
+  if (client_id !== undefined) {
+    urlObj.searchParams.append('client_id', String(client_id));
+  }
+
+  const url = urlObj.toString();
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token
+      },
+      timeout: 30000,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    console.error("Error fetching spend check reports:", error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to fetch spend check reports');
+  }
+}
