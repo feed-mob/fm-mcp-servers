@@ -3,12 +3,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getDirectSpendJobStats, previewCampaign, createCampaign, getApps, getAdopsSpendCheckReports, getAgencyConversionRecords } from "./api.js";
+import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getKohoFinancialSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getDirectSpendJobStats, previewCampaign, createCampaign, getApps, getAdopsSpendCheckReports, getAgencyConversionRecords } from "./api.js";
 
 // Create server instance
 const server = new McpServer({
   name: "feedmob-reporting",
-  version: "0.0.15",
+  version: "0.0.16",
   capabilities: {
     tools: {},
     prompts: {},
@@ -593,6 +593,45 @@ server.tool(
       console.error("Error in get_privacy_hawk_singular_reports tool:", errorMessage);
       return {
         content: [{ type: "text", text: `Error fetching Privacy Hawk Singular reports: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting Koho Financial Singular Reports
+server.tool(
+  "get_koho_financial_singular_reports",
+  "Get Koho Financial Singular API reports data via FeedMob API. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
+  {
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format"),
+  },
+  async (params) => {
+    try {
+      const data = await getKohoFinancialSingularReports(
+        params.start_date,
+        params.end_date
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Koho Financial Singular reports data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
+      return {
+        content: [{
+          type: "text",
+          text: responseText,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching Koho Financial Singular reports.";
+      console.error("Error in get_koho_financial_singular_reports tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching Koho Financial Singular reports: ${errorMessage}` }],
         isError: true,
       };
     }
