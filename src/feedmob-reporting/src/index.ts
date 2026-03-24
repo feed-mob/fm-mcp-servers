@@ -3,12 +3,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getKohoFinancialSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getDirectSpendJobStats, previewCampaign, createCampaign, getApps, getAdopsSpendCheckReports, getAgencyConversionRecords } from "./api.js";
+import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getKohoFinancialSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getDirectSpendJobStats, previewCampaign, createCampaign, getApps, getAdopsSpendCheckReports, getAgencyConversionRecords, getSmadexReportIds, checkSmadexReportStatus, getSmadexReports, getYouappiReports, getKayzenReports, getLiftoffReportIds, checkLiftoffReportStatus, getLiftoffReports, getSamsungReports } from "./api.js";
 
 // Create server instance
 const server = new McpServer({
   name: "feedmob-reporting",
-  version: "0.0.16",
+  version: "0.0.17",
   capabilities: {
     tools: {},
     prompts: {},
@@ -1039,6 +1039,316 @@ server.tool(
       console.error("Error in get_agency_conversion_records tool:", errorMessage);
       return {
         content: [{ type: "text", text: `Error fetching agency conversion records: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting Smadex Report IDs
+server.tool(
+  "get_smadex_report_ids",
+  "Get Smadex report IDs for a date range. ⚠️ Use 'feedmob-reporting-skills' skill for complete Smadex workflow. Next: check_smadex_report_status → get_smadex_reports → get_direct_spends.",
+  {
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format"),
+  },
+  async (params) => {
+    try {
+      const data = await getSmadexReportIds(params.start_date, params.end_date);
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `Smadex report IDs:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching Smadex report IDs.";
+      console.error("Error in get_smadex_report_ids tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching Smadex report IDs: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Checking Smadex Report Status
+server.tool(
+  "check_smadex_report_status",
+  "Check the status of a Smadex report. ⚠️ Use 'feedmob-reporting-skills' skill for proper Smadex workflow sequence.",
+  {
+    report_id: z.string().describe("Report ID to check status for"),
+  },
+  async (params) => {
+    try {
+      const data = await checkSmadexReportStatus(params.report_id);
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `Smadex report status:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while checking Smadex report status.";
+      console.error("Error in check_smadex_report_status tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error checking Smadex report status: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting Smadex Reports
+server.tool(
+  "get_smadex_reports",
+  "Get Smadex reports data. ⚠️ Use 'feedmob-reporting-skills' skill for complete analysis. Next: compare with get_direct_spends.",
+  {
+    report_id: z.string().describe("Report ID"),
+  },
+  async (params) => {
+    try {
+      const data = await getSmadexReports(params.report_id);
+      const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Smadex reports data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
+      return {
+        content: [{
+          type: "text",
+          text: responseText,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching Smadex reports.";
+      console.error("Error in get_smadex_reports tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching Smadex reports: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting YouAppi Reports
+server.tool(
+  "get_youappi_reports",
+  "Get YouAppi reports data via FeedMob API. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
+  {
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format"),
+  },
+  async (params) => {
+    try {
+      const data = await getYouappiReports(
+        params.start_date,
+        params.end_date
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `YouAppi reports data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
+      return {
+        content: [{
+          type: "text",
+          text: responseText,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching YouAppi reports.";
+      console.error("Error in get_youappi_reports tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching YouAppi reports: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting Kayzen Reports
+server.tool(
+  "get_kayzen_reports",
+  "Get Kayzen reports data via FeedMob API. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
+  {
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format"),
+  },
+  async (params) => {
+    try {
+      const data = await getKayzenReports(
+        params.start_date,
+        params.end_date
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Kayzen reports data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
+      return {
+        content: [{
+          type: "text",
+          text: responseText,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching Kayzen reports.";
+      console.error("Error in get_kayzen_reports tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching Kayzen reports: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Liftoff Report IDs
+server.tool(
+  "get_liftoff_report_ids",
+  "Get Liftoff report IDs for a date range. ⚠️ Use 'feedmob-reporting-skills' skill for complete Liftoff workflow. Next: check_liftoff_report_status → get_liftoff_reports → get_direct_spends.",
+  {
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format"),
+  },
+  async (params) => {
+    try {
+      const data = await getLiftoffReportIds(params.start_date, params.end_date);
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `Liftoff report IDs:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching Liftoff report IDs.";
+      console.error("Error in get_liftoff_report_ids tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching Liftoff report IDs: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Checking Liftoff Report Status
+server.tool(
+  "check_liftoff_report_status",
+  "Check the status of Liftoff reports. ⚠️ Use 'feedmob-reporting-skills' skill for proper Liftoff workflow sequence.",
+  {
+    possible_finance_report_id: z.string().describe("Possible Finance report ID"),
+    stash_report_id: z.string().describe("Stash report ID"),
+  },
+  async (params) => {
+    try {
+      const data = await checkLiftoffReportStatus(params.possible_finance_report_id, params.stash_report_id);
+      const formattedData = JSON.stringify(data, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `Liftoff report status:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while checking Liftoff report status.";
+      console.error("Error in check_liftoff_report_status tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error checking Liftoff report status: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting Liftoff Reports
+server.tool(
+  "get_liftoff_reports",
+  "Get Liftoff reports data. ⚠️ Use 'feedmob-reporting-skills' skill for complete analysis. Next: compare with get_direct_spends.",
+  {
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format"),
+    possible_finance_report_id: z.string().describe("Possible Finance report ID"),
+    stash_report_id: z.string().describe("Stash report ID"),
+  },
+  async (params) => {
+    try {
+      const data = await getLiftoffReports(
+        params.start_date,
+        params.end_date,
+        params.possible_finance_report_id,
+        params.stash_report_id
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Liftoff reports data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
+      return {
+        content: [{
+          type: "text",
+          text: responseText,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching Liftoff reports.";
+      console.error("Error in get_liftoff_reports tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching Liftoff reports: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Samsung Reports
+server.tool(
+  "get_samsung_reports",
+  "Get Samsung reports data via FeedMob API. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
+  {
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format"),
+  },
+  async (params) => {
+    try {
+      const data = await getSamsungReports(
+        params.start_date,
+        params.end_date
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Samsung reports data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
+      return {
+        content: [{
+          type: "text",
+          text: responseText,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching Samsung reports.";
+      console.error("Error in get_samsung_reports tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching Samsung reports: ${errorMessage}` }],
         isError: true,
       };
     }
