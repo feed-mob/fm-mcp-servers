@@ -8,7 +8,7 @@ import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, get
 // Create server instance
 const server = new McpServer({
   name: "feedmob-reporting",
-  version: "0.0.17",
+  version: "0.0.18",
   capabilities: {
     tools: {},
     prompts: {},
@@ -787,14 +787,12 @@ server.tool(
   "get_jampp_reports",
   "Get Jampp reports data via FeedMob API. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
   {
-    client_id: z.number().describe("Client ID (required)"),
     start_date: z.string().describe("Start date in YYYY-MM-DD format (required)"),
     end_date: z.string().describe("End date in YYYY-MM-DD format (required)"),
   },
   async (params) => {
     try {
       const data = await getJamppReports(
-        params.client_id,
         params.start_date,
         params.end_date
       );

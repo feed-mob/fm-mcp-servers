@@ -1244,14 +1244,12 @@ export async function getVendors(
 }
 
 export async function getJamppReports(
-  client_id: number,
   start_date: string,
   end_date: string
 ): Promise<any> {
   const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/jampp_reports`);
 
   // Add required parameters
-  urlObj.searchParams.append('client_id', String(client_id));
   urlObj.searchParams.append('start_date', start_date);
   urlObj.searchParams.append('end_date', end_date);
 
