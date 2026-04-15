@@ -1,0 +1,53 @@
+{
+  "serverKey": "user-activity-reporting",
+  "displayName": "User Activity Reporting",
+  "packageName": "@feedmob/user-activity-reporting",
+  "command": {
+    "type": "npx",
+    "args": ["-y", "@feedmob/user-activity-reporting"]
+  },
+  "env": [
+    {
+      "name": "FEEDMOB_API_BASE",
+      "label": "FEEDMOB_API_BASE",
+      "description": "FeedMob Admin API base URL",
+      "required": true,
+      "secret": false
+    },
+    {
+      "name": "FEEDMOB_KEY",
+      "label": "FEEDMOB_KEY",
+      "description": "FeedMob API key",
+      "required": true,
+      "secret": true
+    },
+    {
+      "name": "FEEDMOB_SECRET",
+      "label": "FEEDMOB_SECRET",
+      "description": "FeedMob API secret",
+      "required": true,
+      "secret": true
+    },
+    {
+      "name": "SLACK_BOT_TOKEN",
+      "label": "SLACK_BOT_TOKEN",
+      "description": "Optional Slack bot token for message search",
+      "required": false,
+      "secret": true
+    },
+    {
+      "name": "HUBSPOT_ACCESS_TOKEN",
+      "label": "HUBSPOT_ACCESS_TOKEN",
+      "description": "Optional HubSpot access token",
+      "required": false,
+      "secret": true
+    }
+  ],
+  "macos": {
+    "injectPath": true
+  },
+  "postInstallMessage": [
+    "Fully quit Claude Desktop",
+    "Reopen Claude Desktop to load the MCP server"
+  ]
+}

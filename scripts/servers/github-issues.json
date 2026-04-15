@@ -1,0 +1,46 @@
+{
+  "serverKey": "github-issues",
+  "displayName": "GitHub Issues",
+  "packageName": "@feedmob/github-issues",
+  "command": {
+    "type": "npx",
+    "args": ["-y", "@feedmob/github-issues"]
+  },
+  "env": [
+    {
+      "name": "GITHUB_PERSONAL_ACCESS_TOKEN",
+      "label": "GITHUB_PERSONAL_ACCESS_TOKEN",
+      "description": "GitHub personal access token",
+      "required": true,
+      "secret": true
+    },
+    {
+      "name": "AI_API_URL",
+      "label": "AI_API_URL",
+      "description": "Optional FeedMob API endpoint for AI-backed issue features",
+      "required": false,
+      "secret": false
+    },
+    {
+      "name": "AI_API_TOKEN",
+      "label": "AI_API_TOKEN",
+      "description": "Optional bearer token for the FeedMob AI API",
+      "required": false,
+      "secret": true
+    },
+    {
+      "name": "GITHUB_DEFAULT_OWNER",
+      "label": "GITHUB_DEFAULT_OWNER",
+      "description": "Optional default GitHub owner or organization",
+      "required": false,
+      "secret": false
+    }
+  ],
+  "macos": {
+    "injectPath": true
+  },
+  "postInstallMessage": [
+    "Fully quit Claude Desktop",
+    "Reopen Claude Desktop to load the MCP server"
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "serverKey": "iplocate",
+  "displayName": "IPLocate",
+  "packageName": "@feedmob/iplocate",
+  "command": {
+    "type": "npx",
+    "args": ["-y", "@feedmob/iplocate"]
+  },
+  "env": [
+    {
+      "name": "IPLOCATE_API_KEY",
+      "label": "IPLOCATE_API_KEY",
+      "description": "IPLocate API key",
+      "required": true,
+      "secret": true
+    },
+    {
+      "name": "IPLOCATE_API_BASE",
+      "label": "IPLOCATE_API_BASE",
+      "description": "IPLocate API base URL",
+      "required": false,
+      "secret": false,
+      "default": "https://iplocate.feedmob.ai"
+    }
+  ],
+  "macos": {
+    "injectPath": true
+  },
+  "postInstallMessage": [
+    "Fully quit Claude Desktop",
+    "Reopen Claude Desktop to load the MCP server"
+  ]
+}

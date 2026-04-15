@@ -1,0 +1,32 @@
+{
+  "serverKey": "work-journals",
+  "displayName": "Work Journals",
+  "packageName": "@feedmob/work-journals",
+  "command": {
+    "type": "npx",
+    "args": ["-y", "@feedmob/work-journals"]
+  },
+  "env": [
+    {
+      "name": "API_URL",
+      "label": "API_URL",
+      "description": "Work Journals API base URL",
+      "required": true,
+      "secret": false
+    },
+    {
+      "name": "API_TOKEN",
+      "label": "API_TOKEN",
+      "description": "Work Journals API token",
+      "required": true,
+      "secret": true
+    }
+  ],
+  "macos": {
+    "injectPath": true
+  },
+  "postInstallMessage": [
+    "Fully quit Claude Desktop",
+    "Reopen Claude Desktop to load the MCP server"
+  ]
+}

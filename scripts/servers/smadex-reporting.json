@@ -1,0 +1,39 @@
+{
+  "serverKey": "smadex-reporting",
+  "displayName": "Smadex Reporting",
+  "packageName": "@feedmob/smadex-reporting",
+  "command": {
+    "type": "npx",
+    "args": ["-y", "@feedmob/smadex-reporting"]
+  },
+  "env": [
+    {
+      "name": "SMADEX_API_BASE_URL",
+      "label": "SMADEX_API_BASE_URL",
+      "description": "Smadex API base URL",
+      "required": true,
+      "secret": false
+    },
+    {
+      "name": "SMADEX_EMAIL",
+      "label": "SMADEX_EMAIL",
+      "description": "Smadex login email",
+      "required": true,
+      "secret": false
+    },
+    {
+      "name": "SMADEX_PASSWORD",
+      "label": "SMADEX_PASSWORD",
+      "description": "Smadex login password",
+      "required": true,
+      "secret": true
+    }
+  ],
+  "macos": {
+    "injectPath": true
+  },
+  "postInstallMessage": [
+    "Fully quit Claude Desktop",
+    "Reopen Claude Desktop to load the MCP server"
+  ]
+}

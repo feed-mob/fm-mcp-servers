@@ -1,0 +1,53 @@
+{
+  "serverKey": "impact-radius-reporting",
+  "displayName": "Impact Radius Reporting",
+  "packageName": "@feedmob/impact-radius-reporting",
+  "command": {
+    "type": "npx",
+    "args": ["-y", "@feedmob/impact-radius-reporting"]
+  },
+  "env": [
+    {
+      "name": "IMPACT_RADIUS_SID",
+      "label": "IMPACT_RADIUS_SID",
+      "description": "Impact Radius SID for basic authentication",
+      "required": true,
+      "secret": true
+    },
+    {
+      "name": "IMPACT_RADIUS_TOKEN",
+      "label": "IMPACT_RADIUS_TOKEN",
+      "description": "Impact Radius token for basic authentication",
+      "required": true,
+      "secret": true
+    },
+    {
+      "name": "FEEDMOB_API_BASE",
+      "label": "FEEDMOB_API_BASE",
+      "description": "FeedMob Admin API base URL",
+      "required": true,
+      "secret": false
+    },
+    {
+      "name": "FEEDMOB_KEY",
+      "label": "FEEDMOB_KEY",
+      "description": "FeedMob API key",
+      "required": true,
+      "secret": true
+    },
+    {
+      "name": "FEEDMOB_SECRET",
+      "label": "FEEDMOB_SECRET",
+      "description": "FeedMob API secret",
+      "required": true,
+      "secret": true
+    }
+  ],
+  "macos": {
+    "injectPath": true
+  },
+  "postInstallMessage": [
+    "Fully quit Claude Desktop",
+    "Reopen Claude Desktop to load the MCP server"
+  ]
+}

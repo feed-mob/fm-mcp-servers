@@ -1,0 +1,46 @@
+{
+  "serverKey": "imagekit",
+  "displayName": "ImageKit",
+  "packageName": "@feedmob/imagekit",
+  "command": {
+    "type": "npx",
+    "args": ["-y", "@feedmob/imagekit"]
+  },
+  "env": [
+    {
+      "name": "IMAGE_TOOL_API_KEY",
+      "label": "IMAGE_TOOL_API_KEY",
+      "description": "Image generation API key",
+      "required": true,
+      "secret": true
+    },
+    {
+      "name": "IMAGEKIT_PRIVATE_KEY",
+      "label": "IMAGEKIT_PRIVATE_KEY",
+      "description": "Optional ImageKit private key for upload support",
+      "required": false,
+      "secret": true
+    },
+    {
+      "name": "IMAGE_TOOL_BASE_URL",
+      "label": "IMAGE_TOOL_BASE_URL",
+      "description": "Optional image API base URL override",
+      "required": false,
+      "secret": false
+    },
+    {
+      "name": "IMAGE_TOOL_MODEL_ID",
+      "label": "IMAGE_TOOL_MODEL_ID",
+      "description": "Optional model ID override",
+      "required": false,
+      "secret": false
+    }
+  ],
+  "macos": {
+    "injectPath": true
+  },
+  "postInstallMessage": [
+    "Fully quit Claude Desktop",
+    "Reopen Claude Desktop to load the MCP server"
+  ]
+}

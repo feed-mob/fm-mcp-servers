@@ -1,0 +1,32 @@
+{
+  "serverKey": "singular-reporting",
+  "displayName": "Singular Reporting",
+  "packageName": "@feedmob/singular-reporting",
+  "command": {
+    "type": "npx",
+    "args": ["-y", "@feedmob/singular-reporting"]
+  },
+  "env": [
+    {
+      "name": "SINGULAR_API_KEY",
+      "label": "SINGULAR_API_KEY",
+      "description": "Singular API key",
+      "required": true,
+      "secret": true
+    },
+    {
+      "name": "SINGULAR_API_BASE_URL",
+      "label": "SINGULAR_API_BASE_URL",
+      "description": "Singular Reporting API base URL",
+      "required": true,
+      "secret": false
+    }
+  ],
+  "macos": {
+    "injectPath": true
+  },
+  "postInstallMessage": [
+    "Fully quit Claude Desktop",
+    "Reopen Claude Desktop to load the MCP server"
+  ]
+}

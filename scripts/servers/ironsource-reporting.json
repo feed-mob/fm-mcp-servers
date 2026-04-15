@@ -1,0 +1,32 @@
+{
+  "serverKey": "ironsource-reporting",
+  "displayName": "IronSource Reporting",
+  "packageName": "@feedmob/ironsource-reporting",
+  "command": {
+    "type": "npx",
+    "args": ["-y", "@feedmob/ironsource-reporting"]
+  },
+  "env": [
+    {
+      "name": "IRONSOURCE_SECRET_KEY",
+      "label": "IRONSOURCE_SECRET_KEY",
+      "description": "IronSource secret key",
+      "required": true,
+      "secret": true
+    },
+    {
+      "name": "IRONSOURCE_REFRESH_TOKEN",
+      "label": "IRONSOURCE_REFRESH_TOKEN",
+      "description": "IronSource refresh token",
+      "required": true,
+      "secret": true
+    }
+  ],
+  "macos": {
+    "injectPath": true
+  },
+  "postInstallMessage": [
+    "Fully quit Claude Desktop",
+    "Reopen Claude Desktop to load the MCP server"
+  ]
+}

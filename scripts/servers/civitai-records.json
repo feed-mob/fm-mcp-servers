@@ -1,0 +1,33 @@
+{
+  "serverKey": "civitai-records",
+  "displayName": "Civitai Records",
+  "packageName": "@feedmob/civitai-records",
+  "command": {
+    "type": "npx",
+    "args": ["-y", "@feedmob/civitai-records"]
+  },
+  "env": [
+    {
+      "name": "DATABASE_URL",
+      "label": "DATABASE_URL",
+      "description": "PostgreSQL connection string for the Civitai records database",
+      "required": true,
+      "secret": true
+    },
+    {
+      "name": "CIVITAI_ACCOUNT",
+      "label": "CIVITAI_ACCOUNT",
+      "description": "Optional Civitai account identifier",
+      "required": false,
+      "secret": false,
+      "default": "c29"
+    }
+  ],
+  "macos": {
+    "injectPath": true
+  },
+  "postInstallMessage": [
+    "Fully quit Claude Desktop",
+    "Reopen Claude Desktop to load the MCP server"
+  ]
+}
