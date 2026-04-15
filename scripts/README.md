@@ -1,6 +1,6 @@
 # FeedMob MCP Installer
 
-统一安装入口已经改成按 `serverKey` 选择目标 server，而不是为单个包写死一套脚本。
+The installer now uses a unified entry point that selects the target server by `serverKey`, instead of maintaining a separate hard-coded script for a single package.
 
 ## Usage
 
@@ -20,7 +20,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install.ps1 sensor-tower-report
 
 ## Current Metadata Set
 
-当前已接入 24 个 MCP CLI server 的安装元数据，覆盖仓库里所有带 `bin` 的 MCP server 包：
+The installer metadata currently covers all 24 MCP CLI packages in this repository that expose a `bin` entry:
 
 - `applovin-reporting`
 - `appsamurai-reporting`
@@ -47,23 +47,23 @@ powershell -ExecutionPolicy Bypass -File scripts\install.ps1 sensor-tower-report
 - `user-activity-reporting`
 - `work-journals`
 
-元数据文件位于 `scripts/servers/*.json`。
+Metadata files live under `scripts/servers/*.json`.
 
 ## Design
 
-脚本结构：
+Structure:
 
 - `install.sh` / `install.ps1`
-  - 统一安装入口
-  - 校验本机环境
-  - 读取 `scripts/servers/<server>.json`
-  - 交互采集环境变量
-  - 备份并写入 Claude Desktop `mcpServers`
+  - Unified installer entry points
+  - Validate the local environment
+  - Read `scripts/servers/<server>.json`
+  - Collect environment variables interactively
+  - Back up and update Claude Desktop `mcpServers`
 - `servers/*.json`
-  - 定义 server 名称、npm 包名、命令参数、环境变量采集规则
+  - Define server names, npm package names, command args, and environment variable prompts
 
 ## Notes
 
-- macOS 安装器会显式注入 `PATH`，因为 Claude Desktop 通常不会继承 shell 的完整 PATH。
-- Windows 安装器默认不注入 `PATH`。
-- 第一版暂不支持 `--all`、版本 pin、远程拉取 metadata、`multiline` 交互输入。
+- The macOS installer explicitly injects `PATH` because Claude Desktop usually does not inherit the full shell `PATH`.
+- The Windows installer does not inject `PATH` by default.
+- The first version does not yet support `--all`, version pinning, remote metadata fetching, or `multiline` interactive input.
