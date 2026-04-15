@@ -1,0 +1,25 @@
+{
+  "serverKey": "tapjoy-reporting",
+  "displayName": "Tapjoy Reporting",
+  "packageName": "@feedmob/tapjoy-reporting",
+  "command": {
+    "type": "npx",
+    "args": ["-y", "@feedmob/tapjoy-reporting"]
+  },
+  "env": [
+    {
+      "name": "TAPJOY_API_KEY",
+      "label": "TAPJOY_API_KEY",
+      "description": "Tapjoy API key or base64-encoded credentials, depending on your account setup",
+      "required": true,
+      "secret": true
+    }
+  ],
+  "macos": {
+    "injectPath": true
+  },
+  "postInstallMessage": [
+    "Fully quit Claude Desktop",
+    "Reopen Claude Desktop to load the MCP server"
+  ]
+}

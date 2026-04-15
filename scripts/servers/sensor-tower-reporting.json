@@ -1,0 +1,33 @@
+{
+  "serverKey": "sensor-tower-reporting",
+  "displayName": "Sensor Tower Reporting",
+  "packageName": "@feedmob/sensor-tower-reporting",
+  "command": {
+    "type": "npx",
+    "args": ["-y", "@feedmob/sensor-tower-reporting"]
+  },
+  "env": [
+    {
+      "name": "AUTH_TOKEN",
+      "label": "AUTH_TOKEN",
+      "description": "Sensor Tower API auth token",
+      "required": true,
+      "secret": true
+    },
+    {
+      "name": "SENSOR_TOWER_BASE_URL",
+      "label": "SENSOR_TOWER_BASE_URL",
+      "description": "Sensor Tower API base URL",
+      "required": false,
+      "secret": false,
+      "default": "https://api.sensortower.com"
+    }
+  ],
+  "macos": {
+    "injectPath": true
+  },
+  "postInstallMessage": [
+    "Fully quit Claude Desktop",
+    "Reopen Claude Desktop to load the MCP server"
+  ]
+}

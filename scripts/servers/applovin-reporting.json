@@ -1,0 +1,25 @@
+{
+  "serverKey": "applovin-reporting",
+  "displayName": "AppLovin Reporting",
+  "packageName": "@feedmob/applovin-reporting",
+  "command": {
+    "type": "npx",
+    "args": ["-y", "@feedmob/applovin-reporting"]
+  },
+  "env": [
+    {
+      "name": "APPLOVIN_API_KEY",
+      "label": "APPLOVIN_API_KEY",
+      "description": "AppLovin Reporting API key",
+      "required": true,
+      "secret": true
+    }
+  ],
+  "macos": {
+    "injectPath": true
+  },
+  "postInstallMessage": [
+    "Fully quit Claude Desktop",
+    "Reopen Claude Desktop to load the MCP server"
+  ]
+}

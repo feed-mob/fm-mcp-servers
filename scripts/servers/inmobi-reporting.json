@@ -1,0 +1,60 @@
+{
+  "serverKey": "inmobi-reporting",
+  "displayName": "InMobi Reporting",
+  "packageName": "@feedmob/inmobi-reporting",
+  "command": {
+    "type": "npx",
+    "args": ["-y", "@feedmob/inmobi-reporting"]
+  },
+  "env": [
+    {
+      "name": "INMOBI_AUTH_URL",
+      "label": "INMOBI_AUTH_URL",
+      "description": "InMobi auth endpoint URL",
+      "required": true,
+      "secret": false
+    },
+    {
+      "name": "INMOBI_SKAN_REPORT_URL",
+      "label": "INMOBI_SKAN_REPORT_URL",
+      "description": "InMobi SKAN report endpoint URL",
+      "required": true,
+      "secret": false
+    },
+    {
+      "name": "INMOBI_NON_SKAN_REPORT_URL",
+      "label": "INMOBI_NON_SKAN_REPORT_URL",
+      "description": "InMobi non-SKAN report endpoint URL",
+      "required": true,
+      "secret": false
+    },
+    {
+      "name": "INMOBI_REPORT_BASE_URL",
+      "label": "INMOBI_REPORT_BASE_URL",
+      "description": "InMobi report base URL",
+      "required": true,
+      "secret": false
+    },
+    {
+      "name": "INMOBI_CLIENT_ID",
+      "label": "INMOBI_CLIENT_ID",
+      "description": "InMobi client ID",
+      "required": true,
+      "secret": true
+    },
+    {
+      "name": "INMOBI_CLIENT_SECRET",
+      "label": "INMOBI_CLIENT_SECRET",
+      "description": "InMobi client secret",
+      "required": true,
+      "secret": true
+    }
+  ],
+  "macos": {
+    "injectPath": true
+  },
+  "postInstallMessage": [
+    "Fully quit Claude Desktop",
+    "Reopen Claude Desktop to load the MCP server"
+  ]
+}

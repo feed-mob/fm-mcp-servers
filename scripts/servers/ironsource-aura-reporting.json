@@ -1,0 +1,32 @@
+{
+  "serverKey": "ironsource-aura-reporting",
+  "displayName": "IronSource Aura Reporting",
+  "packageName": "@feedmob/ironsource-aura-reporting",
+  "command": {
+    "type": "npx",
+    "args": ["-y", "@feedmob/ironsource-aura-reporting"]
+  },
+  "env": [
+    {
+      "name": "IRONSOURCE_AURA_API_KEY",
+      "label": "IRONSOURCE_AURA_API_KEY",
+      "description": "IronSource Aura API key",
+      "required": true,
+      "secret": true
+    },
+    {
+      "name": "IRONSOURCE_AURA_API_BASE_URL",
+      "label": "IRONSOURCE_AURA_API_BASE_URL",
+      "description": "IronSource Aura API base URL",
+      "required": true,
+      "secret": false
+    }
+  ],
+  "macos": {
+    "injectPath": true
+  },
+  "postInstallMessage": [
+    "Fully quit Claude Desktop",
+    "Reopen Claude Desktop to load the MCP server"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "serverKey": "samsung-reporting",
+  "displayName": "Samsung Reporting",
+  "packageName": "@feedmob/samsung-reporting",
+  "command": {
+    "type": "npx",
+    "args": ["-y", "@feedmob/samsung-reporting"]
+  },
+  "env": [
+    {
+      "name": "SAMSUNG_ISS",
+      "label": "SAMSUNG_ISS",
+      "description": "Samsung issuer value for JWT authentication",
+      "required": true,
+      "secret": false
+    },
+    {
+      "name": "SAMSUNG_PRIVATE_KEY",
+      "label": "SAMSUNG_PRIVATE_KEY",
+      "description": "Samsung private key for JWT signing. Use a single-line or escaped PEM string in the current installer.",
+      "required": true,
+      "secret": true
+    },
+    {
+      "name": "SAMSUNG_BASE_URL",
+      "label": "SAMSUNG_BASE_URL",
+      "description": "Samsung API base URL",
+      "required": false,
+      "secret": false,
+      "default": "https://devapi.samsungapps.com"
+    }
+  ],
+  "macos": {
+    "injectPath": true
+  },
+  "postInstallMessage": [
+    "Fully quit Claude Desktop",
+    "Reopen Claude Desktop to load the MCP server"
+  ]
+}

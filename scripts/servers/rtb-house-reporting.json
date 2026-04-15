@@ -1,0 +1,32 @@
+{
+  "serverKey": "rtb-house-reporting",
+  "displayName": "RTB House Reporting",
+  "packageName": "@feedmob/rtb-house-reporting",
+  "command": {
+    "type": "npx",
+    "args": ["-y", "@feedmob/rtb-house-reporting"]
+  },
+  "env": [
+    {
+      "name": "RTB_HOUSE_USER",
+      "label": "RTB_HOUSE_USER",
+      "description": "RTB House API username",
+      "required": true,
+      "secret": false
+    },
+    {
+      "name": "RTB_HOUSE_PASSWORD",
+      "label": "RTB_HOUSE_PASSWORD",
+      "description": "RTB House API password",
+      "required": true,
+      "secret": true
+    }
+  ],
+  "macos": {
+    "injectPath": true
+  },
+  "postInstallMessage": [
+    "Fully quit Claude Desktop",
+    "Reopen Claude Desktop to load the MCP server"
+  ]
+}

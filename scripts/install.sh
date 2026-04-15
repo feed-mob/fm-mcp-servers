@@ -1,33 +1,29 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
-# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Configuration
 CONFIG_FILE="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
-NPM_PACKAGE="@feedmob/sensor-tower-reporting"
-SERVER_KEY="sensor-tower-reporting"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SERVERS_DIR="$SCRIPT_DIR/servers"
+MACOS_PATH_VALUE="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
 
-# ============================================================================
-# Helper Functions
-# ============================================================================
-
-print_banner() {
-  echo -e "${BLUE}"
-  echo "╔════════════════════════════════════════════════════════════╗"
-  echo "║                                                            ║"
-  echo "║     FeedMob MCP Server Installation Tool (Sensor Tower)    ║"
-  echo "║                                                            ║"
-  echo "╚════════════════════════════════════════════════════════════╝"
-  echo -e "${NC}"
-  echo ""
-}
+SERVER_KEY="${1:-}"
+METADATA_FILE=""
+DISPLAY_NAME=""
+PACKAGE_NAME=""
+COMMAND_TYPE=""
+INJECT_PATH="true"
+POST_INSTALL_MESSAGES=()
+ENV_KEYS=()
+ENV_DISPLAY_VALUES=()
+NPX_PATH=""
+BACKUP_FILE=""
 
 print_success() {
   echo -e "${GREEN}✓ $1${NC}"
@@ -41,10 +37,6 @@ print_warning() {
   echo -e "${YELLOW}⚠ $1${NC}"
 }
 
-print_info() {
-  echo -e "${BLUE}ℹ $1${NC}"
-}
-
 print_section() {
   echo ""
   echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -53,62 +45,120 @@ print_section() {
   echo ""
 }
 
-# ============================================================================
-# Environment Checks
-# ============================================================================
+usage() {
+  cat <<EOF
+FeedMob MCP Installer
+
+Usage:
+  bash scripts/install.sh <server-key>
+  bash scripts/install.sh --list
+
+Examples:
+  bash scripts/install.sh sensor-tower-reporting
+  bash scripts/install.sh applovin-reporting
+EOF
+}
+
+list_servers() {
+  print_section "Available MCP Servers"
+  if ! find "$SERVERS_DIR" -maxdepth 1 -name '*.json' | grep -q .; then
+    print_warning "No server metadata found in $SERVERS_DIR"
+    return
+  fi
+
+  while IFS= read -r file; do
+    local key name pkg
+    key=$(jq -r '.serverKey' "$file")
+    name=$(jq -r '.displayName' "$file")
+    pkg=$(jq -r '.packageName' "$file")
+    echo "  - $key"
+    echo "    $name ($pkg)"
+  done < <(find "$SERVERS_DIR" -maxdepth 1 -name '*.json' | sort)
+}
+
+validate_args() {
+  if [[ -z "$SERVER_KEY" ]]; then
+    usage
+    exit 1
+  fi
+
+  if [[ "$SERVER_KEY" == "--list" ]]; then
+    list_servers
+    exit 0
+  fi
+
+  METADATA_FILE="$SERVERS_DIR/$SERVER_KEY.json"
+  if [[ ! -f "$METADATA_FILE" ]]; then
+    print_error "Unknown server: $SERVER_KEY"
+    echo ""
+    usage
+    echo ""
+    list_servers
+    exit 1
+  fi
+}
+
+load_metadata() {
+  DISPLAY_NAME=$(jq -r '.displayName' "$METADATA_FILE")
+  PACKAGE_NAME=$(jq -r '.packageName' "$METADATA_FILE")
+  COMMAND_TYPE=$(jq -r '.command.type' "$METADATA_FILE")
+  INJECT_PATH=$(jq -r '.macos.injectPath // true' "$METADATA_FILE")
+
+  if [[ "$COMMAND_TYPE" != "npx" ]]; then
+    print_error "Unsupported command.type in $METADATA_FILE: $COMMAND_TYPE"
+    exit 1
+  fi
+
+  mapfile -t POST_INSTALL_MESSAGES < <(jq -r '.postInstallMessage[]?' "$METADATA_FILE")
+}
+
+print_banner() {
+  echo -e "${BLUE}"
+  echo "╔════════════════════════════════════════════════════════════╗"
+  printf "║ %-58s ║\n" "FeedMob MCP Installer"
+  printf "║ %-58s ║\n" "$DISPLAY_NAME"
+  echo "╚════════════════════════════════════════════════════════════╝"
+  echo -e "${NC}"
+}
 
 check_system() {
   print_section "Step 1: System Environment Check"
 
-  # Check macOS
   if [[ "$OSTYPE" != "darwin"* ]]; then
     print_error "This script only supports macOS. Your system is: $OSTYPE"
     exit 1
   fi
   print_success "macOS system check passed"
 
-  # Check Node.js
-  if ! command -v node &> /dev/null; then
+  if ! command -v node >/dev/null 2>&1; then
     print_error "Node.js not detected. Please install it first."
-    echo ""
-    echo "Recommended installation via Homebrew:"
-    echo -e "  ${YELLOW}brew install node${NC}"
-    echo ""
+    echo "  brew install node"
     exit 1
   fi
 
-  NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-  if [[ $NODE_VERSION -lt 18 ]]; then
-    print_error "Node.js version too old ($NODE_VERSION). Required: >= 18"
-    echo ""
-    echo "Please upgrade Node.js:"
-    echo -e "  ${YELLOW}brew upgrade node${NC}"
-    echo ""
+  local node_major
+  node_major=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+  if [[ "$node_major" -lt 18 ]]; then
+    print_error "Node.js version too old ($(node -v)). Required: >= 18"
     exit 1
   fi
-  print_success "Node.js version check passed (v$(node -v))"
+  print_success "Node.js version check passed ($(node -v))"
 
-  # Check jq (required for JSON manipulation)
-  if ! command -v jq &> /dev/null; then
+  if ! command -v jq >/dev/null 2>&1; then
     print_error "jq not detected. Please install it first."
-    echo ""
-    echo "Recommended installation via Homebrew:"
-    echo -e "  ${YELLOW}brew install jq${NC}"
-    echo ""
+    echo "  brew install jq"
     exit 1
   fi
   print_success "jq installation check passed"
 
-  # Find npx path
-  NPX_PATH=""
-  for candidate in /opt/homebrew/bin/npx /usr/local/bin/npx $(which npx 2>/dev/null); do
-    if [ -x "$candidate" ]; then
+  for candidate in /opt/homebrew/bin/npx /usr/local/bin/npx "$(which npx 2>/dev/null || true)"; do
+    if [[ -n "$candidate" && -x "$candidate" ]]; then
       NPX_PATH="$candidate"
       break
     fi
   done
 
-  if [ -z "$NPX_PATH" ]; then
+  if [[ -z "$NPX_PATH" ]]; then
     print_error "npx not found. Please ensure Node.js is properly installed."
     exit 1
   fi
@@ -118,8 +168,7 @@ check_system() {
 check_claude_desktop() {
   print_section "Step 2: Claude Desktop Configuration Check"
 
-  # Check if Claude Desktop config exists
-  if [ ! -f "$CONFIG_FILE" ]; then
+  if [[ ! -f "$CONFIG_FILE" ]]; then
     print_warning "Claude Desktop config file not found. Creating new file."
     mkdir -p "$(dirname "$CONFIG_FILE")"
     echo '{"mcpServers": {}}' > "$CONFIG_FILE"
@@ -128,176 +177,242 @@ check_claude_desktop() {
     print_success "Config file found: $CONFIG_FILE"
   fi
 
-  # Validate JSON format
   if ! jq empty "$CONFIG_FILE" 2>/dev/null; then
     print_error "Config file has invalid JSON format"
-    echo ""
-    echo "Diagnostic info:"
     jq empty "$CONFIG_FILE" 2>&1 | sed 's/^/  /'
     exit 1
   fi
   print_success "Config file JSON format is valid"
 }
 
-# ============================================================================
-# Collect Environment Variables
-# ============================================================================
+mask_value() {
+  local value="$1"
+  if [[ -z "$value" ]]; then
+    echo "(empty)"
+    return
+  fi
 
-collect_env_vars() {
-  print_section "Step 3: Configure Sensor Tower"
+  local length=${#value}
+  if [[ "$length" -le 3 ]]; then
+    echo "$value"
+    return
+  fi
 
-  # AUTH_TOKEN (required, hidden)
-  while true; do
-    echo -n -e "${YELLOW}Enter AUTH_TOKEN (required, input will be hidden):${NC} "
-    read -s AUTH_TOKEN < /dev/tty
+  local mask_count=$((length - 3))
+  local masked_prefix
+  masked_prefix=$(printf '•%.0s' $(seq 1 "$mask_count"))
+  echo "${masked_prefix}${value: -3}"
+}
+
+prompt_env_value() {
+  local index="$1"
+  local name required secret multiline default_value description prompt_suffix value display_value
+
+  name=$(jq -r ".env[$index].name" "$METADATA_FILE")
+  required=$(jq -r ".env[$index].required // false" "$METADATA_FILE")
+  secret=$(jq -r ".env[$index].secret // false" "$METADATA_FILE")
+  multiline=$(jq -r ".env[$index].multiline // false" "$METADATA_FILE")
+  default_value=$(jq -r ".env[$index].default // empty" "$METADATA_FILE")
+  description=$(jq -r ".env[$index].description // empty" "$METADATA_FILE")
+
+  print_section "Configure $name"
+  if [[ -n "$description" ]]; then
+    echo "$description"
     echo ""
+  fi
 
-    if [ -z "$AUTH_TOKEN" ]; then
-      print_error "AUTH_TOKEN cannot be empty. Please try again."
+  if [[ "$multiline" == "true" ]]; then
+    print_error "multiline env is not supported yet in macOS installer: $name"
+    exit 1
+  fi
+
+  prompt_suffix=""
+  if [[ "$required" == "true" ]]; then
+    prompt_suffix="required"
+  else
+    prompt_suffix="optional"
+  fi
+  if [[ -n "$default_value" ]]; then
+    prompt_suffix="$prompt_suffix, default: $default_value"
+  fi
+
+  while true; do
+    if [[ "$secret" == "true" ]]; then
+      echo -n -e "${YELLOW}Enter $name ($prompt_suffix):${NC} "
+      read -r -s value < /dev/tty
+      echo ""
+    else
+      echo -n -e "${YELLOW}Enter $name ($prompt_suffix):${NC} "
+      read -r value < /dev/tty
+    fi
+
+    if [[ -z "$value" && -n "$default_value" ]]; then
+      value="$default_value"
+    fi
+
+    if [[ -z "$value" && "$required" == "true" ]]; then
+      print_error "$name cannot be empty. Please try again."
       echo ""
       continue
     fi
 
-    # Display masked token for confirmation (show last 3 characters)
-    TOKEN_LENGTH=${#AUTH_TOKEN}
-    if [ $TOKEN_LENGTH -le 3 ]; then
-      MASKED_TOKEN="$AUTH_TOKEN"
-    else
-      MASK_COUNT=$((TOKEN_LENGTH - 3))
-      MASKED_PREFIX=$(printf '•%.0s' $(seq 1 $MASK_COUNT))
-      LAST_3="${AUTH_TOKEN: -3}"
-      MASKED_TOKEN="$MASKED_PREFIX$LAST_3"
+    display_value="$value"
+    if [[ "$secret" == "true" ]]; then
+      display_value=$(mask_value "$value")
+    elif [[ -z "$display_value" ]]; then
+      display_value="(not set)"
     fi
 
-    echo -e "${GREEN}✓ AUTH_TOKEN entered: $MASKED_TOKEN${NC}"
+    export "ENV_VALUE_$name=$value"
+    ENV_KEYS+=("$name")
+    ENV_DISPLAY_VALUES+=("$display_value")
+    print_success "$name: $display_value"
     break
   done
-
-  # SENSOR_TOWER_BASE_URL (use default, no prompt)
-  SENSOR_TOWER_BASE_URL="https://api.sensortower.com"
-  print_success "SENSOR_TOWER_BASE_URL: $SENSOR_TOWER_BASE_URL (default)"
 }
 
-# ============================================================================
-# Preview & Confirmation
-# ============================================================================
+collect_env_vars() {
+  local count index
+  count=$(jq '.env | length' "$METADATA_FILE")
+  if [[ "$count" -eq 0 ]]; then
+    print_section "Step 3: Configure Environment"
+    print_success "No environment variables required"
+    return
+  fi
+
+  for ((index=0; index<count; index++)); do
+    prompt_env_value "$index"
+  done
+}
 
 show_preview() {
   print_section "Step 4: Installation Preview"
 
-  # Check if server already exists
   if jq -e ".mcpServers[\"$SERVER_KEY\"]" "$CONFIG_FILE" >/dev/null 2>&1; then
-    print_warning "Sensor Tower is already configured. It will be overwritten."
+    print_warning "$DISPLAY_NAME is already configured. It will be overwritten."
     echo ""
   fi
 
   echo "The following will be added/updated to Claude Desktop config:"
   echo ""
   echo -e "${BLUE}Server name:${NC} $SERVER_KEY"
-  echo -e "${BLUE}npm package:${NC} $NPM_PACKAGE"
-  echo -e "${BLUE}Command:${NC} npx"
-  echo -e "${BLUE}Args:${NC} ['-y', '$NPM_PACKAGE']"
+  echo -e "${BLUE}Display name:${NC} $DISPLAY_NAME"
+  echo -e "${BLUE}npm package:${NC} $PACKAGE_NAME"
+  echo -e "${BLUE}Command:${NC} $NPX_PATH"
+  echo -e "${BLUE}Args:${NC} ['-y', '$PACKAGE_NAME']"
   echo -e "${BLUE}Environment variables:${NC}"
-  echo "  - AUTH_TOKEN: $MASKED_TOKEN"
-  echo "  - SENSOR_TOWER_BASE_URL: $SENSOR_TOWER_BASE_URL"
-  echo "  - PATH: /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+
+  local idx
+  for idx in "${!ENV_KEYS[@]}"; do
+    echo "  - ${ENV_KEYS[$idx]}: ${ENV_DISPLAY_VALUES[$idx]}"
+  done
+  if [[ "$INJECT_PATH" == "true" ]]; then
+    echo "  - PATH: $MACOS_PATH_VALUE"
+  fi
   echo ""
 
   echo -n "Confirm installation? (y/n): "
-  read -r CONFIRM < /dev/tty
-  if [[ ! $CONFIRM =~ ^[Yy]$ ]]; then
+  local confirm
+  read -r confirm < /dev/tty
+  if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
     print_error "Installation cancelled by user"
     exit 0
   fi
 }
 
-# ============================================================================
-# Backup & Install
-# ============================================================================
-
 backup_config() {
   print_section "Step 5: Backing up existing configuration"
-
   BACKUP_FILE="$CONFIG_FILE.backup.$(date +%Y%m%d_%H%M%S)"
   cp "$CONFIG_FILE" "$BACKUP_FILE"
   print_success "Config file backed up to: $BACKUP_FILE"
-  echo "To restore: cp $BACKUP_FILE $CONFIG_FILE"
+}
+
+build_env_json() {
+  local env_json idx key value value_var
+  env_json='{}'
+
+  for idx in "${!ENV_KEYS[@]}"; do
+    key="${ENV_KEYS[$idx]}"
+    value_var="ENV_VALUE_$key"
+    value="${!value_var-}"
+    if [[ -z "$value" ]]; then
+      continue
+    fi
+    env_json=$(jq -c --arg key "$key" --arg value "$value" '. + {($key): $value}' <<<"$env_json")
+  done
+
+  if [[ "$INJECT_PATH" == "true" ]]; then
+    env_json=$(jq -c --arg value "$MACOS_PATH_VALUE" '. + {"PATH": $value}' <<<"$env_json")
+  fi
+
+  echo "$env_json"
 }
 
 update_config() {
   print_section "Step 6: Updating configuration file"
 
-  TMP_FILE=$(mktemp)
-  trap "rm -f '$TMP_FILE' '${TMP_FILE}.new'" EXIT
+  local tmp_file new_file env_json args_json jq_output
+  tmp_file=$(mktemp)
+  new_file="${tmp_file}.new"
+  trap "rm -f '$tmp_file' '$new_file'" EXIT
+  cp "$CONFIG_FILE" "$tmp_file"
 
-  cp "$CONFIG_FILE" "$TMP_FILE"
+  env_json=$(build_env_json)
+  args_json=$(jq -c '.command.args' "$METADATA_FILE")
 
-  # Use jq to safely merge JSON configs
-  # jq --arg automatically escapes all special characters
-  local jq_output
   jq_output=$(jq \
     --arg key "$SERVER_KEY" \
     --arg cmd "$NPX_PATH" \
-    --arg pkg "$NPM_PACKAGE" \
-    --arg token "$AUTH_TOKEN" \
-    --arg url "$SENSOR_TOWER_BASE_URL" \
+    --argjson args "$args_json" \
+    --argjson env "$env_json" \
     '.mcpServers[$key] = {
       "command": $cmd,
-      "args": ["-y", $pkg],
-      "env": {
-        "AUTH_TOKEN": $token,
-        "SENSOR_TOWER_BASE_URL": $url,
-        "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
-      }
-    }' "$TMP_FILE" 2>&1) || {
-    print_error "Config generation failed"
-    echo ""
-    echo "Diagnostic info:"
-    echo "$jq_output" | sed 's/^/  /'
-    exit 1
-  }
+      "args": $args,
+      "env": $env
+    }' "$tmp_file" 2>&1) || {
+      print_error "Config generation failed"
+      echo "$jq_output" | sed 's/^/  /'
+      exit 1
+    }
 
-  echo "$jq_output" > "${TMP_FILE}.new"
-
-  # Validate generated JSON format
-  if ! jq empty "${TMP_FILE}.new" 2>/dev/null; then
+  echo "$jq_output" > "$new_file"
+  if ! jq empty "$new_file" 2>/dev/null; then
     print_error "Generated config file has invalid JSON format"
-    echo ""
-    echo "Diagnostic info:"
-    jq empty "${TMP_FILE}.new" 2>&1 | sed 's/^/  /'
+    jq empty "$new_file" 2>&1 | sed 's/^/  /'
     exit 1
   fi
 
-  # Replace original config with validated new config
-  mv "${TMP_FILE}.new" "$CONFIG_FILE"
+  mv "$new_file" "$CONFIG_FILE"
   print_success "Config file updated successfully"
 }
 
-# ============================================================================
-# Main Execution
-# ============================================================================
+print_completion() {
+  print_section "Installation Complete!"
+  echo -e "${GREEN}$DISPLAY_NAME has been successfully installed${NC}"
+  echo ""
+  echo "Next steps:"
+  local message
+  if [[ "${#POST_INSTALL_MESSAGES[@]}" -gt 0 ]]; then
+    for message in "${POST_INSTALL_MESSAGES[@]}"; do
+      echo -e "  ${YELLOW}- $message${NC}"
+    done
+  else
+    echo -e "  ${YELLOW}- Fully quit Claude Desktop${NC}"
+    echo -e "  ${YELLOW}- Reopen Claude Desktop${NC}"
+  fi
+}
 
 main() {
+  validate_args
+  load_metadata
   print_banner
-
   check_system
   check_claude_desktop
   collect_env_vars
   show_preview
   backup_config
   update_config
-
-  print_section "Installation Complete!"
-  echo -e "${GREEN}Sensor Tower MCP Server has been successfully installed${NC}"
-  echo ""
-  echo "Next steps:"
-  echo -e "  ${YELLOW}1. Fully quit Claude Desktop (make sure it's completely closed)${NC}"
-  echo -e "  ${YELLOW}2. Reopen Claude Desktop${NC}"
-  echo ""
-  echo "To verify the installation:"
-  echo "  Check the tools list in Claude Desktop - you should see Sensor Tower tools"
-  echo ""
-  print_success "Enjoy using Sensor Tower with Claude!"
+  print_completion
 }
 
 main

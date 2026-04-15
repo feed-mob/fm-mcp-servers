@@ -1,0 +1,47 @@
+{
+  "serverKey": "kayzen-reporting",
+  "displayName": "Kayzen Reporting",
+  "packageName": "@feedmob/kayzen-reporting",
+  "command": {
+    "type": "npx",
+    "args": ["-y", "@feedmob/kayzen-reporting"]
+  },
+  "env": [
+    {
+      "name": "KAYZEN_USERNAME",
+      "label": "KAYZEN_USERNAME",
+      "description": "Kayzen username or email. Required unless KAYZEN_BASIC_AUTH is used.",
+      "required": false,
+      "secret": false
+    },
+    {
+      "name": "KAYZEN_PASSWORD",
+      "label": "KAYZEN_PASSWORD",
+      "description": "Kayzen password. Required unless KAYZEN_BASIC_AUTH is used.",
+      "required": false,
+      "secret": true
+    },
+    {
+      "name": "KAYZEN_BASIC_AUTH",
+      "label": "KAYZEN_BASIC_AUTH",
+      "description": "Optional precomputed basic auth token. If provided, username/password can be left empty.",
+      "required": false,
+      "secret": true
+    },
+    {
+      "name": "KAYZEN_BASE_URL",
+      "label": "KAYZEN_BASE_URL",
+      "description": "Kayzen API base URL",
+      "required": false,
+      "secret": false,
+      "default": "https://api.kayzen.io/v1"
+    }
+  ],
+  "macos": {
+    "injectPath": true
+  },
+  "postInstallMessage": [
+    "Fully quit Claude Desktop",
+    "Reopen Claude Desktop to load the MCP server"
+  ]
+}

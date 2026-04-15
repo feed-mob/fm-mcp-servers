@@ -1,0 +1,25 @@
+{
+  "serverKey": "appsamurai-reporting",
+  "displayName": "AppSamurai Reporting",
+  "packageName": "@feedmob/appsamurai-reporting",
+  "command": {
+    "type": "npx",
+    "args": ["-y", "@feedmob/appsamurai-reporting"]
+  },
+  "env": [
+    {
+      "name": "APPSAMURAI_API_KEY",
+      "label": "APPSAMURAI_API_KEY",
+      "description": "AppSamurai Campaign Spend API key",
+      "required": true,
+      "secret": true
+    }
+  ],
+  "macos": {
+    "injectPath": true
+  },
+  "postInstallMessage": [
+    "Fully quit Claude Desktop",
+    "Reopen Claude Desktop to load the MCP server"
+  ]
+}

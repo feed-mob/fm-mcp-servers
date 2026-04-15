@@ -1,0 +1,32 @@
+{
+  "serverKey": "jampp-reporting",
+  "displayName": "Jampp Reporting",
+  "packageName": "@feedmob/jampp-reporting",
+  "command": {
+    "type": "npx",
+    "args": ["-y", "@feedmob/jampp-reporting"]
+  },
+  "env": [
+    {
+      "name": "JAMPP_CLIENT_ID",
+      "label": "JAMPP_CLIENT_ID",
+      "description": "Jampp client ID",
+      "required": true,
+      "secret": true
+    },
+    {
+      "name": "JAMPP_CLIENT_SECRET",
+      "label": "JAMPP_CLIENT_SECRET",
+      "description": "Jampp client secret",
+      "required": true,
+      "secret": true
+    }
+  ],
+  "macos": {
+    "injectPath": true
+  },
+  "postInstallMessage": [
+    "Fully quit Claude Desktop",
+    "Reopen Claude Desktop to load the MCP server"
+  ]
+}
