@@ -1,5 +1,18 @@
 # Sensor Tower Reporting MCP Server
 
+## Install with Claude Desktop
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/main/scripts/install.sh | bash -s -- sensor-tower-reporting
+```
+
+Pin a specific release:
+
+```bash
+FM_MCP_INSTALL_REF=v1.0.0 \
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/v1.0.0/scripts/install.sh | bash -s -- sensor-tower-reporting
+```
+
 This MCP server provides tools to interact with the [Sensor Tower API](https://sensortower.com/api) for mobile app intelligence and market data.
 
 ## Features

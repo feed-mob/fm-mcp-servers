@@ -1,5 +1,18 @@
 # IPLocate MCP Server
 
+## Install with Claude Desktop
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/main/scripts/install.sh | bash -s -- iplocate
+```
+
+Pin a specific release:
+
+```bash
+FM_MCP_INSTALL_REF=v1.0.0 \
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/v1.0.0/scripts/install.sh | bash -s -- iplocate
+```
+
 MCP Server for the IPLocate API, providing IP geolocation and fraud detection capabilities through Claude and other MCP-compatible clients.
 
 ## Features

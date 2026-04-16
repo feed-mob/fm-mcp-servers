@@ -1,5 +1,18 @@
 # TapJoy Reporting MCP Server
 
+## Install with Claude Desktop
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/main/scripts/install.sh | bash -s -- tapjoy-reporting
+```
+
+Pin a specific release:
+
+```bash
+FM_MCP_INSTALL_REF=v1.0.0 \
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/v1.0.0/scripts/install.sh | bash -s -- tapjoy-reporting
+```
+
 Node.js server implementing Model Context Protocol (MCP) for [TapJoy Reporting API](https://api.tapjoy.com/graphql/docs/guide-getting_started).
 
 ## Features

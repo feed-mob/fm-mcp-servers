@@ -1,5 +1,18 @@
 # Singular Reporting MCP Server
 
+## Install with Claude Desktop
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/main/scripts/install.sh | bash -s -- singular-reporting
+```
+
+Pin a specific release:
+
+```bash
+FM_MCP_INSTALL_REF=v1.0.0 \
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/v1.0.0/scripts/install.sh | bash -s -- singular-reporting
+```
+
 Node.js server implementing Model Context Protocol (MCP) for [Singular Reporting](https://support.singular.net/hc/en-us/articles/360045245692-Reporting-API-Reference).
 
 

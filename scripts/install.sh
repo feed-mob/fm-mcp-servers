@@ -9,12 +9,18 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 CONFIG_FILE="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 SERVERS_DIR="$SCRIPT_DIR/servers"
 MACOS_PATH_VALUE="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+REMOTE_REPO="${FM_MCP_INSTALL_REPO:-feed-mob/fm-mcp-servers}"
+REMOTE_REF="${FM_MCP_INSTALL_REF:-main}"
+REMOTE_RAW_BASE_URL="https://raw.githubusercontent.com/$REMOTE_REPO/$REMOTE_REF/scripts/servers"
+REMOTE_API_URL="https://api.github.com/repos/$REMOTE_REPO/contents/scripts/servers?ref=$REMOTE_REF"
 
 SERVER_KEY="${1:-}"
 METADATA_FILE=""
+METADATA_TEMP_FILE=""
 DISPLAY_NAME=""
 PACKAGE_NAME=""
 COMMAND_TYPE=""
@@ -56,24 +62,82 @@ Usage:
 Examples:
   bash scripts/install.sh sensor-tower-reporting
   bash scripts/install.sh applovin-reporting
+
+Remote install examples:
+  curl -fsSL https://raw.githubusercontent.com/$REMOTE_REPO/$REMOTE_REF/scripts/install.sh | bash -s -- --list
+  curl -fsSL https://raw.githubusercontent.com/$REMOTE_REPO/$REMOTE_REF/scripts/install.sh | bash -s -- sensor-tower-reporting
+
+Environment overrides:
+  FM_MCP_INSTALL_REPO=feed-mob/fm-mcp-servers
+  FM_MCP_INSTALL_REF=main
 EOF
 }
 
 list_servers() {
   print_section "Available MCP Servers"
-  if ! find "$SERVERS_DIR" -maxdepth 1 -name '*.json' | grep -q .; then
-    print_warning "No server metadata found in $SERVERS_DIR"
+  if [[ -d "$SERVERS_DIR" ]] && find "$SERVERS_DIR" -maxdepth 1 -name '*.json' 2>/dev/null | grep -q .; then
+    while IFS= read -r file; do
+      local key name pkg
+      key=$(jq -r '.serverKey' "$file")
+      name=$(jq -r '.displayName' "$file")
+      pkg=$(jq -r '.packageName' "$file")
+      echo "  - $key"
+      echo "    $name ($pkg)"
+    done < <(find "$SERVERS_DIR" -maxdepth 1 -name '*.json' | sort)
     return
   fi
 
-  while IFS= read -r file; do
-    local key name pkg
-    key=$(jq -r '.serverKey' "$file")
-    name=$(jq -r '.displayName' "$file")
-    pkg=$(jq -r '.packageName' "$file")
-    echo "  - $key"
-    echo "    $name ($pkg)"
-  done < <(find "$SERVERS_DIR" -maxdepth 1 -name '*.json' | sort)
+  if ! command -v curl >/dev/null 2>&1; then
+    print_error "curl is required to list remote servers"
+    exit 1
+  fi
+
+  if ! command -v jq >/dev/null 2>&1; then
+    print_error "jq is required to list remote servers"
+    exit 1
+  fi
+
+  print_warning "Local metadata not found. Listing server keys from $REMOTE_REPO@$REMOTE_REF"
+  local response
+  response=$(curl -fsSL "$REMOTE_API_URL") || {
+    print_error "Failed to fetch remote server list"
+    exit 1
+  }
+
+  if [[ "$(jq -r 'type' <<<"$response")" != "array" ]]; then
+    print_error "Unexpected response while fetching remote server list"
+    exit 1
+  fi
+
+  jq -r '.[] | select(.name | endswith(".json")) | "  - " + (.name | sub("\\.json$"; ""))' <<<"$response"
+}
+
+fetch_remote_metadata() {
+  if ! command -v curl >/dev/null 2>&1; then
+    print_error "curl is required for direct remote installation"
+    exit 1
+  fi
+
+  METADATA_TEMP_FILE=$(mktemp)
+  if ! curl -fsSL "$REMOTE_RAW_BASE_URL/$SERVER_KEY.json" -o "$METADATA_TEMP_FILE"; then
+    rm -f "$METADATA_TEMP_FILE"
+    METADATA_TEMP_FILE=""
+    print_error "Unknown server: $SERVER_KEY"
+    echo ""
+    usage
+    echo ""
+    list_servers
+    exit 1
+  fi
+
+  if ! jq empty "$METADATA_TEMP_FILE" 2>/dev/null; then
+    rm -f "$METADATA_TEMP_FILE"
+    METADATA_TEMP_FILE=""
+    print_error "Fetched metadata is not valid JSON: $SERVER_KEY"
+    exit 1
+  fi
+
+  METADATA_FILE="$METADATA_TEMP_FILE"
 }
 
 validate_args() {
@@ -88,14 +152,11 @@ validate_args() {
   fi
 
   METADATA_FILE="$SERVERS_DIR/$SERVER_KEY.json"
-  if [[ ! -f "$METADATA_FILE" ]]; then
-    print_error "Unknown server: $SERVER_KEY"
-    echo ""
-    usage
-    echo ""
-    list_servers
-    exit 1
+  if [[ -f "$METADATA_FILE" ]]; then
+    return
   fi
+
+  fetch_remote_metadata
 }
 
 load_metadata() {
@@ -403,6 +464,7 @@ print_completion() {
 }
 
 main() {
+  trap 'rm -f "$METADATA_TEMP_FILE"' EXIT
   validate_args
   load_metadata
   print_banner

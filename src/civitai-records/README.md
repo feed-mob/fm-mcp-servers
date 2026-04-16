@@ -1,5 +1,18 @@
 # FeedMob Civitai Records MCP Server
 
+## Install with Claude Desktop
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/main/scripts/install.sh | bash -s -- civitai-records
+```
+
+Pin a specific release:
+
+```bash
+FM_MCP_INSTALL_REF=v1.0.0 \
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/v1.0.0/scripts/install.sh | bash -s -- civitai-records
+```
+
 MCP server for managing Civitai content workflows including prompts, assets (images/videos), and publication records. Tracks the full lifecycle from content generation to Civitai publication with support for many-to-many associations between posts, assets, and prompts.
 
 ## Prerequisites
