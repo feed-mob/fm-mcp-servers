@@ -1,5 +1,18 @@
 # FeedMob ImageKit MCP Server
 
+## Install with Claude Desktop
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/main/scripts/install.sh | bash -s -- imagekit
+```
+
+Pin a specific release:
+
+```bash
+FM_MCP_INSTALL_REF=v1.0.0 \
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/v1.0.0/scripts/install.sh | bash -s -- imagekit
+```
+
 Lightweight Model Context Protocol server that exposes ImageKit-related tooling via the FeedMob internal MCP stack. The starter implementation currently publishes a single arithmetic helper and is intended as a template for richer ImageKit automation.
 
 ## Prerequisites

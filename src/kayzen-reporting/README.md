@@ -1,5 +1,18 @@
 # Kayzen Reporting MCP Server
 
+## Install with Claude Desktop
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/main/scripts/install.sh | bash -s -- kayzen-reporting
+```
+
+Pin a specific release:
+
+```bash
+FM_MCP_INSTALL_REF=v1.0.0 \
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/v1.0.0/scripts/install.sh | bash -s -- kayzen-reporting
+```
+
 Node.js server implementing Model Context Protocol (MCP) for [Kayzen Reporting API](https://developers.kayzen.io/reference/list-reports).
 
 

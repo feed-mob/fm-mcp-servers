@@ -140,6 +140,33 @@ MCP (Model Context Protocol) servers provide structured data and context to AI m
 ## 📖 Documentation
 Each server implementation includes its own detailed documentation in its respective directory.
 
+## ⚡ Installation
+
+Each MCP server README now includes its own dedicated install command, for example:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/main/scripts/install.sh | bash -s -- sensor-tower-reporting
+```
+
+To discover available server keys from this repository:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/main/scripts/install.sh | bash -s -- --list
+```
+
+For pinned installs:
+
+```bash
+FM_MCP_INSTALL_REF=v1.0.0 \
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/v1.0.0/scripts/install.sh | bash -s -- sensor-tower-reporting
+```
+
+If you want to review the installer before running it:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/main/scripts/install.sh | less
+```
+
 
 ## 🤝 Contributing
 

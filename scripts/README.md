@@ -11,6 +11,20 @@ bash scripts/install.sh --list
 bash scripts/install.sh sensor-tower-reporting
 ```
 
+### Direct from GitHub
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/main/scripts/install.sh | bash -s -- --list
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/main/scripts/install.sh | bash -s -- sensor-tower-reporting
+```
+
+Pin a specific release or tag:
+
+```bash
+FM_MCP_INSTALL_REF=v1.0.0 \
+curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/v1.0.0/scripts/install.sh | bash -s -- sensor-tower-reporting
+```
+
 ### Windows
 
 ```powershell
@@ -66,4 +80,6 @@ Structure:
 
 - The macOS installer explicitly injects `PATH` because Claude Desktop usually does not inherit the full shell `PATH`.
 - The Windows installer does not inject `PATH` by default.
-- The first version does not yet support `--all`, version pinning, remote metadata fetching, or `multiline` interactive input.
+- The shell installer now supports direct execution from GitHub by fetching `scripts/servers/<server>.json` remotely when local metadata is unavailable.
+- Use `FM_MCP_INSTALL_REF` to pin a release tag and `FM_MCP_INSTALL_REPO` to point at a fork.
+- The installer still does not support `--all` or `multiline` interactive input.
