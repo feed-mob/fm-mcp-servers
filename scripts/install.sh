@@ -170,7 +170,10 @@ load_metadata() {
     exit 1
   fi
 
-  mapfile -t POST_INSTALL_MESSAGES < <(jq -r '.postInstallMessage[]?' "$METADATA_FILE")
+  POST_INSTALL_MESSAGES=()
+  while IFS= read -r message; do
+    POST_INSTALL_MESSAGES+=("$message")
+  done < <(jq -r '.postInstallMessage[]?' "$METADATA_FILE")
 }
 
 print_banner() {
