@@ -3,8 +3,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import fetch from "node-fetch";
 import dotenv from "dotenv";
+
+import { ConfigurationError, SensorTowerApiError } from "./errors.js";
+import { SensorTowerHttpClient } from "./sensorTowerHttpClient.js";
+import type { ApiUsageSummary } from "./types.js";
 
 dotenv.config();
 
@@ -15,30 +18,11 @@ const server = new McpServer({
 
 const SENSOR_TOWER_BASE_URL = process.env.SENSOR_TOWER_BASE_URL || 'https://api.sensortower.com';
 const AUTH_TOKEN = process.env.AUTH_TOKEN;
-
-/**
- * Custom error classes
- */
-class CapturedError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'CapturedError';
-  }
-}
-
-class SensorTowerApiError extends CapturedError {
-  constructor(message: string) {
-    super(message);
-    this.name = 'SensorTowerApiError';
-  }
-}
-
-class ConfigurationError extends CapturedError {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ConfigurationError';
-  }
-}
+const SENSOR_TOWER_REQUESTS_PER_SECOND = Number.parseInt(process.env.SENSOR_TOWER_REQUESTS_PER_SECOND ?? "5", 10);
+const SENSOR_TOWER_MONTHLY_LIMIT = Number.parseInt(process.env.SENSOR_TOWER_MONTHLY_LIMIT ?? "100000", 10);
+const SENSOR_TOWER_USAGE_WARN_THRESHOLD = Number.parseFloat(process.env.SENSOR_TOWER_USAGE_WARN_THRESHOLD ?? "0.2");
+const SENSOR_TOWER_USAGE_BLOCK_THRESHOLD = Number.parseFloat(process.env.SENSOR_TOWER_USAGE_BLOCK_THRESHOLD ?? "0.05");
+const SENSOR_TOWER_MAX_RETRIES = Number.parseInt(process.env.SENSOR_TOWER_MAX_RETRIES ?? "3", 10);
 
 /**
  * Utility functions
@@ -47,14 +31,53 @@ function validateConfiguration(): void {
   if (!AUTH_TOKEN) {
     throw new ConfigurationError('AUTH_TOKEN environment variable is required');
   }
+
+  if (!Number.isFinite(SENSOR_TOWER_REQUESTS_PER_SECOND) || SENSOR_TOWER_REQUESTS_PER_SECOND <= 0) {
+    throw new ConfigurationError('SENSOR_TOWER_REQUESTS_PER_SECOND must be a positive integer');
+  }
+
+  if (!Number.isFinite(SENSOR_TOWER_MONTHLY_LIMIT) || SENSOR_TOWER_MONTHLY_LIMIT <= 0) {
+    throw new ConfigurationError('SENSOR_TOWER_MONTHLY_LIMIT must be a positive integer');
+  }
+
+  if (!Number.isFinite(SENSOR_TOWER_USAGE_WARN_THRESHOLD) || SENSOR_TOWER_USAGE_WARN_THRESHOLD <= 0 || SENSOR_TOWER_USAGE_WARN_THRESHOLD >= 1) {
+    throw new ConfigurationError('SENSOR_TOWER_USAGE_WARN_THRESHOLD must be a number between 0 and 1');
+  }
+
+  if (!Number.isFinite(SENSOR_TOWER_USAGE_BLOCK_THRESHOLD) || SENSOR_TOWER_USAGE_BLOCK_THRESHOLD <= 0 || SENSOR_TOWER_USAGE_BLOCK_THRESHOLD >= 1) {
+    throw new ConfigurationError('SENSOR_TOWER_USAGE_BLOCK_THRESHOLD must be a number between 0 and 1');
+  }
+
+  if (SENSOR_TOWER_USAGE_BLOCK_THRESHOLD >= SENSOR_TOWER_USAGE_WARN_THRESHOLD) {
+    throw new ConfigurationError('SENSOR_TOWER_USAGE_BLOCK_THRESHOLD must be lower than SENSOR_TOWER_USAGE_WARN_THRESHOLD');
+  }
+
+  if (!Number.isFinite(SENSOR_TOWER_MAX_RETRIES) || SENSOR_TOWER_MAX_RETRIES < 0) {
+    throw new ConfigurationError('SENSOR_TOWER_MAX_RETRIES must be zero or a positive integer');
+  }
 }
 
 /**
  * Sensor Tower API Service Class
  */
 class SensorTowerApiService {
+  private readonly client: SensorTowerHttpClient;
+
   constructor() {
     validateConfiguration();
+    this.client = new SensorTowerHttpClient({
+      baseUrl: SENSOR_TOWER_BASE_URL,
+      authToken: AUTH_TOKEN!,
+      requestsPerSecond: SENSOR_TOWER_REQUESTS_PER_SECOND,
+      defaultMonthlyLimit: SENSOR_TOWER_MONTHLY_LIMIT,
+      warnThresholdRatio: SENSOR_TOWER_USAGE_WARN_THRESHOLD,
+      blockThresholdRatio: SENSOR_TOWER_USAGE_BLOCK_THRESHOLD,
+      maxRetries: SENSOR_TOWER_MAX_RETRIES
+    });
+  }
+
+  getUsageSummary(): ApiUsageSummary {
+    return this.client.getUsageSummary();
   }
 
   /**
@@ -83,25 +106,17 @@ class SensorTowerApiService {
       }
 
       const appIdsParam = appIds.join(',');
-      const url = `${SENSOR_TOWER_BASE_URL}/v1/${os.toLowerCase()}/apps?app_ids=${appIdsParam}&country=${country}&auth_token=${AUTH_TOKEN}`;
+      const queryParams = new URLSearchParams();
+      queryParams.append('app_ids', appIdsParam);
+      queryParams.append('country', country);
 
       console.error(`Fetching app metadata for ${os}, app IDs: ${appIdsParam}, country: ${country}`);
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorBody}`);
-      }
-
-      const data = await response.json();
-      return data;
+      return await this.client.getJson<any>(
+        `/v1/${os.toLowerCase()}/apps`,
+        queryParams,
+        'app metadata'
+      );
     } catch (error: any) {
       console.error('Error fetching app metadata:', error);
       throw new SensorTowerApiError(`Failed to fetch app metadata: ${error.message}`);
@@ -128,25 +143,17 @@ class SensorTowerApiService {
       }
 
       const appIdsParam = appIds.join(',');
-      const url = `${SENSOR_TOWER_BASE_URL}/v1/ios/apps/top_in_app_purchases?app_ids=${appIdsParam}&country=${country}&auth_token=${AUTH_TOKEN}`;
+      const queryParams = new URLSearchParams();
+      queryParams.append('app_ids', appIdsParam);
+      queryParams.append('country', country);
 
       console.error(`Fetching top in-app purchases for app IDs: ${appIdsParam}, country: ${country}`);
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorBody}`);
-      }
-
-      const data = await response.json();
-      return data;
+      return await this.client.getJson<any>(
+        '/v1/ios/apps/top_in_app_purchases',
+        queryParams,
+        'top in-app purchases'
+      );
     } catch (error: any) {
       console.error('Error fetching top in-app purchases:', error);
       throw new SensorTowerApiError(`Failed to fetch top in-app purchases: ${error.message}`);
@@ -204,7 +211,6 @@ class SensorTowerApiService {
       const queryParams = new URLSearchParams();
       queryParams.append('start_date', startDate);
       queryParams.append('end_date', endDate);
-      queryParams.append('auth_token', AUTH_TOKEN!);
 
       // Add optional parameters if provided
       if (appIds && appIds.length > 0) {
@@ -237,25 +243,13 @@ class SensorTowerApiService {
         queryParams.append('data_model', dataModel);
       }
 
-      const url = `${SENSOR_TOWER_BASE_URL}/v1/${os.toLowerCase()}/compact_sales_report_estimates?${queryParams.toString()}`;
-
       console.error(`Fetching compact sales report estimates for ${os}, start date: ${startDate}, end date: ${endDate}`);
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorBody}`);
-      }
-
-      const data = await response.json();
-      return data;
+      return await this.client.getJson<any>(
+        `/v1/${os.toLowerCase()}/compact_sales_report_estimates`,
+        queryParams,
+        'compact sales report estimates'
+      );
     } catch (error: any) {
       console.error('Error fetching compact sales report estimates:', error);
       throw new SensorTowerApiError(`Failed to fetch compact sales report estimates: ${error.message}`);
@@ -311,7 +305,6 @@ class SensorTowerApiService {
       queryParams.append('time_period', timePeriod);
       queryParams.append('start_date', startDate);
       queryParams.append('end_date', endDate);
-      queryParams.append('auth_token', AUTH_TOKEN!);
 
       // Add optional parameters if provided
       if (countries && countries.length > 0) {
@@ -322,25 +315,13 @@ class SensorTowerApiService {
         queryParams.append('data_model', dataModel);
       }
 
-      const url = `${SENSOR_TOWER_BASE_URL}/v1/${os.toLowerCase()}/usage/active_users?${queryParams.toString()}`;
-
       console.error(`Fetching active users for ${os}, app IDs: ${appIds.join(',')}, time period: ${timePeriod}, start date: ${startDate}, end date: ${endDate}`);
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorBody}`);
-      }
-
-      const data = await response.json();
-      return data;
+      return await this.client.getJson<any>(
+        `/v1/${os.toLowerCase()}/usage/active_users`,
+        queryParams,
+        'active users'
+      );
     } catch (error: any) {
       console.error('Error fetching active users:', error);
       throw new SensorTowerApiError(`Failed to fetch active users: ${error.message}`);
@@ -405,7 +386,6 @@ class SensorTowerApiService {
       queryParams.append('category', category);
       queryParams.append('chart_type_ids', chartTypeIds.join(','));
       queryParams.append('countries', countries.join(','));
-      queryParams.append('auth_token', AUTH_TOKEN!);
 
       // Add optional parameters if provided
       if (startDate) {
@@ -420,25 +400,13 @@ class SensorTowerApiService {
         queryParams.append('is_hourly', isHourly.toString());
       }
 
-      const url = `${SENSOR_TOWER_BASE_URL}/v1/${os.toLowerCase()}/category/category_history?${queryParams.toString()}`;
-
       console.error(`Fetching category history for ${os}, app IDs: ${appIds.join(',')}, category: ${category}, chart types: ${chartTypeIds.join(',')}, countries: ${countries.join(',')}`);
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorBody}`);
-      }
-
-      const data = await response.json();
-      return data;
+      return await this.client.getJson<any>(
+        `/v1/${os.toLowerCase()}/category/category_history`,
+        queryParams,
+        'category history'
+      );
     } catch (error: any) {
       console.error('Error fetching category history:', error);
       throw new SensorTowerApiError(`Failed to fetch category history: ${error.message}`);
@@ -474,27 +442,14 @@ class SensorTowerApiService {
       const queryParams = new URLSearchParams();
       queryParams.append('app_id', appId);
       queryParams.append('country', country);
-      queryParams.append('auth_token', AUTH_TOKEN!);
-
-      const url = `${SENSOR_TOWER_BASE_URL}/v1/${os.toLowerCase()}/category/category_ranking_summary?${queryParams.toString()}`;
 
       console.error(`Fetching category ranking summary for ${os}, app ID: ${appId}, country: ${country}`);
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorBody}`);
-      }
-
-      const data = await response.json();
-      return data;
+      return await this.client.getJson<any>(
+        `/v1/${os.toLowerCase()}/category/category_ranking_summary`,
+        queryParams,
+        'category ranking summary'
+      );
     } catch (error: any) {
       console.error('Error fetching category ranking summary:', error);
       throw new SensorTowerApiError(`Failed to fetch category ranking summary: ${error.message}`);
@@ -547,7 +502,6 @@ class SensorTowerApiService {
       queryParams.append('start_date', startDate);
       queryParams.append('end_date', endDate);
       queryParams.append('period', period);
-      queryParams.append('auth_token', AUTH_TOKEN!);
 
       // Add optional parameters if provided
       if (networks && networks.length > 0) {
@@ -558,25 +512,13 @@ class SensorTowerApiService {
         queryParams.append('countries', countries.join(','));
       }
 
-      const url = `${SENSOR_TOWER_BASE_URL}/v1/${os.toLowerCase()}/ad_intel/network_analysis?${queryParams.toString()}`;
-
       console.error(`Fetching network analysis for ${os}, app IDs: ${appIds.join(',')}, start date: ${startDate}, end date: ${endDate}`);
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorBody}`);
-      }
-
-      const data = await response.json();
-      return data;
+      return await this.client.getJson<any>(
+        `/v1/${os.toLowerCase()}/ad_intel/network_analysis`,
+        queryParams,
+        'network analysis'
+      );
     } catch (error: any) {
       console.error('Error fetching network analysis:', error);
       throw new SensorTowerApiError(`Failed to fetch network analysis: ${error.message}`);
@@ -629,7 +571,6 @@ class SensorTowerApiService {
       queryParams.append('start_date', startDate);
       queryParams.append('end_date', endDate);
       queryParams.append('period', period);
-      queryParams.append('auth_token', AUTH_TOKEN!);
 
       // Add optional parameters if provided
       if (networks && networks.length > 0) {
@@ -640,25 +581,13 @@ class SensorTowerApiService {
         queryParams.append('countries', countries.join(','));
       }
 
-      const url = `${SENSOR_TOWER_BASE_URL}/v1/${os.toLowerCase()}/ad_intel/network_analysis/rank?${queryParams.toString()}`;
-
       console.error(`Fetching network analysis rank for ${os}, app IDs: ${appIds.join(',')}, start date: ${startDate}, end date: ${endDate}`);
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorBody}`);
-      }
-
-      const data = await response.json();
-      return data;
+      return await this.client.getJson<any>(
+        `/v1/${os.toLowerCase()}/ad_intel/network_analysis/rank`,
+        queryParams,
+        'network analysis rank'
+      );
     } catch (error: any) {
       console.error('Error fetching network analysis rank:', error);
       throw new SensorTowerApiError(`Failed to fetch network analysis rank: ${error.message}`);
@@ -715,7 +644,6 @@ class SensorTowerApiService {
       queryParams.append('app_ids', appIds.join(','));
       queryParams.append('date_granularity', dateGranularity);
       queryParams.append('start_date', startDate);
-      queryParams.append('auth_token', AUTH_TOKEN!);
 
       // Add optional parameters if provided
       if (endDate) {
@@ -726,25 +654,13 @@ class SensorTowerApiService {
         queryParams.append('country', country);
       }
 
-      const url = `${SENSOR_TOWER_BASE_URL}/v1/${os.toLowerCase()}/usage/retention?${queryParams.toString()}`;
-
       console.error(`Fetching retention data for ${os}, app IDs: ${appIds.join(',')}, date granularity: ${dateGranularity}, start date: ${startDate}${endDate ? `, end date: ${endDate}` : ''}${country ? `, country: ${country}` : ''}`);
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorBody}`);
-      }
-
-      const data = await response.json();
-      return data;
+      return await this.client.getJson<any>(
+        `/v1/${os.toLowerCase()}/usage/retention`,
+        queryParams,
+        'retention data'
+      );
     } catch (error: any) {
       console.error('Error fetching retention data:', error);
       throw new SensorTowerApiError(`Failed to fetch retention data: ${error.message}`);
@@ -799,32 +715,19 @@ class SensorTowerApiService {
       queryParams.append('countries', countries.join(','));
       queryParams.append('start_date', startDate);
       queryParams.append('end_date', endDate);
-      queryParams.append('auth_token', AUTH_TOKEN!);
 
       // Add optional parameters if provided
       if (dateGranularity) {
         queryParams.append('date_granularity', dateGranularity);
       }
 
-      const url = `${SENSOR_TOWER_BASE_URL}/v1/${os.toLowerCase()}/downloads_by_sources?${queryParams.toString()}`;
-
       console.error(`Fetching downloads by sources for ${os}, app IDs: ${appIds.join(',')}, countries: ${countries.join(',')}, start date: ${startDate}, end date: ${endDate}`);
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorBody}`);
-      }
-
-      const data = await response.json();
-      return data;
+      return await this.client.getJson<any>(
+        `/v1/${os.toLowerCase()}/downloads_by_sources`,
+        queryParams,
+        'downloads by sources'
+      );
     } catch (error: any) {
       console.error('Error fetching downloads by sources:', error);
       throw new SensorTowerApiError(`Failed to fetch downloads by sources: ${error.message}`);
@@ -880,7 +783,6 @@ class SensorTowerApiService {
       queryParams.append('category', category);
       queryParams.append('date', date);
       queryParams.append('limit', String(limit ?? 2000));
-      queryParams.append('auth_token', AUTH_TOKEN!);
 
       if (deviceType) {
         queryParams.append('device_type', deviceType);
@@ -895,28 +797,32 @@ class SensorTowerApiService {
         queryParams.append('data_model', dataModel);
       }
 
-      const url = `${SENSOR_TOWER_BASE_URL}/v1/${os.toLowerCase()}/sales_report_estimates_comparison_attributes?${queryParams.toString()}`;
       console.error(`Fetching top and trending apps for ${os}, time_range: ${timeRange}, measure: ${measure}, category: ${category}, date: ${date}`);
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorBody}`);
-      }
-
-      return await response.json();
+      return await this.client.getJson<any>(
+        `/v1/${os.toLowerCase()}/sales_report_estimates_comparison_attributes`,
+        queryParams,
+        'top and trending apps'
+      );
     } catch (error: any) {
       console.error('Error fetching top and trending apps:', error);
       throw new SensorTowerApiError(`Failed to fetch top and trending apps: ${error.message}`);
     }
   }
+}
+
+let sensorTowerService: SensorTowerApiService | null = null;
+
+function getSensorTowerService(): SensorTowerApiService {
+  if (!sensorTowerService) {
+    sensorTowerService = new SensorTowerApiService();
+  }
+
+  return sensorTowerService;
+}
+
+function getApiUsageSummary(): ApiUsageSummary | undefined {
+  return sensorTowerService?.getUsageSummary();
 }
 
 // Input validation schemas
@@ -1049,7 +955,7 @@ server.tool("get_app_metadata",
       console.error(`Fetching app metadata for ${os}, app IDs: ${appIds}, country: ${country}`);
 
       const appIdsArray = appIds.split(',').map(id => id.trim());
-      const sensorTowerService = new SensorTowerApiService();
+      const sensorTowerService = getSensorTowerService();
       const metadata = await sensorTowerService.fetchAppMetadata(os, appIdsArray, country);
 
       return {
@@ -1060,6 +966,7 @@ server.tool("get_app_metadata",
               os,
               country,
               appIds: appIdsArray,
+              api_usage: getApiUsageSummary(),
               data: metadata
             }, null, 2)
           }
@@ -1078,6 +985,7 @@ server.tool("get_app_metadata",
               os,
               country,
               appIds: appIds.split(',').map(id => id.trim()),
+              api_usage: getApiUsageSummary(),
               timestamp: new Date().toISOString()
             }, null, 2)
           }
@@ -1100,7 +1008,7 @@ server.tool("get_top_in_app_purchases",
       console.error(`Fetching top in-app purchases for app IDs: ${appIds}, country: ${country}`);
 
       const appIdsArray = appIds.split(',').map(id => id.trim());
-      const sensorTowerService = new SensorTowerApiService();
+      const sensorTowerService = getSensorTowerService();
       const inAppPurchasesData = await sensorTowerService.fetchTopInAppPurchases(appIdsArray, country);
 
       return {
@@ -1110,6 +1018,7 @@ server.tool("get_top_in_app_purchases",
             text: JSON.stringify({
               country,
               appIds: appIdsArray,
+              api_usage: getApiUsageSummary(),
               data: inAppPurchasesData
             }, null, 2)
           }
@@ -1127,6 +1036,7 @@ server.tool("get_top_in_app_purchases",
               error: errorMessage,
               country,
               appIds: appIds.split(',').map(id => id.trim()),
+              api_usage: getApiUsageSummary(),
               timestamp: new Date().toISOString()
             }, null, 2)
           }
@@ -1162,7 +1072,7 @@ server.tool("get_compact_sales_report_estimates",
       const unifiedPublisherIdsArray = unifiedPublisherIds ? unifiedPublisherIds.split(',').map(id => id.trim()) : undefined;
       const categoriesArray = categories ? categories.split(',').map(category => category.trim()) : undefined;
 
-      const sensorTowerService = new SensorTowerApiService();
+      const sensorTowerService = getSensorTowerService();
       const reportData = await sensorTowerService.fetchCompactSalesReportEstimates(
         os,
         startDate,
@@ -1191,6 +1101,7 @@ server.tool("get_compact_sales_report_estimates",
               categories: categoriesArray,
               dateGranularity,
               dataModel,
+              api_usage: getApiUsageSummary(),
               data: reportData
             }, null, 2)
           }
@@ -1216,6 +1127,7 @@ server.tool("get_compact_sales_report_estimates",
               categories: categories ? categories.split(',').map(category => category.trim()) : undefined,
               dateGranularity,
               dataModel,
+              api_usage: getApiUsageSummary(),
               timestamp: new Date().toISOString()
             }, null, 2)
           }
@@ -1246,7 +1158,7 @@ server.tool("get_active_users",
       const appIdsArray = appIds.split(',').map(id => id.trim());
       const countriesArray = countries ? countries.split(',').map(country => country.trim()) : undefined;
 
-      const sensorTowerService = new SensorTowerApiService();
+      const sensorTowerService = getSensorTowerService();
       const activeUsersData = await sensorTowerService.fetchActiveUsers(
         os,
         appIdsArray,
@@ -1269,6 +1181,7 @@ server.tool("get_active_users",
               endDate,
               countries: countriesArray,
               dataModel,
+              api_usage: getApiUsageSummary(),
               data: activeUsersData
             }, null, 2)
           }
@@ -1291,6 +1204,7 @@ server.tool("get_active_users",
               endDate,
               countries: countries ? countries.split(',').map(country => country.trim()) : undefined,
               dataModel,
+              api_usage: getApiUsageSummary(),
               timestamp: new Date().toISOString()
             }, null, 2)
           }
@@ -1323,7 +1237,7 @@ server.tool("get_category_history",
       const chartTypeIdsArray = chartTypeIds.split(',').map(id => id.trim());
       const countriesArray = countries.split(',').map(country => country.trim());
 
-      const sensorTowerService = new SensorTowerApiService();
+      const sensorTowerService = getSensorTowerService();
       const categoryHistoryData = await sensorTowerService.fetchCategoryHistory(
         os,
         appIdsArray,
@@ -1348,6 +1262,7 @@ server.tool("get_category_history",
               startDate,
               endDate,
               isHourly,
+              api_usage: getApiUsageSummary(),
               data: categoryHistoryData
             }, null, 2)
           }
@@ -1371,6 +1286,7 @@ server.tool("get_category_history",
               startDate,
               endDate,
               isHourly,
+              api_usage: getApiUsageSummary(),
               timestamp: new Date().toISOString()
             }, null, 2)
           }
@@ -1393,7 +1309,7 @@ server.tool("get_category_ranking_summary",
     try {
       console.error(`Fetching category ranking summary for ${os}, app ID: ${appId}, country: ${country}`);
 
-      const sensorTowerService = new SensorTowerApiService();
+      const sensorTowerService = getSensorTowerService();
       const rankingSummaryData = await sensorTowerService.fetchCategoryRankingSummary(
         os,
         appId,
@@ -1408,6 +1324,7 @@ server.tool("get_category_ranking_summary",
               os,
               appId,
               country,
+              api_usage: getApiUsageSummary(),
               data: rankingSummaryData
             }, null, 2)
           }
@@ -1426,6 +1343,7 @@ server.tool("get_category_ranking_summary",
               os,
               appId,
               country,
+              api_usage: getApiUsageSummary(),
               timestamp: new Date().toISOString()
             }, null, 2)
           }
@@ -1457,7 +1375,7 @@ server.tool("get_network_analysis",
       const networksArray = networks ? networks.split(',').map(network => network.trim()) : undefined;
       const countriesArray = countries ? countries.split(',').map(country => country.trim()) : undefined;
 
-      const sensorTowerService = new SensorTowerApiService();
+      const sensorTowerService = getSensorTowerService();
       const networkAnalysisData = await sensorTowerService.fetchNetworkAnalysis(
         os,
         appIdsArray,
@@ -1480,6 +1398,7 @@ server.tool("get_network_analysis",
               period,
               networks: networksArray,
               countries: countriesArray,
+              api_usage: getApiUsageSummary(),
               data: networkAnalysisData
             }, null, 2)
           }
@@ -1502,6 +1421,7 @@ server.tool("get_network_analysis",
               period,
               networks: networks ? networks.split(',').map(network => network.trim()) : undefined,
               countries: countries ? countries.split(',').map(country => country.trim()) : undefined,
+              api_usage: getApiUsageSummary(),
               timestamp: new Date().toISOString()
             }, null, 2)
           }
@@ -1533,7 +1453,7 @@ server.tool("get_network_analysis_rank",
       const networksArray = networks ? networks.split(',').map(network => network.trim()) : undefined;
       const countriesArray = countries ? countries.split(',').map(country => country.trim()) : undefined;
 
-      const sensorTowerService = new SensorTowerApiService();
+      const sensorTowerService = getSensorTowerService();
       const networkAnalysisRankData = await sensorTowerService.fetchNetworkAnalysisRank(
         os,
         appIdsArray,
@@ -1556,6 +1476,7 @@ server.tool("get_network_analysis_rank",
               period,
               networks: networksArray,
               countries: countriesArray,
+              api_usage: getApiUsageSummary(),
               data: networkAnalysisRankData
             }, null, 2)
           }
@@ -1578,6 +1499,7 @@ server.tool("get_network_analysis_rank",
               period,
               networks: networks ? networks.split(',').map(network => network.trim()) : undefined,
               countries: countries ? countries.split(',').map(country => country.trim()) : undefined,
+              api_usage: getApiUsageSummary(),
               timestamp: new Date().toISOString()
             }, null, 2)
           }
@@ -1606,7 +1528,7 @@ server.tool("get_retention",
       // Process string inputs into arrays
       const appIdsArray = appIds.split(',').map(id => id.trim());
 
-      const sensorTowerService = new SensorTowerApiService();
+      const sensorTowerService = getSensorTowerService();
       const retentionData = await sensorTowerService.fetchRetention(
         os,
         appIdsArray,
@@ -1627,6 +1549,7 @@ server.tool("get_retention",
               start_date,
               end_date,
               country,
+              api_usage: getApiUsageSummary(),
               data: retentionData
             }, null, 2)
           }
@@ -1648,6 +1571,7 @@ server.tool("get_retention",
               start_date,
               end_date,
               country,
+              api_usage: getApiUsageSummary(),
               timestamp: new Date().toISOString()
             }, null, 2)
           }
@@ -1677,7 +1601,7 @@ server.tool("get_downloads_by_sources",
       const appIdsArray = app_ids.split(',').map(id => id.trim());
       const countriesArray = countries.split(',').map(country => country.trim());
 
-      const sensorTowerService = new SensorTowerApiService();
+      const sensorTowerService = getSensorTowerService();
       const downloadsBySourcesData = await sensorTowerService.fetchDownloadsBySources(
         os,
         appIdsArray,
@@ -1698,6 +1622,7 @@ server.tool("get_downloads_by_sources",
               start_date,
               end_date,
               date_granularity,
+              api_usage: getApiUsageSummary(),
               data: downloadsBySourcesData
             }, null, 2)
           }
@@ -1719,6 +1644,7 @@ server.tool("get_downloads_by_sources",
               start_date,
               end_date,
               date_granularity,
+              api_usage: getApiUsageSummary(),
               timestamp: new Date().toISOString()
             }, null, 2)
           }
@@ -1760,7 +1686,7 @@ server.tool("find_apps_by_metric_threshold",
 
       const regionsArray = countries ? countries.split(',').map(c => c.trim()).filter(Boolean) : undefined;
 
-      const sensorTowerService = new SensorTowerApiService();
+      const sensorTowerService = getSensorTowerService();
       const rawData: any[] = await sensorTowerService.fetchTopAndTrendingApps(
         os,
         comparison_attribute,
@@ -1824,6 +1750,7 @@ server.tool("find_apps_by_metric_threshold",
               total_matching: filteredData.length,
               total_returned: outputData.length,
               truncated,
+              api_usage: getApiUsageSummary(),
               data: outputData
             }, null, 2)
           }
@@ -1845,6 +1772,7 @@ server.tool("find_apps_by_metric_threshold",
               category,
               date,
               min_value,
+              api_usage: getApiUsageSummary(),
               timestamp: new Date().toISOString()
             }, null, 2)
           }
