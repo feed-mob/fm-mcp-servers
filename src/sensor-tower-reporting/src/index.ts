@@ -13,7 +13,7 @@ dotenv.config();
 
 const server = new McpServer({
   name: "Sensor Tower Reporting MCP Server",
-  version: "0.1.6"
+  version: "0.1.7"
 });
 
 const SENSOR_TOWER_BASE_URL = process.env.SENSOR_TOWER_BASE_URL || 'https://api.sensortower.com';
@@ -78,6 +78,10 @@ class SensorTowerApiService {
 
   getUsageSummary(): ApiUsageSummary {
     return this.client.getUsageSummary();
+  }
+
+  async refreshUsageSummaryIfNeeded(): Promise<ApiUsageSummary> {
+    return await this.client.refreshUsageHeaders();
   }
 
   /**
@@ -827,6 +831,7 @@ function getApiUsageSummary(): ApiUsageSummary | undefined {
 
 function formatApiUsageResponse() {
   const apiUsage = getApiUsageSummary();
+  const hasObservedUsageHeaders = apiUsage?.used !== null && apiUsage?.used !== undefined;
 
   return {
     api_usage_limit: apiUsage?.limit ?? null,
@@ -834,9 +839,9 @@ function formatApiUsageResponse() {
     api_usage_remaining: apiUsage?.remaining ?? null,
     api_usage_warning: apiUsage?.warning,
     last_updated_at: apiUsage?.lastUpdatedAt,
-    source: apiUsage?.used === null
-      ? "No Sensor Tower response headers have been observed in this MCP process yet."
-      : "Values sourced from the latest observed Sensor Tower response headers."
+    source: hasObservedUsageHeaders
+      ? "Values sourced from the latest observed Sensor Tower response headers."
+      : "No Sensor Tower response headers have been observed in this MCP process yet."
   };
 }
 
@@ -963,6 +968,9 @@ server.tool("get_api_usage",
   {},
   async () => {
     try {
+      const sensorTowerService = getSensorTowerService();
+      await sensorTowerService.refreshUsageSummaryIfNeeded();
+
       return {
         content: [
           {

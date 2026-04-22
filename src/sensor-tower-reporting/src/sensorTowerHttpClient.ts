@@ -22,6 +22,10 @@ function sleep(ms: number): Promise<void> {
 export class SensorTowerHttpClient {
   private readonly rateLimiter: RateLimiter;
   private readonly usageBudget: UsageBudget;
+  private readonly usageRefreshQueryParams = new URLSearchParams({
+    app_ids: "284882215",
+    country: "US"
+  });
 
   constructor(private readonly options: SensorTowerHttpClientOptions) {
     this.rateLimiter = new RateLimiter(options.requestsPerSecond);
@@ -73,6 +77,27 @@ export class SensorTowerHttpClient {
   }
 
   getUsageSummary(): ApiUsageSummary {
+    return this.usageBudget.getSummary();
+  }
+
+  async refreshUsageHeaders(): Promise<ApiUsageSummary> {
+    const currentUsage = this.usageBudget.getSummary();
+    if (currentUsage.used !== null && currentUsage.used !== undefined) {
+      return currentUsage;
+    }
+
+    const queryParams = new URLSearchParams(this.usageRefreshQueryParams);
+    try {
+      await this.getJson<unknown>(
+        "/v1/ios/apps",
+        queryParams,
+        "api usage refresh"
+      );
+    } catch (error) {
+      console.error("Failed to refresh Sensor Tower API usage headers:", error);
+      throw error;
+    }
+
     return this.usageBudget.getSummary();
   }
 
