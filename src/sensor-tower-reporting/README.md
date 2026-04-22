@@ -29,6 +29,12 @@ This MCP server provides tools to interact with the [Sensor Tower API](https://s
   - [`get_retention`](src/index.ts:1592): Get app retention data (day 1 to day 90)
   - [`get_downloads_by_sources`](src/index.ts:1662): Fetch app downloads by sources (organic, paid, browser)
   - [`find_apps_by_metric_threshold`](src/index.ts:1733): Discover apps exceeding a download/revenue threshold over a given time period and geography
+- **Built-in API Safeguards**:
+  - Shared request client for all Sensor Tower endpoints
+  - Default request pacing of `5` requests per second to stay under the documented `6 req/s` cap
+  - Monthly quota tracking via `x-api-usage-limit` and `x-api-usage-count`
+  - Automatic retries for `429`, `502`, `503`, and `504`
+  - Quota warnings and near-exhaustion blocking before the monthly limit is fully depleted
 
 - **Data Files**:
   - [`data/category_ids.json`](src/data/category_ids.json): Category ID reference for iOS and Android
@@ -46,6 +52,11 @@ This MCP server provides tools to interact with the [Sensor Tower API](https://s
    ```env
    AUTH_TOKEN=your_sensor_tower_auth_token
    SENSOR_TOWER_BASE_URL=https://api.sensortower.com
+   SENSOR_TOWER_REQUESTS_PER_SECOND=5
+   SENSOR_TOWER_MONTHLY_LIMIT=100000
+   SENSOR_TOWER_USAGE_WARN_THRESHOLD=0.2
+   SENSOR_TOWER_USAGE_BLOCK_THRESHOLD=0.05
+   SENSOR_TOWER_MAX_RETRIES=3
    ```
 
 3. **Build the server**:
@@ -143,9 +154,11 @@ npm run dev
 ## Error Handling
 
 The server includes comprehensive error handling with specific error types:
-- [`ConfigurationError`](src/index.ts:36): Missing or invalid configuration
-- [`SensorTowerApiError`](src/index.ts:29): API-related errors with detailed messages
+- `ConfigurationError`: Missing or invalid configuration
+- `SensorTowerApiError`: API-related errors with detailed messages
 - Input validation using [Zod schemas](src/index.ts:836) for all parameters
+- Retries with backoff for `429`, `502`, `503`, and `504`
+- Shared quota tracking so tool responses can include `api_usage` metadata
 
 ## Environment Variables
 
@@ -153,6 +166,19 @@ The server includes comprehensive error handling with specific error types:
 |----------|----------|-------------|---------|
 | `AUTH_TOKEN` | Yes | Sensor Tower API authentication token | - |
 | `SENSOR_TOWER_BASE_URL` | No | Sensor Tower API base URL | `https://api.sensortower.com` |
+| `SENSOR_TOWER_REQUESTS_PER_SECOND` | No | Shared in-process request pacing. Keep this at or below `6`; defaults to `5` for safety. | `5` |
+| `SENSOR_TOWER_MONTHLY_LIMIT` | No | Fallback monthly quota used before API usage headers are observed. | `100000` |
+| `SENSOR_TOWER_USAGE_WARN_THRESHOLD` | No | Warning threshold as a fraction of the monthly quota remaining. | `0.2` |
+| `SENSOR_TOWER_USAGE_BLOCK_THRESHOLD` | No | Hard stop threshold as a fraction of the monthly quota remaining. Must be lower than the warn threshold. | `0.05` |
+| `SENSOR_TOWER_MAX_RETRIES` | No | Max retries for retryable Sensor Tower responses (`429`, `502`, `503`, `504`). | `3` |
+
+## Rate Limit Strategy
+
+- All outgoing Sensor Tower requests now flow through a shared HTTP client, so the same limits apply across every MCP tool.
+- The client paces requests at `5 req/s` by default to stay below Sensor Tower's documented `6 req/s` cap.
+- Monthly usage is refreshed from Sensor Tower's response headers whenever available.
+- When remaining monthly quota drops below the warning threshold, tool responses include an `api_usage.warning`.
+- When remaining monthly quota drops below the block threshold, new requests are rejected instead of fully exhausting the account.
 
 ## Development
 
