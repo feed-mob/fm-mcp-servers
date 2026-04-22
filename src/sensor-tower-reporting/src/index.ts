@@ -825,6 +825,21 @@ function getApiUsageSummary(): ApiUsageSummary | undefined {
   return sensorTowerService?.getUsageSummary();
 }
 
+function formatApiUsageResponse() {
+  const apiUsage = getApiUsageSummary();
+
+  return {
+    api_usage_limit: apiUsage?.limit ?? null,
+    api_usage_count: apiUsage?.used ?? null,
+    api_usage_remaining: apiUsage?.remaining ?? null,
+    api_usage_warning: apiUsage?.warning,
+    last_updated_at: apiUsage?.lastUpdatedAt,
+    source: apiUsage?.used === null
+      ? "No Sensor Tower response headers have been observed in this MCP process yet."
+      : "Values sourced from the latest observed Sensor Tower response headers."
+  };
+}
+
 // Input validation schemas
 const osSchema = z.string()
   .refine(val => ['ios', 'android'].includes(val.toLowerCase()), "OS must be 'ios' or 'android'")
@@ -941,6 +956,41 @@ const minValueSchema = z.number().optional()
 
 const limitLargeSchema = z.number().min(1).max(2000).optional().default(100)
   .describe("Max number of apps to fetch from the API (1–2000). Defaults to 100. Use higher values with min_value to filter large result sets.");
+
+// Tool: Get API Usage
+server.tool("get_api_usage",
+  "Returns the latest observed Sensor Tower API usage headers captured by this MCP process.",
+  {},
+  async () => {
+    try {
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(formatApiUsageResponse(), null, 2)
+          }
+        ]
+      };
+    } catch (error: any) {
+      const errorMessage = `Error fetching Sensor Tower API usage: ${error.message}`;
+      console.error(errorMessage);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              error: errorMessage,
+              ...formatApiUsageResponse(),
+              timestamp: new Date().toISOString()
+            }, null, 2)
+          }
+        ],
+        isError: true
+      };
+    }
+  }
+);
 
 // Tool: Get App Metadata
 server.tool("get_app_metadata",

@@ -29,6 +29,7 @@ This MCP server provides tools to interact with the [Sensor Tower API](https://s
   - [`get_retention`](src/index.ts:1592): Get app retention data (day 1 to day 90)
   - [`get_downloads_by_sources`](src/index.ts:1662): Fetch app downloads by sources (organic, paid, browser)
   - [`find_apps_by_metric_threshold`](src/index.ts:1733): Discover apps exceeding a download/revenue threshold over a given time period and geography
+  - `get_api_usage`: Return the latest observed `x-api-usage-limit` and `x-api-usage-count` headers cached by the MCP process
 - **Built-in API Safeguards**:
   - Shared request client for all Sensor Tower endpoints
   - Default request pacing of `5` requests per second to stay under the documented `6 req/s` cap
@@ -179,6 +180,7 @@ The server includes comprehensive error handling with specific error types:
 - Monthly usage is refreshed from Sensor Tower's response headers whenever available.
 - When remaining monthly quota drops below the warning threshold, tool responses include an `api_usage.warning`.
 - When remaining monthly quota drops below the block threshold, new requests are rejected instead of fully exhausting the account.
+- `get_api_usage` returns the most recently observed usage headers without consuming an extra Sensor Tower API request.
 
 ## Development
 
