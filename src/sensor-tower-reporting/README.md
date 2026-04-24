@@ -1,6 +1,16 @@
 # Sensor Tower Reporting MCP Server
 
-## Install with Claude Desktop
+## Deprecated
+
+This local stdio MCP server is deprecated. Use the hosted SensorTower MCP endpoint for new installs and migrate existing clients:
+
+```text
+https://insights-mcp.feedmob.com/sensortower
+```
+
+The configuration examples below are retained for legacy/local development only.
+
+## Legacy Install with Claude Desktop
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/main/scripts/install.sh | bash -s -- sensor-tower-reporting
@@ -13,7 +23,7 @@ FM_MCP_INSTALL_REF=v1.0.0 \
 curl -fsSL https://raw.githubusercontent.com/feed-mob/fm-mcp-servers/v1.0.0/scripts/install.sh | bash -s -- sensor-tower-reporting
 ```
 
-This MCP server provides tools to interact with the [Sensor Tower API](https://sensortower.com/api) for mobile app intelligence and market data.
+This MCP server provides legacy tools to interact with the [Sensor Tower API](https://sensortower.com/api) for mobile app intelligence and market data.
 
 ## Features
 

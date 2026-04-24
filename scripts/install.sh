@@ -24,6 +24,8 @@ METADATA_TEMP_FILE=""
 DISPLAY_NAME=""
 PACKAGE_NAME=""
 COMMAND_TYPE=""
+DEPRECATED="false"
+MIGRATION_URL=""
 INJECT_PATH="true"
 POST_INSTALL_MESSAGES=()
 ENV_KEYS=()
@@ -163,6 +165,8 @@ load_metadata() {
   DISPLAY_NAME=$(jq -r '.displayName' "$METADATA_FILE")
   PACKAGE_NAME=$(jq -r '.packageName' "$METADATA_FILE")
   COMMAND_TYPE=$(jq -r '.command.type' "$METADATA_FILE")
+  DEPRECATED=$(jq -r '.deprecated // false' "$METADATA_FILE")
+  MIGRATION_URL=$(jq -r '.migrationUrl // empty' "$METADATA_FILE")
   INJECT_PATH=$(jq -r '.macos.injectPath // true' "$METADATA_FILE")
 
   if [[ "$COMMAND_TYPE" != "npx" ]]; then
@@ -183,6 +187,18 @@ print_banner() {
   printf "║ %-58s ║\n" "$DISPLAY_NAME"
   echo "╚════════════════════════════════════════════════════════════╝"
   echo -e "${NC}"
+}
+
+print_deprecation_notice() {
+  if [[ "$DEPRECATED" != "true" ]]; then
+    return
+  fi
+
+  print_warning "$DISPLAY_NAME is deprecated."
+  if [[ -n "$MIGRATION_URL" ]]; then
+    echo -e "${YELLOW}  Migrate to: $MIGRATION_URL${NC}"
+  fi
+  echo ""
 }
 
 check_system() {
@@ -471,6 +487,7 @@ main() {
   validate_args
   load_metadata
   print_banner
+  print_deprecation_notice
   check_system
   check_claude_desktop
   collect_env_vars
