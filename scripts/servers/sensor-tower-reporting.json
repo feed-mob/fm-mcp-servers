@@ -1,7 +1,9 @@
 {
   "serverKey": "sensor-tower-reporting",
-  "displayName": "Sensor Tower Reporting",
+  "displayName": "Sensor Tower Reporting (Deprecated)",
   "packageName": "@feedmob/sensor-tower-reporting",
+  "deprecated": true,
+  "migrationUrl": "https://insights-mcp.feedmob.com/sensortower",
   "command": {
     "type": "npx",
     "args": ["-y", "@feedmob/sensor-tower-reporting"]
@@ -27,6 +29,7 @@
     "injectPath": true
   },
   "postInstallMessage": [
+    "Deprecated: migrate to the hosted SensorTower MCP at https://insights-mcp.feedmob.com/sensortower",
     "Fully quit Claude Desktop",
     "Reopen Claude Desktop to load the MCP server"
   ]

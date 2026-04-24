@@ -69,7 +69,7 @@ MCP (Model Context Protocol) servers provide structured data and context to AI m
   - Content metrics tracking
   - Installs, revenue, and ratings data
 
-- **[Sensor Tower Reporting](src/sensor-tower-reporting)** - Sensor Tower mobile app intelligence and market data
+- **[Sensor Tower Reporting](src/sensor-tower-reporting)** - Deprecated; use the hosted SensorTower MCP at https://insights-mcp.feedmob.com/sensortower
   - 10 comprehensive tools for app analytics
   - App metadata, sales estimates, active users, retention data
   - Category rankings and advertising intelligence

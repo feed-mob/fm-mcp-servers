@@ -85,6 +85,16 @@ function Write-Banner {
     Write-Host ""
 }
 
+function Write-DeprecationNotice {
+    if (($Metadata.PSObject.Properties.Name -contains "deprecated") -and $Metadata.deprecated) {
+        Write-Warning-Custom "$($Metadata.displayName) is deprecated."
+        if (($Metadata.PSObject.Properties.Name -contains "migrationUrl") -and $Metadata.migrationUrl) {
+            Write-Host "  Migrate to: $($Metadata.migrationUrl)" -ForegroundColor Yellow
+        }
+        Write-Host ""
+    }
+}
+
 function Test-System {
     Write-Section "Step 1: System Environment Check"
 
@@ -332,6 +342,7 @@ function Write-Completion {
 function Main {
     Initialize-Metadata
     Write-Banner
+    Write-DeprecationNotice
     Test-System
     Test-ClaudeDesktop
     $envValues = Get-EnvValues

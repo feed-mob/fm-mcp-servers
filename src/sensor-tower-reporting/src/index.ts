@@ -11,9 +11,20 @@ import type { ApiUsageSummary } from "./types.js";
 
 dotenv.config();
 
+const MIGRATION_URL = "https://insights-mcp.feedmob.com/sensortower";
+const DEPRECATION_NOTICE = [
+  "@feedmob/sensor-tower-reporting is deprecated.",
+  `Use the hosted SensorTower MCP at ${MIGRATION_URL} for new installs and migrate existing clients.`
+].join(" ");
+
+const deprecatedDescription = (description: string): string =>
+  `${DEPRECATION_NOTICE} ${description}`;
+
 const server = new McpServer({
   name: "Sensor Tower Reporting MCP Server",
   version: "0.1.7"
+}, {
+  instructions: DEPRECATION_NOTICE
 });
 
 const SENSOR_TOWER_BASE_URL = process.env.SENSOR_TOWER_BASE_URL || 'https://api.sensortower.com';
@@ -962,6 +973,7 @@ const minValueSchema = z.number().optional()
 const limitLargeSchema = z.number().min(1).max(2000).optional().default(100)
   .describe("Max number of apps to fetch from the API (1–2000). Defaults to 100. Use higher values with min_value to filter large result sets.");
 
+<<<<<<< HEAD
 // Tool: Get API Usage
 server.tool("get_api_usage",
   "Returns the latest observed Sensor Tower API usage headers captured by this MCP process.",
@@ -998,11 +1010,27 @@ server.tool("get_api_usage",
       };
     }
   }
+=======
+// Prompt: Deprecation Notice
+server.prompt(
+  "deprecation_notice",
+  "Show the migration notice for the deprecated Sensor Tower Reporting MCP server.",
+  {},
+  () => ({
+    messages: [{
+      role: "user",
+      content: {
+        type: "text",
+        text: DEPRECATION_NOTICE
+      }
+    }]
+  })
+>>>>>>> d3727ac (Deprecate sensortower-reporting mcp)
 );
 
 // Tool: Get App Metadata
 server.tool("get_app_metadata",
-  "Fetch app metadata from Sensor Tower API, such as app name, publisher, categories, description, screenshots, rating, etc.",
+  deprecatedDescription("Fetch app metadata from Sensor Tower API, such as app name, publisher, categories, description, screenshots, rating, etc."),
   {
     os: osSchema,
     appIds: appIdsSchema,
@@ -1056,7 +1084,7 @@ server.tool("get_app_metadata",
 
 // Tool: Get Top In-App Purchases
 server.tool("get_top_in_app_purchases",
-  "Fetches the top in-app purchases for particular iOS apps",
+  deprecatedDescription("Fetches the top in-app purchases for particular iOS apps"),
   {
     appIds: appIdsSchema,
     country: countrySchema
@@ -1107,7 +1135,7 @@ server.tool("get_top_in_app_purchases",
 
 // Tool: Get Compact Sales Report Estimates
 server.tool("get_compact_sales_report_estimates",
-  "Fetches download and revenue estimates of apps and publishers in compact format. All revenues are returned in cents.",
+  deprecatedDescription("Fetches download and revenue estimates of apps and publishers in compact format. All revenues are returned in cents."),
   {
     os: osSchema,
     startDate: dateSchema,
@@ -1198,7 +1226,7 @@ server.tool("get_compact_sales_report_estimates",
 
 // Tool: Get Active Users
 server.tool("get_active_users",
-  "Fetches active user estimates of apps per country by date and time period.",
+  deprecatedDescription("Fetches active user estimates of apps per country by date and time period."),
   {
     os: osSchema,
     appIds: appIdsRequiredSchema,
@@ -1275,7 +1303,7 @@ server.tool("get_active_users",
 
 // Tool: Get Category History
 server.tool("get_category_history",
-  "Fetches detailed category ranking history of a particular app, category, and chart type.",
+  deprecatedDescription("Fetches detailed category ranking history of a particular app, category, and chart type."),
   {
     os: osSchema,
     appIds: appIdsRequiredSchema,
@@ -1357,7 +1385,7 @@ server.tool("get_category_history",
 
 // Tool: Get Category Ranking Summary
 server.tool("get_category_ranking_summary",
-  "Fetches today's category ranking summary of a particular app with data on chart type, category, and rank.",
+  deprecatedDescription("Fetches today's category ranking summary of a particular app with data on chart type, category, and rank."),
   {
     os: osSchema,
     appId: appIdSchema,
@@ -1414,7 +1442,7 @@ server.tool("get_category_ranking_summary",
 
 // Tool: Get Network Analysis
 server.tool("get_network_analysis",
-  "Fetches the impressions share of voice (SOV) time series of the requested apps.",
+  deprecatedDescription("Fetches the impressions share of voice (SOV) time series of the requested apps."),
   {
     os: osSchema,
     appIds: appIdsRequiredSchema,
@@ -1492,7 +1520,7 @@ server.tool("get_network_analysis",
 
 // Tool: Get Network Analysis Rank
 server.tool("get_network_analysis_rank",
-  "Fetches the ranks for the countries, networks and dates of the requested apps.",
+  deprecatedDescription("Fetches the ranks for the countries, networks and dates of the requested apps."),
   {
     os: osSchema,
     appIds: appIdsRequiredSchema,
@@ -1570,7 +1598,7 @@ server.tool("get_network_analysis_rank",
 
 // Tool: Get Retention
 server.tool("get_retention",
-  "Fetches retention of apps (from day 1 to day 90), along with the baseline retention.",
+  deprecatedDescription("Fetches retention of apps (from day 1 to day 90), along with the baseline retention."),
   {
     os: osSchema,
     appIds: appIdsRequiredSchema,
@@ -1642,7 +1670,7 @@ server.tool("get_retention",
 
 // Tool: Get Downloads By Sources
 server.tool("get_downloads_by_sources",
-  "Fetches app downloads by sources (organic, paid, and browser) with percentages and absolute values.",
+  deprecatedDescription("Fetches app downloads by sources (organic, paid, and browser) with percentages and absolute values."),
   {
     os: osSchema,
     app_ids: unifiedAppIdsRequiredSchema,
@@ -1715,11 +1743,13 @@ server.tool("get_downloads_by_sources",
 
 // Tool: Find Apps by Metric Threshold
 server.tool("find_apps_by_metric_threshold",
-  "Discovers apps that meet or exceed a download or revenue threshold over a given time period and geography. " +
-  "Ideal for market research questions like 'What apps have over 7,000 downloads daily in the US?' " +
-  "Use measure='units' for downloads and measure='revenue' for revenue (in cents). " +
-  "Set category='0' for all categories if ios. " +
-  "Set category='all' for all categories if android.",
+  deprecatedDescription(
+    "Discovers apps that meet or exceed a download or revenue threshold over a given time period and geography. " +
+    "Ideal for market research questions like 'What apps have over 7,000 downloads daily in the US?' " +
+    "Use measure='units' for downloads and measure='revenue' for revenue (in cents). " +
+    "Set category='0' for all categories if ios. " +
+    "Set category='all' for all categories if android."
+  ),
   {
     os: osSchema.optional().describe("Operating System ('ios' or 'android'). Defaults to 'ios' if not provided."),
     time_range: timeRangeSchema,
@@ -1845,6 +1875,7 @@ async function runServer(): Promise<void> {
   try {
     const transport = new StdioServerTransport();
     await server.connect(transport);
+    console.error(DEPRECATION_NOTICE);
     console.error("Sensor Tower Reporting MCP Server running on stdio");
   } catch (error) {
     console.error("Failed to start server:", error);
