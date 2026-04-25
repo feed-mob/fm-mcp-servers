@@ -22,7 +22,7 @@ const deprecatedDescription = (description: string): string =>
 
 const server = new McpServer({
   name: "Sensor Tower Reporting MCP Server",
-  version: "0.1.7"
+  version: "0.1.8"
 }, {
   instructions: DEPRECATION_NOTICE
 });
@@ -973,10 +973,9 @@ const minValueSchema = z.number().optional()
 const limitLargeSchema = z.number().min(1).max(2000).optional().default(100)
   .describe("Max number of apps to fetch from the API (1–2000). Defaults to 100. Use higher values with min_value to filter large result sets.");
 
-<<<<<<< HEAD
 // Tool: Get API Usage
 server.tool("get_api_usage",
-  "Returns the latest observed Sensor Tower API usage headers captured by this MCP process.",
+  deprecatedDescription("Returns the latest observed Sensor Tower API usage headers captured by this MCP process."),
   {},
   async () => {
     try {
@@ -1010,7 +1009,8 @@ server.tool("get_api_usage",
       };
     }
   }
-=======
+);
+
 // Prompt: Deprecation Notice
 server.prompt(
   "deprecation_notice",
@@ -1025,7 +1025,6 @@ server.prompt(
       }
     }]
   })
->>>>>>> d3727ac (Deprecate sensortower-reporting mcp)
 );
 
 // Tool: Get App Metadata
