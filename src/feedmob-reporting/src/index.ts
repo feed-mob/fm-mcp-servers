@@ -3,12 +3,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getKohoFinancialSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getDirectSpendJobStats, previewCampaign, createCampaign, getApps, getAdopsSpendCheckReports, getAgencyConversionRecords, getSmadexReportIds, checkSmadexReportStatus, getSmadexReports, getYouappiReports, getKayzenReports, getLiftoffReportIds, checkLiftoffReportStatus, getLiftoffReports, getSamsungReports } from "./api.js";
+import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getKohoFinancialSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getDirectSpendJobStats, previewCampaign, createCampaign, getApps, getAdopsSpendCheckReports, getAgencyConversionRecords, getSmadexReportIds, checkSmadexReportStatus, getSmadexReports, getYouappiReports, getKayzenReports, getLiftoffReportIds, checkLiftoffReportStatus, getLiftoffReports, getSamsungReports, getClientReportSpendReportNames, getClientReportSpends } from "./api.js";
 
 // Create server instance
 const server = new McpServer({
   name: "feedmob-reporting",
-  version: "0.0.18",
+  version: "0.0.19",
   capabilities: {
     tools: {},
     prompts: {},
@@ -1347,6 +1347,74 @@ server.tool(
       console.error("Error in get_samsung_reports tool:", errorMessage);
       return {
         content: [{ type: "text", text: `Error fetching Samsung reports: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting Client Report Spend Report Names
+server.tool(
+  "get_client_report_spend_report_names",
+  "Get available report names for client report spends via FeedMob API. Returns a list of report names that can be used with get_client_report_spends.",
+  {},
+  async () => {
+    try {
+      const data = await getClientReportSpendReportNames();
+      const formattedData = JSON.stringify(data, null, 2);
+
+      return {
+        content: [{
+          type: "text",
+          text: `Client report spend report names:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching client report spend report names.";
+      console.error("Error in get_client_report_spend_report_names tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching client report spend report names: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting Client Report Spends
+server.tool(
+  "get_client_report_spends",
+  "Get client report spends data via FeedMob API. Returns spend data aggregated by click URL with raw log rows from attribution reports.",
+  {
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format"),
+    report_name: z.string().describe("Report name to filter by (use get_client_report_spend_report_names to see available names)"),
+  },
+  async (params) => {
+    try {
+      const data = await getClientReportSpends(
+        params.start_date,
+        params.end_date,
+        params.report_name
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Client report spends data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
+      return {
+        content: [{
+          type: "text",
+          text: responseText,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching client report spends.";
+      console.error("Error in get_client_report_spends tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching client report spends: ${errorMessage}` }],
         isError: true,
       };
     }
