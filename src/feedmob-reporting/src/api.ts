@@ -1419,7 +1419,8 @@ export async function createCampaign(
   app_info_id: number,
   os: string,
   client_id: number,
-  client_uuid: string
+  client_uuid: string,
+  on_behalf_of_user_id?: number
 ): Promise<any> {
   const url = `${FEEDMOB_API_BASE}/ai/api/campaigns`;
 
@@ -1430,7 +1431,8 @@ export async function createCampaign(
       app_info_id,
       os,
       client_id,
-      client_uuid
+      client_uuid,
+      on_behalf_of_user_id
     }, {
       headers: {
         'Content-Type': 'application/json',

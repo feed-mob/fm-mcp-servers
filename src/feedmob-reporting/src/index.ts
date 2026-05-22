@@ -915,6 +915,7 @@ server.tool(
     os: z.string().describe("Operating system: 'Android', 'iOS', or 'Universal'"),
     client_id: z.number().describe("Client ID"),
     client_uuid: z.string().describe("Client UUID"),
+    on_behalf_of_user_id: z.number().optional().describe("FeedMob user ID to include in the campaign creation audit comment"),
   },
   async (params) => {
     try {
@@ -923,7 +924,8 @@ server.tool(
         params.app_info_id,
         params.os,
         params.client_id,
-        params.client_uuid
+        params.client_uuid,
+        params.on_behalf_of_user_id
       );
       const formattedData = JSON.stringify(data, null, 2);
       return {
