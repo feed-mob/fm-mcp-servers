@@ -23,8 +23,10 @@ This server provides the following tools:
     *   **Input Parameters**:
         *   `startDate` (string, required): Start date for the report in `YYYY-MM-DD` format.
         *   `endDate` (string, required): End date for the report in `YYYY-MM-DD` format.
+        *   `appName` (string, optional): Limit results to a single configured client. Available clients: `Lyft`, `Self Financial`, `Chime`, `ZipRecruiter`, `Upside`, `Albert`.
         *   `metricIds` (array of strings, optional): Optional array of metric IDs to fetch. Defaults to standard metrics if not provided:
             *   `total_unique_installs_filter`
+            *   `dn_by_total_dvce`
             *   `revenue_total`
             *   `revenue_iap_order_count`
             *   `daily_rat_score`
@@ -38,13 +40,28 @@ This server provides the following tools:
     ```bash
     export SAMSUNG_ISS='your_samsung_issuer'
     export SAMSUNG_PRIVATE_KEY='your_samsung_private_key'
-    export SAMSUNG_CONTENT_ID='your_samsung_content_id'
+    export SAMSUNG_BASE_URL='your_samsung_api_base_url'
     ```
 
     **Required Environment Variables:**
     *   `SAMSUNG_ISS`: Samsung issuer identifier for JWT authentication
     *   `SAMSUNG_PRIVATE_KEY`: Private key for JWT signing (RS256 algorithm)
-    *   `SAMSUNG_CONTENT_ID`: Content ID for which to fetch metrics
+    
+    **Optional Environment Variables:**
+    *   `SAMSUNG_BASE_URL`: Samsung API base URL. If omitted, the server uses its built-in default
+
+## Configured Clients
+
+The package currently ships with a built-in list of supported clients, including:
+
+*   `Lyft`
+*   `Self Financial`
+*   `Chime`
+*   `ZipRecruiter`
+*   `Upside`
+*   `Albert`
+
+To add a new client, update the `SAMSUNG_CONTENT_IDS` constant in `src/index.ts` with the client name and the corresponding Samsung content ID mappings.
 
 ## Usage with Claude Desktop
 
@@ -62,8 +79,7 @@ This server provides the following tools:
           "args": [ "-y", "@feedmob/samsung-reporting" ],
           "env": {
             "SAMSUNG_ISS": "your_samsung_issuer",
-            "SAMSUNG_PRIVATE_KEY": "your_samsung_private_key",
-            "SAMSUNG_CONTENT_ID": "your_samsung_content_id"
+            "SAMSUNG_PRIVATE_KEY": "your_samsung_private_key"
           }
         }
       }
@@ -89,7 +105,7 @@ The JWT token includes:
 1.  Clone the repository.
 2.  Navigate to the `src/samsung-reporting` directory.
 3.  Install dependencies: `npm install`
-4.  Set the required environment variables (`SAMSUNG_ISS`, `SAMSUNG_PRIVATE_KEY`, and `SAMSUNG_CONTENT_ID`).
+4.  Set the required environment variables (`SAMSUNG_ISS` and `SAMSUNG_PRIVATE_KEY`).
 5.  Build the project: `npm run build`
 6.  Run the server directly: `node dist/index.js`
 
