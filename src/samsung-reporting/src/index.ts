@@ -55,6 +55,7 @@ const SAMSUNG_CONTENT_IDS: ContentApp[] = [
   { app: 'Chime', contentIds: ['000008223186'] },
   { app: 'ZipRecruiter', contentIds: ['000008182313'] },
   { app: 'Upside', contentIds: ['000007104981', '000008222297'] },
+  { app: 'Albert', contentIds: ['000008824486'] },
 ];
 
 /**
