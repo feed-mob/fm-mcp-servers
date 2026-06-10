@@ -3,12 +3,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getKohoFinancialSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getDirectSpendJobStats, previewCampaign, createCampaign, getApps, getAdopsSpendCheckReports, getAgencyConversionRecords, getSmadexReportIds, checkSmadexReportStatus, getSmadexReports, getYouappiReports, getKayzenReports, getLiftoffReportIds, checkLiftoffReportStatus, getLiftoffReports, getSamsungReports, getClientReportSpendReportNames, getClientReportSpends } from "./api.js";
+import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getKohoFinancialSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getDirectSpendJobStats, previewCampaign, createCampaign, getApps, getAdopsSpendCheckReports, getAgencyConversionRecords, getSmadexReportIds, checkSmadexReportStatus, getSmadexReports, getYouappiReports, getKayzenReports, getLiftoffReportIds, checkLiftoffReportStatus, getLiftoffReports, getSamsungReports, getClientReportSpendReportNames, getClientReportSpends, getPubmaticReports, getPubmaticReportsGeo, getAppsflyerCohortRevenues, getAppsflyerCohortRevenuesGeo } from "./api.js";
 
 // Create server instance
 const server = new McpServer({
   name: "feedmob-reporting",
-  version: "0.0.19",
+  version: "0.0.20",
   capabilities: {
     tools: {},
     prompts: {},
@@ -1415,6 +1415,170 @@ server.tool(
       console.error("Error in get_client_report_spends tool:", errorMessage);
       return {
         content: [{ type: "text", text: `Error fetching client report spends: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Pubmatic Reports
+server.tool(
+  "get_pubmatic_reports",
+  "Get Pubmatic reports data via FeedMob API.",
+  {
+    client_id: z.number().describe("Client ID"),
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format"),
+  },
+  async (params) => {
+    try {
+      const data = await getPubmaticReports(
+        params.client_id,
+        params.start_date,
+        params.end_date
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Pubmatic reports data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
+      return {
+        content: [{
+          type: "text",
+          text: responseText,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching Pubmatic reports.";
+      console.error("Error in get_pubmatic_reports tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching Pubmatic reports: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Pubmatic Geo Reports
+server.tool(
+  "get_pubmatic_reports_geo",
+  "Get Pubmatic geo reports data via FeedMob API.",
+  {
+    client_id: z.number().describe("Client ID"),
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format"),
+  },
+  async (params) => {
+    try {
+      const data = await getPubmaticReportsGeo(
+        params.client_id,
+        params.start_date,
+        params.end_date
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Pubmatic geo reports data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
+      return {
+        content: [{
+          type: "text",
+          text: responseText,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching Pubmatic geo reports.";
+      console.error("Error in get_pubmatic_reports_geo tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching Pubmatic geo reports: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for AppsFlyer Cohort Revenues
+server.tool(
+  "get_appsflyer_cohort_revenues",
+  "Get AppsFlyer cohort revenue data via FeedMob API.",
+  {
+    client_id: z.number().describe("Client ID"),
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format"),
+  },
+  async (params) => {
+    try {
+      const data = await getAppsflyerCohortRevenues(
+        params.client_id,
+        params.start_date,
+        params.end_date
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `AppsFlyer cohort revenues data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
+      return {
+        content: [{
+          type: "text",
+          text: responseText,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching AppsFlyer cohort revenues.";
+      console.error("Error in get_appsflyer_cohort_revenues tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching AppsFlyer cohort revenues: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for AppsFlyer Cohort Revenues Geo
+server.tool(
+  "get_appsflyer_cohort_revenues_geo",
+  "Get AppsFlyer cohort revenue geo data via FeedMob API.",
+  {
+    client_id: z.number().describe("Client ID"),
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format"),
+  },
+  async (params) => {
+    try {
+      const data = await getAppsflyerCohortRevenuesGeo(
+        params.client_id,
+        params.start_date,
+        params.end_date
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `AppsFlyer cohort revenues geo data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
+      return {
+        content: [{
+          type: "text",
+          text: responseText,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching AppsFlyer cohort revenues geo.";
+      console.error("Error in get_appsflyer_cohort_revenues_geo tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching AppsFlyer cohort revenues geo: ${errorMessage}` }],
         isError: true,
       };
     }
