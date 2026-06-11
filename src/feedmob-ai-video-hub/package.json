@@ -36,5 +36,9 @@
     "ai-video",
     "video-management"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/feed-mob/fm-mcp-servers.git"
+  }
 }
