@@ -13,7 +13,7 @@ npm install
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `FEEDMOB_ACCESS_TOKEN` | Yes | OAuth access token for Rails API |
-| `RAILS_BASE_URL` | No | Rails API base URL (default: `https://insights-mcp.feedmob.com`) |
+| `RAILS_BASE_URL` | No | Rails API base URL |
 
 ## MCP Client Configuration
 
