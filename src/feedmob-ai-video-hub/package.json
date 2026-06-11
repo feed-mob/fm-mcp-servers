@@ -1,0 +1,40 @@
+{
+  "name": "@feedmob/ai-video-hub",
+  "version": "1.0.0",
+  "description": "FeedMob AI Video Hub MCP Server",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "feedmob-ai-video-hub": "dist/index.js"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "fastmcp": "1.21.0",
+    "@modelcontextprotocol/sdk": "1.6.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "feedmob",
+    "ai-video",
+    "video-management"
+  ],
+  "license": "MIT"
+}
