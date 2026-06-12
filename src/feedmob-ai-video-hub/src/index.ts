@@ -35,7 +35,6 @@ interface AiVideo {
   design_rationale_markdown?: string;
   production_notes_markdown?: string;
   reference_count: number;
-  video_url?: string;
   created_at: string;
   updated_at: string;
   references: AiVideoReference[];
