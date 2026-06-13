@@ -133,7 +133,7 @@ async function uploadFile(filePath: string): Promise<UploadResponse> {
 // Create MCP Server
 const server = new FastMCP({
   name: "feedmob-ai-video-hub",
-  version: "1.0.4",
+  version: "1.0.5",
 });
 
 // Tool: list_ai_videos
