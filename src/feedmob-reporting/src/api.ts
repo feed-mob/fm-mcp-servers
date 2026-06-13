@@ -1812,6 +1812,63 @@ export async function getYouappiReports(
   }
 }
 
+export async function getYouappiReportsGeo(
+  start_date: string,
+  end_date: string
+): Promise<any> {
+  const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/youappi_reports/geo`);
+  urlObj.searchParams.append('start_date', start_date);
+  urlObj.searchParams.append('end_date', end_date);
+
+  const url = urlObj.toString();
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token
+      },
+      timeout: 30000,
+    });
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `youappi_reports_geo_${start_date}_to_${end_date}_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
+  } catch (error: unknown) {
+    console.error("Error fetching YouAppi geo reports:", error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to fetch YouAppi geo reports');
+  }
+}
+
 export async function getKayzenReports(
   start_date: string,
   end_date: string
@@ -2339,7 +2396,7 @@ export async function getAppsflyerCohortRevenuesGeo(
   start_date: string,
   end_date: string
 ): Promise<any> {
-  const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/appsflyer_cohort_revenues_geo`);
+  const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/appsflyer_cohort_revenues/geo`);
   urlObj.searchParams.append('client_id', String(client_id));
   urlObj.searchParams.append('start_date', start_date);
   urlObj.searchParams.append('end_date', end_date);
