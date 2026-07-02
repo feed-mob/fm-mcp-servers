@@ -2447,3 +2447,205 @@ export async function getAppsflyerCohortRevenuesGeo(
     throw new Error('Failed to fetch AppsFlyer cohort revenues geo');
   }
 }
+
+export async function getAppsflyerInAppEventsRetargetReports(
+  start_date: string,
+  end_date: string,
+  click_url_ids?: string[],
+  client_ids?: string[],
+  campaign_ids?: string[],
+  af_app_ids?: string[]
+): Promise<any> {
+  const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/appsflyer_in_app_events_retarget_reports`);
+
+  // Add required parameters
+  urlObj.searchParams.append('start_date', start_date);
+  urlObj.searchParams.append('end_date', end_date);
+
+  // Add optional parameters
+  if (click_url_ids && click_url_ids.length > 0) {
+    click_url_ids.forEach(id => {
+      urlObj.searchParams.append('click_url_ids[]', id);
+    });
+  }
+
+  if (client_ids && client_ids.length > 0) {
+    client_ids.forEach(id => {
+      urlObj.searchParams.append('client_ids[]', id);
+    });
+  }
+
+  if (campaign_ids && campaign_ids.length > 0) {
+    campaign_ids.forEach(id => {
+      urlObj.searchParams.append('campaign_ids[]', id);
+    });
+  }
+
+  if (af_app_ids && af_app_ids.length > 0) {
+    af_app_ids.forEach(id => {
+      urlObj.searchParams.append('af_app_ids[]', id);
+    });
+  }
+
+  const url = urlObj.toString();
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token
+      },
+      timeout: 30000,
+    });
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `appsflyer_in_app_events_retarget_reports_${start_date}_to_${end_date}_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
+  } catch (error: unknown) {
+    console.error("Error fetching AppsFlyer in-app events retarget reports:", error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to fetch AppsFlyer in-app events retarget reports');
+  }
+}
+
+export async function getBeeswaxReports(
+  start_date: string,
+  end_date: string
+): Promise<any> {
+  const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/beeswax_reports`);
+  urlObj.searchParams.append('start_date', start_date);
+  urlObj.searchParams.append('end_date', end_date);
+
+  const url = urlObj.toString();
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token
+      },
+      timeout: 30000,
+    });
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `beeswax_reports_${start_date}_to_${end_date}_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
+  } catch (error: unknown) {
+    console.error("Error fetching Beeswax reports:", error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to fetch Beeswax reports');
+  }
+}
+
+export async function getRemergeReports(
+  start_date: string,
+  end_date: string
+): Promise<any> {
+  const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/remerge_reports`);
+  urlObj.searchParams.append('start_date', start_date);
+  urlObj.searchParams.append('end_date', end_date);
+
+  const url = urlObj.toString();
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token
+      },
+      timeout: 30000,
+    });
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `remerge_reports_${start_date}_to_${end_date}_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
+  } catch (error: unknown) {
+    console.error("Error fetching Remerge reports:", error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to fetch Remerge reports');
+  }
+}
