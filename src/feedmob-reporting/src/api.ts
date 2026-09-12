@@ -2512,43 +2512,13 @@ export async function getAppsflyerCohortRevenuesGeo(
 export async function getAppsflyerInAppEventsRetargetReports(
   client_id: number,
   start_date: string,
-  end_date: string,
-  click_url_ids?: string[],
-  client_ids?: string[],
-  campaign_ids?: string[],
-  af_app_ids?: string[]
+  end_date: string
 ): Promise<any> {
   const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/appsflyer_in_app_events_retarget_reports`);
 
-  // Add required parameters
   urlObj.searchParams.append('client_id', String(client_id));
   urlObj.searchParams.append('start_date', start_date);
   urlObj.searchParams.append('end_date', end_date);
-
-  // Add optional parameters
-  if (click_url_ids && click_url_ids.length > 0) {
-    click_url_ids.forEach(id => {
-      urlObj.searchParams.append('click_url_ids[]', id);
-    });
-  }
-
-  if (client_ids && client_ids.length > 0) {
-    client_ids.forEach(id => {
-      urlObj.searchParams.append('client_ids[]', id);
-    });
-  }
-
-  if (campaign_ids && campaign_ids.length > 0) {
-    campaign_ids.forEach(id => {
-      urlObj.searchParams.append('campaign_ids[]', id);
-    });
-  }
-
-  if (af_app_ids && af_app_ids.length > 0) {
-    af_app_ids.forEach(id => {
-      urlObj.searchParams.append('af_app_ids[]', id);
-    });
-  }
 
   const url = urlObj.toString();
 

@@ -320,26 +320,18 @@ server.tool(
 // Tool Definition for Getting AppsFlyer In-App Events Retarget Reports
 server.tool(
   "get_appsflyer_in_app_events_retarget_reports",
-  "Get AppsFlyer in-app events retarget reports by date range, optionally filtered by click URL, client, campaign, or AppsFlyer app IDs. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
+  "Get AppsFlyer in-app events retarget reports by date range. Requires client_id. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
   {
-    client_id: z.number().describe("Client ID (required). Supported values: 197 (ZipRecruiter), 216 (DiDi)"),
+    client_id: z.number().describe("Client ID (required)"),
     start_date: z.string().describe("Start date in YYYY-MM-DD format"),
     end_date: z.string().describe("End date in YYYY-MM-DD format"),
-    click_url_ids: z.array(z.string()).optional().describe("Array of click URL IDs (optional)"),
-    client_ids: z.array(z.string()).optional().describe("Array of client IDs (optional)"),
-    campaign_ids: z.array(z.string()).optional().describe("Array of campaign IDs (optional)"),
-    af_app_ids: z.array(z.string()).optional().describe("Array of AppsFlyer app IDs (optional)"),
   },
   async (params) => {
     try {
       const data = await getAppsflyerInAppEventsRetargetReports(
         params.client_id,
         params.start_date,
-        params.end_date,
-        params.click_url_ids,
-        params.client_ids,
-        params.campaign_ids,
-        params.af_app_ids
+        params.end_date
       );
       const formattedData = JSON.stringify(data, null, 2);
 
@@ -1526,9 +1518,9 @@ server.tool(
 // Tool Definition for Remerge Reports
 server.tool(
   "get_remerge_reports",
-  "Get Remerge spend reports by date range, including partner net spend and mapped FeedMob click URL metadata when available. Required client_id: 216 for DiDi or 189 for Binance. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
+  "Get Remerge spend reports by date range, including partner net spend and mapped FeedMob click URL metadata when available. Requires client_id. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
   {
-    client_id: z.number().describe("Client ID (required). Supported values: 216 (DiDi), 189 (Binance)."),
+    client_id: z.number().describe("Client ID (required)"),
     start_date: z.string().describe("Start date in YYYY-MM-DD format"),
     end_date: z.string().describe("End date in YYYY-MM-DD format"),
   },
@@ -1567,9 +1559,9 @@ server.tool(
 // Tool Definition for Remerge Geo Reports
 server.tool(
   "get_remerge_reports_geo",
-  "Get country-level Remerge spend reports by date range. Required client_id: 216 for DiDi or 189 for Binance. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
+  "Get country-level Remerge spend reports by date range. Requires client_id. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
   {
-    client_id: z.number().describe("Client ID (required). Supported values: 216 (DiDi), 189 (Binance)."),
+    client_id: z.number().describe("Client ID (required)"),
     start_date: z.string().describe("Start date in YYYY-MM-DD format"),
     end_date: z.string().describe("End date in YYYY-MM-DD format"),
   },
