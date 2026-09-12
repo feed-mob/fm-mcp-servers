@@ -1245,12 +1245,13 @@ export async function getVendors(
 }
 
 export async function getJamppReports(
+  client_id: number,
   start_date: string,
   end_date: string
 ): Promise<any> {
   const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/jampp_reports`);
 
-  // Add required parameters
+  urlObj.searchParams.append('client_id', String(client_id));
   urlObj.searchParams.append('start_date', start_date);
   urlObj.searchParams.append('end_date', end_date);
 
@@ -1278,7 +1279,7 @@ export async function getJamppReports(
     // Save data to CSV if data array exists
     if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `jampp_reports_${start_date}_to_${end_date}_${timestamp}.csv`;
+      const filename = `jampp_reports_${client_id}_${start_date}_to_${end_date}_${timestamp}.csv`;
       const csvFilePath = saveDataToCsv(responseData.data, filename);
       responseData.csv_file_path = csvFilePath;
     }
@@ -1300,6 +1301,66 @@ export async function getJamppReports(
       }
     }
     throw new Error('Failed to fetch Jampp reports');
+  }
+}
+
+export async function getJamppReportsGeo(
+  client_id: number,
+  start_date: string,
+  end_date: string
+): Promise<any> {
+  const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/jampp_reports/geo`);
+
+  urlObj.searchParams.append('client_id', String(client_id));
+  urlObj.searchParams.append('start_date', start_date);
+  urlObj.searchParams.append('end_date', end_date);
+
+  const url = urlObj.toString();
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token
+      },
+      timeout: 30000,
+    });
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `jampp_reports_geo_${client_id}_${start_date}_to_${end_date}_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
+  } catch (error: unknown) {
+    console.error("Error fetching Jampp geo reports:", error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to fetch Jampp geo reports');
   }
 }
 
@@ -2449,6 +2510,7 @@ export async function getAppsflyerCohortRevenuesGeo(
 }
 
 export async function getAppsflyerInAppEventsRetargetReports(
+  client_id: number,
   start_date: string,
   end_date: string,
   click_url_ids?: string[],
@@ -2459,6 +2521,7 @@ export async function getAppsflyerInAppEventsRetargetReports(
   const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/appsflyer_in_app_events_retarget_reports`);
 
   // Add required parameters
+  urlObj.searchParams.append('client_id', String(client_id));
   urlObj.searchParams.append('start_date', start_date);
   urlObj.searchParams.append('end_date', end_date);
 
@@ -2511,7 +2574,7 @@ export async function getAppsflyerInAppEventsRetargetReports(
     // Save data to CSV if data array exists
     if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `appsflyer_in_app_events_retarget_reports_${start_date}_to_${end_date}_${timestamp}.csv`;
+      const filename = `appsflyer_in_app_events_retarget_reports_${client_id}_${start_date}_to_${end_date}_${timestamp}.csv`;
       const csvFilePath = saveDataToCsv(responseData.data, filename);
       responseData.csv_file_path = csvFilePath;
     }
@@ -2594,10 +2657,12 @@ export async function getBeeswaxReports(
 }
 
 export async function getRemergeReports(
+  client_id: number,
   start_date: string,
   end_date: string
 ): Promise<any> {
   const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/remerge_reports`);
+  urlObj.searchParams.append('client_id', String(client_id));
   urlObj.searchParams.append('start_date', start_date);
   urlObj.searchParams.append('end_date', end_date);
 
@@ -2625,7 +2690,7 @@ export async function getRemergeReports(
     // Save data to CSV if data array exists
     if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `remerge_reports_${start_date}_to_${end_date}_${timestamp}.csv`;
+      const filename = `remerge_reports_${client_id}_${start_date}_to_${end_date}_${timestamp}.csv`;
       const csvFilePath = saveDataToCsv(responseData.data, filename);
       responseData.csv_file_path = csvFilePath;
     }
@@ -2647,5 +2712,64 @@ export async function getRemergeReports(
       }
     }
     throw new Error('Failed to fetch Remerge reports');
+  }
+}
+
+export async function getRemergeReportsGeo(
+  client_id: number,
+  start_date: string,
+  end_date: string
+): Promise<any> {
+  const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/remerge_reports/geo`);
+  urlObj.searchParams.append('client_id', String(client_id));
+  urlObj.searchParams.append('start_date', start_date);
+  urlObj.searchParams.append('end_date', end_date);
+
+  const url = urlObj.toString();
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token
+      },
+      timeout: 30000,
+    });
+
+    let responseData = response.data;
+
+    // Wrap array response in object if needed
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    // Save data to CSV if data array exists
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `remerge_reports_geo_${client_id}_${start_date}_to_${end_date}_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
+  } catch (error: unknown) {
+    console.error("Error fetching Remerge geo reports:", error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to fetch Remerge geo reports');
   }
 }
