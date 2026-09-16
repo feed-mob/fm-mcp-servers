@@ -3,12 +3,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAppsflyerInAppEventsRetargetReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getKohoFinancialSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getDirectSpendJobStats, previewCampaign, createCampaign, getApps, getAdopsSpendCheckReports, getAgencyConversionRecords, getSmadexReportIds, checkSmadexReportStatus, getSmadexReports, getYouappiReports, getYouappiReportsGeo, getKayzenReports, getLiftoffReportIds, checkLiftoffReportStatus, getLiftoffReports, getSamsungReports, getBeeswaxReports, getRemergeReports, getClientReportSpendReportNames, getClientReportSpends, getPubmaticReports, getPubmaticReportsGeo, getAppsflyerCohortRevenues, getAppsflyerCohortRevenuesGeo } from "./api.js";
+import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getAppsflyerInAppEventsRetargetReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getKohoFinancialSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getJamppReportsGeo, getDirectSpendJobStats, previewCampaign, createCampaign, getApps, getAdopsSpendCheckReports, getAgencyConversionRecords, getSmadexReportIds, checkSmadexReportStatus, getSmadexReports, getYouappiReports, getYouappiReportsGeo, getKayzenReports, getLiftoffReportIds, checkLiftoffReportStatus, getLiftoffReports, getSamsungReports, getBeeswaxReports, getRemergeReports, getRemergeReportsGeo, getClientReportSpendReportNames, getClientReportSpends, getPubmaticReports, getPubmaticReportsGeo, getAppsflyerCohortRevenues, getAppsflyerCohortRevenuesGeo } from "./api.js";
 
 // Create server instance
 const server = new McpServer({
   name: "feedmob-reporting",
-  version: "0.0.22",
+  version: "0.0.23",
   capabilities: {
     tools: {},
     prompts: {},
@@ -320,24 +320,18 @@ server.tool(
 // Tool Definition for Getting AppsFlyer In-App Events Retarget Reports
 server.tool(
   "get_appsflyer_in_app_events_retarget_reports",
-  "Get AppsFlyer in-app events retarget reports by date range, optionally filtered by click URL, client, campaign, or AppsFlyer app IDs. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
+  "Get AppsFlyer in-app events retarget reports by date range. Requires client_id. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
   {
+    client_id: z.number().describe("Client ID (required)"),
     start_date: z.string().describe("Start date in YYYY-MM-DD format"),
     end_date: z.string().describe("End date in YYYY-MM-DD format"),
-    click_url_ids: z.array(z.string()).optional().describe("Array of click URL IDs (optional)"),
-    client_ids: z.array(z.string()).optional().describe("Array of client IDs (optional)"),
-    campaign_ids: z.array(z.string()).optional().describe("Array of campaign IDs (optional)"),
-    af_app_ids: z.array(z.string()).optional().describe("Array of AppsFlyer app IDs (optional)"),
   },
   async (params) => {
     try {
       const data = await getAppsflyerInAppEventsRetargetReports(
+        params.client_id,
         params.start_date,
-        params.end_date,
-        params.click_url_ids,
-        params.client_ids,
-        params.campaign_ids,
-        params.af_app_ids
+        params.end_date
       );
       const formattedData = JSON.stringify(data, null, 2);
 
@@ -832,14 +826,16 @@ server.tool(
 // Tool Definition for Getting Jampp Reports
 server.tool(
   "get_jampp_reports",
-  "Get Jampp reports data via FeedMob API. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
+  "Get Jampp reports data via FeedMob API. Requires a client that has a Jampp campaign mapping. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
   {
+    client_id: z.number().describe("Client ID. The client must have a Jampp campaign mapping."),
     start_date: z.string().describe("Start date in YYYY-MM-DD format (required)"),
     end_date: z.string().describe("End date in YYYY-MM-DD format (required)"),
   },
   async (params) => {
     try {
       const data = await getJamppReports(
+        params.client_id,
         params.start_date,
         params.end_date
       );
@@ -862,6 +858,47 @@ server.tool(
       console.error("Error in get_jampp_reports tool:", errorMessage);
       return {
         content: [{ type: "text", text: `Error fetching Jampp reports: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Getting Jampp Reports Geo
+server.tool(
+  "get_jampp_reports_geo",
+  "Get Jampp geo-level reports data via FeedMob API. Returns country breakdown including impressions, clicks, installs, and spend. Requires a client that has a Jampp campaign mapping. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
+  {
+    client_id: z.number().describe("Client ID. The client must have a Jampp campaign mapping."),
+    start_date: z.string().describe("Start date in YYYY-MM-DD format (required)"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format (required)"),
+  },
+  async (params) => {
+    try {
+      const data = await getJamppReportsGeo(
+        params.client_id,
+        params.start_date,
+        params.end_date
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Jampp geo reports data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
+      return {
+        content: [{
+          type: "text",
+          text: responseText,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching Jampp geo reports.";
+      console.error("Error in get_jampp_reports_geo tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching Jampp geo reports: ${errorMessage}` }],
         isError: true,
       };
     }
@@ -1481,14 +1518,16 @@ server.tool(
 // Tool Definition for Remerge Reports
 server.tool(
   "get_remerge_reports",
-  "Get Remerge spend reports by date range, including partner net spend and mapped FeedMob click URL metadata when available. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
+  "Get Remerge spend reports by date range, including partner net spend and mapped FeedMob click URL metadata when available. Requires client_id. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
   {
+    client_id: z.number().describe("Client ID (required)"),
     start_date: z.string().describe("Start date in YYYY-MM-DD format"),
     end_date: z.string().describe("End date in YYYY-MM-DD format"),
   },
   async (params) => {
     try {
       const data = await getRemergeReports(
+        params.client_id,
         params.start_date,
         params.end_date
       );
@@ -1511,6 +1550,47 @@ server.tool(
       console.error("Error in get_remerge_reports tool:", errorMessage);
       return {
         content: [{ type: "text", text: `Error fetching Remerge reports: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Remerge Geo Reports
+server.tool(
+  "get_remerge_reports_geo",
+  "Get country-level Remerge spend reports by date range. Requires client_id. ⚠️ Use 'feedmob-reporting-skills' skill for cross-platform analysis workflows.",
+  {
+    client_id: z.number().describe("Client ID (required)"),
+    start_date: z.string().describe("Start date in YYYY-MM-DD format"),
+    end_date: z.string().describe("End date in YYYY-MM-DD format"),
+  },
+  async (params) => {
+    try {
+      const data = await getRemergeReportsGeo(
+        params.client_id,
+        params.start_date,
+        params.end_date
+      );
+      const formattedData = JSON.stringify(data, null, 2);
+
+      let responseText = `Remerge geo reports data:\n\`\`\`json\n${formattedData}\n\`\`\``;
+
+      if (data.csv_file_path) {
+        responseText += `\n\nCSV file saved to: ${data.csv_file_path}`;
+      }
+
+      return {
+        content: [{
+          type: "text",
+          text: responseText,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while fetching Remerge geo reports.";
+      console.error("Error in get_remerge_reports_geo tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error fetching Remerge geo reports: ${errorMessage}` }],
         isError: true,
       };
     }
