@@ -554,6 +554,76 @@ export async function getAppsflyerReports(
   }
 }
 
+export async function getKochavaReports(
+  start_date: string,
+  end_date: string,
+  click_url_ids?: number[],
+  client_ids?: number[]
+): Promise<any> {
+  const urlObj = new URL(`${FEEDMOB_API_BASE}/ai/api/kochava_reports`);
+
+  urlObj.searchParams.append('start_date', start_date);
+  urlObj.searchParams.append('end_date', end_date);
+
+  if (click_url_ids && click_url_ids.length > 0) {
+    click_url_ids.forEach(id => {
+      urlObj.searchParams.append('click_url_ids[]', String(id));
+    });
+  }
+
+  if (client_ids && client_ids.length > 0) {
+    client_ids.forEach(id => {
+      urlObj.searchParams.append('client_ids[]', String(id));
+    });
+  }
+
+  const url = urlObj.toString();
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token
+      },
+      timeout: 30000,
+    });
+
+    let responseData = response.data;
+
+    if (Array.isArray(responseData)) {
+      responseData = { data: responseData };
+    }
+
+    if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `kochava_reports_${start_date}_to_${end_date}_${timestamp}.csv`;
+      const csvFilePath = saveDataToCsv(responseData.data, filename);
+      responseData.csv_file_path = csvFilePath;
+    }
+
+    return responseData;
+  } catch (error: unknown) {
+    console.error("Error fetching Kochava reports:", error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as Record<string, any>;
+      const status = err.response?.status;
+      if (status === 401) {
+        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 400) {
+        throw new Error('FeedMob API request failed: Bad Request');
+      } else if (status === 404) {
+        throw new Error('FeedMob API request failed: Not Found');
+      } else {
+        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
+      }
+    }
+    throw new Error('Failed to fetch Kochava reports');
+  }
+}
+
 export async function getAdopsReports(
   month: string
 ): Promise<any> {
