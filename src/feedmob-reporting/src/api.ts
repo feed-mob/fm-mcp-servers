@@ -352,59 +352,6 @@ export async function checkInmobiReportStatus(
   }
 }
 
-export async function createDirectSpend(
-  click_url_id: number,
-  spend_date: string,
-  net_spend?: number,
-  gross_spend?: number,
-  partner_paid_action_count?: number,
-  client_paid_action_count?: number
-): Promise<any> {
-  // Validate at least one spend metric is provided
-  if (!net_spend && !gross_spend && !partner_paid_action_count && !client_paid_action_count) {
-    throw new Error('必须提供至少一个支出指标：net_spend, gross_spend, partner_paid_action_count 或 client_paid_action_count');
-  }
-
-  const url = `${FEEDMOB_API_BASE}/ai/api/direct_spends`;
-
-  try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
-    const response = await axios.post(url, {
-      click_url_id,
-      spend_date,
-      net_spend,
-      gross_spend,
-      partner_paid_action_count,
-      client_paid_action_count
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
-      timeout: 30000,
-    });
-    return response.data;
-  } catch (error: unknown) {
-    console.error("Error creating direct spend:", error);
-    if (error && typeof error === 'object' && 'response' in error) {
-      const err = error as Record<string, any>;
-      const status = err.response?.status;
-      if (status === 401) {
-        throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
-      } else if (status === 400) {
-        throw new Error('FeedMob API request failed: Bad Request');
-      } else if (status === 404) {
-        throw new Error('FeedMob API request failed: Not Found');
-      } else {
-        throw new Error(`FeedMob API request failed: ${status || 'Unknown error'}`);
-      }
-    }
-    throw new Error('Failed to create direct spend');
-  }
-}
-
 export async function getInmobiReports(
   start_date: string,
   end_date: string,

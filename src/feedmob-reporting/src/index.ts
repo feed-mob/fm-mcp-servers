@@ -3,7 +3,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getKochavaReports, getAppsflyerInAppEventsRetargetReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getKohoFinancialSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getJamppReportsGeo, getDirectSpendJobStats, previewCampaign, createCampaign, getApps, getAdopsSpendCheckReports, getAgencyConversionRecords, getSmadexReportIds, checkSmadexReportStatus, getSmadexReports, getYouappiReports, getYouappiReportsGeo, getKayzenReports, getLiftoffReportIds, checkLiftoffReportStatus, getLiftoffReports, getSamsungReports, getBeeswaxReports, getRemergeReports, getRemergeReportsGeo, getClientReportSpendReportNames, getClientReportSpends, getPubmaticReports, getPubmaticReportsGeo, getAppsflyerCohortRevenues, getAppsflyerCohortRevenuesGeo } from "./api.js";
+import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, getAppsflyerReports, getKochavaReports, getAppsflyerInAppEventsRetargetReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getKohoFinancialSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getJamppReportsGeo, getDirectSpendJobStats, previewCampaign, createCampaign, getApps, getAdopsSpendCheckReports, getAgencyConversionRecords, getSmadexReportIds, checkSmadexReportStatus, getSmadexReports, getYouappiReports, getYouappiReportsGeo, getKayzenReports, getLiftoffReportIds, checkLiftoffReportStatus, getLiftoffReports, getSamsungReports, getBeeswaxReports, getRemergeReports, getRemergeReportsGeo, getClientReportSpendReportNames, getClientReportSpends, getPubmaticReports, getPubmaticReportsGeo, getAppsflyerCohortRevenues, getAppsflyerCohortRevenuesGeo } from "./api.js";
 
 // Create server instance
 const server = new McpServer({
@@ -15,10 +15,9 @@ const server = new McpServer({
   },
 });
 
-// Tool Definition for Creating Direct Spend
 server.tool(
   "create_direct_spend",
-  "Create Or Update a direct spend via FeedMob API.",
+  "Deprecated and disabled. Direct spend creation and updates via MCP are no longer available. A human operator can use Admin.",
   {
     click_url_id: z.number().describe("Click URL ID"),
     spend_date: z.string().describe("Spend date in YYYY-MM-DD format"),
@@ -27,36 +26,13 @@ server.tool(
     partner_paid_action_count: z.number().optional().describe("Partner paid action count"),
     client_paid_action_count: z.number().optional().describe("Client paid action count"),
   },
-  async (params) => {
-    try {
-      if (!params.net_spend && !params.gross_spend && !params.partner_paid_action_count && !params.client_paid_action_count) {
-        throw new Error("必须提供至少一个支出指标：net_spend, gross_spend, partner_paid_action_count 或 client_paid_action_count");
-      }
-
-      const result = await createDirectSpend(
-        params.click_url_id,
-        params.spend_date,
-        params.net_spend,
-        params.gross_spend,
-        params.partner_paid_action_count,
-        params.client_paid_action_count
-      );
-      const formattedData = JSON.stringify(result, null, 2);
-      return {
-        content: [{
-          type: "text",
-          text: `Direct spend created successfully:\n\`\`\`json\n${formattedData}\n\`\`\``,
-        }],
-      };
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while creating direct spend.";
-      console.error("Error in create_direct_spend tool:", errorMessage);
-      return {
-        content: [{ type: "text", text: `Error creating direct spend: ${errorMessage}` }],
-        isError: true,
-      };
-    }
-  }
+  async () => ({
+    content: [{
+      type: "text",
+      text: "Direct spend creation and updates via MCP are deprecated and disabled. No data was changed. Do not retry this operation. A human operator can use Admin to create or update direct spends.",
+    }],
+    isError: true,
+  })
 );
 
 // Tool Definition for Getting Direct Spends
