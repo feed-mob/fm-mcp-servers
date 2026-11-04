@@ -352,6 +352,16 @@ export async function checkInmobiReportStatus(
   }
 }
 
+function hasDirectSpendErrors(errors: unknown): boolean {
+  if (Array.isArray(errors)) {
+    return errors.length > 0;
+  }
+  if (errors !== null && typeof errors === "object") {
+    return Object.keys(errors).length > 0;
+  }
+  return Boolean(errors);
+}
+
 export async function createDirectSpend(
   click_url_id: number,
   spend_date: string,
@@ -366,6 +376,7 @@ export async function createDirectSpend(
   }
 
   const url = `${FEEDMOB_API_BASE}/ai/api/direct_spends`;
+  let responseData: any;
 
   try {
     const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
@@ -385,14 +396,18 @@ export async function createDirectSpend(
       },
       timeout: 30000,
     });
-    return response.data;
+    responseData = response.data;
   } catch (error: unknown) {
-    console.error("Error creating direct spend:", error);
+    console.error("Error creating direct spend:", error instanceof Error ? error.message : "Unknown error");
     if (error && typeof error === 'object' && 'response' in error) {
       const err = error as Record<string, any>;
       const status = err.response?.status;
       if (status === 401) {
         throw new Error('FeedMob API request failed: Unauthorized (Invalid API Key or Token)');
+      } else if (status === 403) {
+        const errors = err.response?.data?.errors;
+        const details = hasDirectSpendErrors(errors) ? `: ${JSON.stringify(errors)}` : '';
+        throw new Error(`FeedMob API request failed: Forbidden (403)${details}`);
       } else if (status === 400) {
         throw new Error('FeedMob API request failed: Bad Request');
       } else if (status === 404) {
@@ -403,6 +418,11 @@ export async function createDirectSpend(
     }
     throw new Error('Failed to create direct spend');
   }
+
+  if (hasDirectSpendErrors(responseData?.errors)) {
+    throw new Error(`FeedMob API direct spend creation failed: ${JSON.stringify(responseData.errors)}`);
+  }
+  return responseData;
 }
 
 export async function getInmobiReports(
