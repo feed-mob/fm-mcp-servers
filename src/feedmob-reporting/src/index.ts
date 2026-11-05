@@ -3,12 +3,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, getAppsflyerReports, getKochavaReports, getAppsflyerInAppEventsRetargetReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getKohoFinancialSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getJamppReportsGeo, getDirectSpendJobStats, previewCampaign, createCampaign, getApps, getAdopsSpendCheckReports, getAgencyConversionRecords, getSmadexReportIds, checkSmadexReportStatus, getSmadexReports, getYouappiReports, getYouappiReportsGeo, getKayzenReports, getLiftoffReportIds, checkLiftoffReportStatus, getLiftoffReports, getSamsungReports, getBeeswaxReports, getRemergeReports, getRemergeReportsGeo, getClientReportSpendReportNames, getClientReportSpends, getPubmaticReports, getPubmaticReportsGeo, getAppsflyerCohortRevenues, getAppsflyerCohortRevenuesGeo } from "./api.js";
+import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, updateDirectSpend, getAppsflyerReports, getKochavaReports, getAppsflyerInAppEventsRetargetReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getKohoFinancialSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getJamppReportsGeo, getDirectSpendJobStats, previewCampaign, createCampaign, getApps, getAdopsSpendCheckReports, getAgencyConversionRecords, getSmadexReportIds, checkSmadexReportStatus, getSmadexReports, getYouappiReports, getYouappiReportsGeo, getKayzenReports, getLiftoffReportIds, checkLiftoffReportStatus, getLiftoffReports, getSamsungReports, getBeeswaxReports, getRemergeReports, getRemergeReportsGeo, getClientReportSpendReportNames, getClientReportSpends, getPubmaticReports, getPubmaticReportsGeo, getAppsflyerCohortRevenues, getAppsflyerCohortRevenuesGeo } from "./api.js";
 
 // Create server instance
 const server = new McpServer({
   name: "feedmob-reporting",
-  version: "0.0.25",
+  version: "0.0.26",
   capabilities: {
     tools: {},
     prompts: {},
@@ -18,29 +18,23 @@ const server = new McpServer({
 // Tool Definition for Creating Direct Spend
 server.tool(
   "create_direct_spend",
-  "Create Or Update a direct spend via FeedMob API.",
+  "Create a new direct spend via POST /ai/api/direct_spends. Requires click_url_id, spend_date, net_spend and gross_spend. Campaign, vendor and paid_action are derived from the Click URL. Creates new records only; use update_direct_spend with a NetSpend ID or click_url_id + spend_date to change an existing record.",
   {
-    click_url_id: z.number().describe("Click URL ID"),
-    spend_date: z.string().describe("Spend date in YYYY-MM-DD format"),
-    net_spend: z.number().optional().describe("Net spend amount"),
-    gross_spend: z.number().optional().describe("Gross spend amount"),
-    partner_paid_action_count: z.number().optional().describe("Partner paid action count"),
-    client_paid_action_count: z.number().optional().describe("Client paid action count"),
+    click_url_id: z.number().int().positive().describe("Click URL ID"),
+    spend_date: z.string().date().describe("Spend date in YYYY-MM-DD format, on or after the Click URL creation date (validated by the API)"),
+    net_spend: z.union([z.number().finite().nonnegative(), z.string().trim().regex(/^[+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/).refine((value) => Number.isFinite(Number(value)), "Amount must be finite")]).describe("Required finite net spend >= 0; numeric strings accepted"),
+    gross_spend: z.union([z.number().finite().nonnegative(), z.string().trim().regex(/^[+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/).refine((value) => Number.isFinite(Number(value)), "Amount must be finite")]).describe("Required finite gross spend >= 0; numeric strings accepted"),
+    impression: z.union([z.number().finite().int().nonnegative(), z.string().trim().regex(/^[+]?\d+$/).refine((value) => Number.isFinite(Number(value)), "Count must be finite")]).optional().describe("Impressions: integer >= 0; integer strings accepted; blanks and decimals rejected"),
+    clicks_count: z.union([z.number().finite().int().nonnegative(), z.string().trim().regex(/^[+]?\d+$/).refine((value) => Number.isFinite(Number(value)), "Count must be finite")]).optional().describe("Clicks: integer >= 0; integer strings accepted; blanks and decimals rejected"),
+    installs_count: z.union([z.number().finite().int().nonnegative(), z.string().trim().regex(/^[+]?\d+$/).refine((value) => Number.isFinite(Number(value)), "Count must be finite")]).optional().describe("Installs: integer >= 0; integer strings accepted; blanks and decimals rejected"),
+    client_paid_action_count: z.union([z.number().finite().int().nonnegative(), z.string().trim().regex(/^[+]?\d+$/).refine((value) => Number.isFinite(Number(value)), "Count must be finite")]).optional().describe("Client paid actions: integer >= 0; integer strings accepted; blanks and decimals rejected"),
+    partner_paid_action_count: z.union([z.number().finite().int().nonnegative(), z.string().trim().regex(/^[+]?\d+$/).refine((value) => Number.isFinite(Number(value)), "Count must be finite")]).optional().describe("Partner paid actions: integer >= 0; integer strings accepted; blanks and decimals rejected"),
+    creative: z.string().optional().describe("Creative; blank values are ignored by the API"),
+    audit_comment: z.string().optional().describe("Appended to the creation audit source description"),
   },
   async (params) => {
     try {
-      if (!params.net_spend && !params.gross_spend && !params.partner_paid_action_count && !params.client_paid_action_count) {
-        throw new Error("必须提供至少一个支出指标：net_spend, gross_spend, partner_paid_action_count 或 client_paid_action_count");
-      }
-
-      const result = await createDirectSpend(
-        params.click_url_id,
-        params.spend_date,
-        params.net_spend,
-        params.gross_spend,
-        params.partner_paid_action_count,
-        params.client_paid_action_count
-      );
+      const result = await createDirectSpend(params);
       const formattedData = JSON.stringify(result, null, 2);
       return {
         content: [{
@@ -53,6 +47,58 @@ server.tool(
       console.error("Error in create_direct_spend tool:", errorMessage);
       return {
         content: [{ type: "text", text: `Error creating direct spend: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool Definition for Updating Direct Spend
+server.tool(
+  "update_direct_spend",
+  "Update an existing direct spend using either a NetSpend ID (PATCH /ai/api/direct_spends/:id) or click_url_id + spend_date (PATCH /ai/api/direct_spends/by_click_url). Spend date and associations cannot be modified. Omitted fields are preserved; no record is created if not found. Gross spend cannot change in an invoiced month. Requires direct spend write permission.",
+  {
+    id: z.number().int().positive().optional().describe("Existing NetSpend ID; omit when using click_url_id + spend_date"),
+    click_url_id: z.number().int().positive().optional().describe("Click URL ID used with spend_date to find the existing record; cannot be updated"),
+    spend_date: z.string().date().optional().describe("Existing spend date in YYYY-MM-DD format; required with click_url_id for lookup only; cannot be updated or supplied with id"),
+    net_spend: z.union([z.number().finite().nonnegative(), z.string().trim().min(1)]).optional().describe("Finite net spend >= 0; numeric strings accepted; cannot be blank"),
+    gross_spend: z.union([z.number().finite().nonnegative(), z.string().trim().min(1)]).optional().describe("Finite gross spend >= 0; numeric strings accepted; cannot change in an invoiced month"),
+    impression: z.union([z.number().int().nonnegative(), z.string().trim().regex(/^[+]?\d+$/)]).optional().describe("Impressions: integer >= 0; integer strings accepted"),
+    clicks_count: z.union([z.number().int().nonnegative(), z.string().trim().regex(/^[+]?\d+$/)]).optional().describe("Clicks: integer >= 0; integer strings accepted"),
+    installs_count: z.union([z.number().int().nonnegative(), z.string().trim().regex(/^[+]?\d+$/)]).optional().describe("Installs: integer >= 0; integer strings accepted"),
+    client_paid_action_count: z.union([z.number().int().nonnegative(), z.string().trim().regex(/^[+]?\d+$/)]).optional().describe("Client paid actions: integer >= 0; integer strings accepted"),
+    partner_paid_action_count: z.union([z.number().int().nonnegative(), z.string().trim().regex(/^[+]?\d+$/)]).optional().describe("Partner paid actions: integer >= 0; integer strings accepted"),
+    creative: z.string().optional().describe("Creative; blank values are ignored by the API"),
+    audit_comment: z.string().optional().describe("Appended to the update audit source description when fields change"),
+  },
+  async (params) => {
+    try {
+      const { id, click_url_id, spend_date, ...fields } = params;
+      let target: number | { click_url_id: number; spend_date: string };
+      if (id !== undefined) {
+        if (click_url_id !== undefined || spend_date !== undefined) {
+          throw new Error("Provide id alone or click_url_id + spend_date. Spend date and associations cannot be modified.");
+        }
+        target = id;
+      } else {
+        if (click_url_id === undefined || spend_date === undefined) {
+          throw new Error("Provide id or both click_url_id and spend_date.");
+        }
+        target = { click_url_id, spend_date };
+      }
+      const result = await updateDirectSpend(target, fields);
+      const formattedData = JSON.stringify(result, null, 2);
+      return {
+        content: [{
+          type: "text",
+          text: `Direct spend updated successfully:\n\`\`\`json\n${formattedData}\n\`\`\``,
+        }],
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred while updating direct spend.";
+      console.error("Error in update_direct_spend tool:", errorMessage);
+      return {
+        content: [{ type: "text", text: `Error updating direct spend: ${errorMessage}` }],
         isError: true,
       };
     }
