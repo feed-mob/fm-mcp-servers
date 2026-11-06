@@ -363,31 +363,28 @@ function hasDirectSpendErrors(errors: unknown): boolean {
 }
 
 export async function createDirectSpend(
-  click_url_id: number,
-  spend_date: string,
-  net_spend?: number,
-  gross_spend?: number,
-  partner_paid_action_count?: number,
-  client_paid_action_count?: number
-): Promise<any> {
-  // Validate at least one spend metric is provided
-  if (!net_spend && !gross_spend && !partner_paid_action_count && !client_paid_action_count) {
-    throw new Error('必须提供至少一个支出指标：net_spend, gross_spend, partner_paid_action_count 或 client_paid_action_count');
+  params: {
+    click_url_id: number;
+    spend_date: string;
+    net_spend: number | string;
+    gross_spend: number | string;
+    impression?: number | string;
+    clicks_count?: number | string;
+    installs_count?: number | string;
+    client_paid_action_count?: number | string;
+    partner_paid_action_count?: number | string;
+    creative?: string;
+    audit_comment?: string;
   }
-
+): Promise<any> {
+  const body = Object.fromEntries(Object.entries(params)
+    .filter(([, value]) => value !== undefined));
   const url = `${FEEDMOB_API_BASE}/ai/api/direct_spends`;
   let responseData: any;
 
   try {
     const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
-    const response = await axios.post(url, {
-      click_url_id,
-      spend_date,
-      net_spend,
-      gross_spend,
-      partner_paid_action_count,
-      client_paid_action_count
-    }, {
+    const response = await axios.post(url, body, {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -409,7 +406,9 @@ export async function createDirectSpend(
         const details = hasDirectSpendErrors(errors) ? `: ${JSON.stringify(errors)}` : '';
         throw new Error(`FeedMob API request failed: Forbidden (403)${details}`);
       } else if (status === 400) {
-        throw new Error('FeedMob API request failed: Bad Request');
+        const errors = err.response?.data?.errors;
+        const details = hasDirectSpendErrors(errors) ? `: ${JSON.stringify(errors)}` : '';
+        throw new Error(`FeedMob API request failed: Bad Request (400)${details}`);
       } else if (status === 404) {
         throw new Error('FeedMob API request failed: Not Found');
       } else {
@@ -419,8 +418,63 @@ export async function createDirectSpend(
     throw new Error('Failed to create direct spend');
   }
 
-  if (hasDirectSpendErrors(responseData?.errors)) {
-    throw new Error(`FeedMob API direct spend creation failed: ${JSON.stringify(responseData.errors)}`);
+  if (hasDirectSpendErrors(responseData?.errors) || responseData?.status >= 400) {
+    throw new Error(`FeedMob API direct spend creation failed: ${JSON.stringify(responseData)}`);
+  }
+  return responseData;
+}
+
+export async function updateDirectSpend(
+  target: number | { click_url_id: number; spend_date: string },
+  params: {
+    net_spend?: number | string;
+    gross_spend?: number | string;
+    impression?: number | string;
+    clicks_count?: number | string;
+    installs_count?: number | string;
+    client_paid_action_count?: number | string;
+    partner_paid_action_count?: number | string;
+    creative?: string;
+    audit_comment?: string;
+  }
+): Promise<any> {
+  const body = Object.fromEntries(Object.entries({
+    ...params,
+    ...(typeof target === 'number' ? {} : { click_url_id: target.click_url_id, spend_date: target.spend_date }),
+  }).filter(([, value]) => value !== undefined));
+  const path = typeof target === 'number' ? String(target) : 'by_click_url';
+  const url = `${FEEDMOB_API_BASE}/ai/api/direct_spends/${path}`;
+  let responseData: any;
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.patch(url, body, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token
+      },
+      timeout: 30000,
+    });
+    responseData = response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const errors = error.response?.data?.errors;
+      const details = hasDirectSpendErrors(errors) ? `: ${JSON.stringify(errors)}` : '';
+      const reason = status === 401 ? 'Unauthorized (Invalid API Key or Token)'
+        : status === 403 ? 'Forbidden (403)'
+        : status === 400 ? 'Bad Request (400)'
+        : status === 404 ? 'Not Found (404)'
+        : status ?? error.code ?? 'Unknown error';
+      throw new Error(`FeedMob API direct spend update failed: ${reason}${details}`);
+    }
+    throw new Error('Failed to update direct spend');
+  }
+
+  if (hasDirectSpendErrors(responseData?.errors) || responseData?.status >= 400) {
+    throw new Error(`FeedMob API direct spend update failed: ${JSON.stringify(responseData)}`);
   }
   return responseData;
 }
