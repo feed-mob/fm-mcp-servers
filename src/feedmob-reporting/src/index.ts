@@ -3,17 +3,20 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { registerClickUrlPricesTool } from "./tools/click-url-prices.js";
 import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, updateDirectSpend, getAppsflyerReports, getKochavaReports, getAppsflyerInAppEventsRetargetReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getKohoFinancialSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getJamppReportsGeo, getDirectSpendJobStats, previewCampaign, createCampaign, getApps, getAdopsSpendCheckReports, getAgencyConversionRecords, getSmadexReportIds, checkSmadexReportStatus, getSmadexReports, getYouappiReports, getYouappiReportsGeo, getKayzenReports, getLiftoffReportIds, checkLiftoffReportStatus, getLiftoffReports, getSamsungReports, getBeeswaxReports, getRemergeReports, getRemergeReportsGeo, getClientReportSpendReportNames, getClientReportSpends, getPubmaticReports, getPubmaticReportsGeo, getAppsflyerCohortRevenues, getAppsflyerCohortRevenuesGeo } from "./api.js";
 
 // Create server instance
 const server = new McpServer({
   name: "feedmob-reporting",
-  version: "0.0.26",
+  version: "0.0.27",
   capabilities: {
     tools: {},
     prompts: {},
   },
 });
+
+registerClickUrlPricesTool(server);
 
 // Tool Definition for Creating Direct Spend
 server.tool(
