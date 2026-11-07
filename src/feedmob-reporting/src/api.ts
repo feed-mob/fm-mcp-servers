@@ -479,6 +479,74 @@ export async function updateDirectSpend(
   return responseData;
 }
 
+export interface ClickUrlPrice {
+  spend_date: string;
+  net_cpi: number | string;
+  gross_cpi: number | string;
+  margin: number | string;
+}
+
+export interface ClickUrlPricesResponse {
+  status: number;
+  data: unknown;
+  errors: unknown[];
+  warnings?: unknown[];
+  confirmation_required?: boolean;
+  title?: string;
+  message?: string;
+}
+
+export async function updateClickUrlPrices(
+  clickUrlId: number,
+  prices: ClickUrlPrice[],
+  confirm = false,
+  onBehalfOfUserId?: number
+): Promise<ClickUrlPricesResponse> {
+  const url = `${FEEDMOB_API_BASE}/ai/api/click_urls/${clickUrlId}/prices`;
+  const body = {
+    prices,
+    confirm,
+    ...(onBehalfOfUserId === undefined ? {} : { on_behalf_of_user_id: onBehalfOfUserId }),
+  };
+  let responseData: ClickUrlPricesResponse;
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.patch<ClickUrlPricesResponse>(url, body, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': token,
+      },
+      timeout: 30000,
+    });
+    responseData = response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<ClickUrlPricesResponse>(error)) {
+      const status = error.response?.status;
+      const data = error.response?.data;
+      // A warning response is a confirmation step, never an automatic retry.
+      if (status === 422 && data?.status === 422 && data.confirmation_required === true) {
+        return data;
+      }
+      const details = hasDirectSpendErrors(data?.errors) ? `: ${JSON.stringify(data?.errors)}` : '';
+      const reason = status === 401 ? 'Unauthorized (Invalid API Key or Token)'
+        : status === 403 ? 'Forbidden (403)'
+        : status === 400 ? 'Bad Request (400)'
+        : status === 404 ? 'Not Found (404)'
+        : status ?? error.code ?? 'Unknown error';
+      throw new Error(`FeedMob API click URL prices update failed: ${reason}${details}`);
+    }
+    throw new Error('Failed to update click URL prices');
+  }
+
+  if (hasDirectSpendErrors(responseData?.errors) || responseData?.status >= 400) {
+    throw new Error(`FeedMob API click URL prices update failed: ${JSON.stringify(responseData)}`);
+  }
+  return responseData;
+}
+
 export async function getInmobiReports(
   start_date: string,
   end_date: string,

@@ -1,6 +1,6 @@
 {
   "name": "@feedmob/feedmob-reporting",
-  "version": "0.0.26",
+  "version": "0.0.27",
   "description": "MCP Server for FeedMob Spend API",
   "main": "dist/index.js",
   "type": "module",
@@ -9,11 +9,13 @@
   },
   "scripts": {
     "build": "tsc && shx chmod +x dist/*.js",
+    "test": "npm run build && node --test dist/tools/__tests__/*.test.js",
     "prepare": "npm run build",
     "watch": "tsc --watch"
   },
   "files": [
     "dist",
+    "!dist/**/__tests__/**",
     "README.md"
   ],
   "keywords": [
