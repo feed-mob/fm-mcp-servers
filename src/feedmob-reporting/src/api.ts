@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import dotenv from "dotenv";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
+import type { CreateDirectSpendRequestParams } from "./schemas/direct-spend-request.js";
+import type { ClickUrlsQuery } from "./schemas/click-urls.js";
 
 dotenv.config(); // Load environment variables from .env file
 
@@ -979,6 +981,104 @@ export async function searchUserInfos(username: string): Promise<any> {
   }
 }
 
+export interface DirectSpendRequestOptionsResponse {
+  status: number;
+  data: {
+    create: Record<string, unknown>;
+    fields: Record<string, unknown>;
+  };
+  errors: unknown;
+  message?: string;
+}
+
+export async function getDirectSpendRequestOptions(): Promise<DirectSpendRequestOptionsResponse> {
+  let responseData: DirectSpendRequestOptionsResponse;
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.get<DirectSpendRequestOptionsResponse>(
+      `${FEEDMOB_API_BASE}/ai/api/direct_spend_requests/options`, {
+        headers: {
+          'Accept': 'application/json',
+          'FEEDMOB-KEY': FEEDMOB_KEY,
+          'FEEDMOB-TOKEN': token,
+        },
+        timeout: 30000,
+      }
+    );
+    responseData = response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<DirectSpendRequestOptionsResponse>(error)) {
+      const status = error.response?.status;
+      const data = error.response?.data;
+      const reason = status === 401 ? 'Unauthorized (Invalid API Key or Token)'
+        : status === 403 ? 'Forbidden (403)'
+        : status === 404 ? 'Not Found (404)'
+        : status ?? error.code ?? 'Unknown error';
+      const details = hasDirectSpendErrors(data?.errors) ? `: ${JSON.stringify(data?.errors)}`
+        : data?.message ? `: ${data.message}` : '';
+      throw new Error(`FeedMob API direct spend request options failed: ${reason}${details}`);
+    }
+    throw new Error('Failed to fetch direct spend request options');
+  }
+
+  if (hasDirectSpendErrors(responseData?.errors) || responseData?.status >= 400) {
+    throw new Error(`FeedMob API direct spend request options failed: ${JSON.stringify(responseData)}`);
+  }
+  return responseData;
+}
+
+export interface CreateDirectSpendRequestResponse {
+  status: number;
+  data: Record<string, unknown>;
+  errors: unknown;
+  warnings?: string[];
+  message?: string;
+}
+
+export async function createDirectSpendRequest(
+  params: CreateDirectSpendRequestParams
+): Promise<CreateDirectSpendRequestResponse> {
+  const body = Object.fromEntries(Object.entries(params).filter(([, value]) => value !== undefined));
+  let responseData: CreateDirectSpendRequestResponse;
+
+  try {
+    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
+    const response = await axios.post<CreateDirectSpendRequestResponse>(
+      `${FEEDMOB_API_BASE}/ai/api/direct_spend_requests`, body, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'FEEDMOB-KEY': FEEDMOB_KEY,
+          'FEEDMOB-TOKEN': token,
+        },
+        timeout: 30000,
+      }
+    );
+    responseData = response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<CreateDirectSpendRequestResponse>(error)) {
+      const status = error.response?.status;
+      const data = error.response?.data;
+      const reason = status === 400 ? 'Bad Request (400)'
+        : status === 401 ? 'Unauthorized (Invalid API Key or Token)'
+        : status === 403 ? 'Forbidden (403)'
+        : status === 404 ? 'Not Found (404)'
+        : status === 422 ? 'Unprocessable Entity (422)'
+        : status ?? error.code ?? 'Unknown error';
+      const details = hasDirectSpendErrors(data?.errors) ? `: ${JSON.stringify(data?.errors)}`
+        : data?.message ? `: ${data.message}` : '';
+      throw new Error(`FeedMob API direct spend request creation failed: ${reason}${details}`);
+    }
+    throw new Error('Failed to create direct spend request');
+  }
+
+  if (hasDirectSpendErrors(responseData?.errors) || responseData?.status >= 400) {
+    throw new Error(`FeedMob API direct spend request creation failed: ${JSON.stringify(responseData)}`);
+  }
+  return responseData;
+}
+
 export async function getDirectSpendRequests(
   feedmob_user_id?: number,
   client_id?: number,
@@ -1277,6 +1377,63 @@ export async function getTextnowAdjustReports(
     }
     throw new Error('Failed to fetch TextNow Adjust reports');
   }
+}
+
+export interface ClickUrlsResponse {
+  status: number;
+  data: Record<string, unknown>[];
+  meta: {
+    current_page: number;
+    per_page: number;
+    total_count: number;
+    total_pages: number;
+  };
+  errors?: unknown;
+  message?: string;
+}
+
+export async function getClickUrls(params: ClickUrlsQuery = {}): Promise<ClickUrlsResponse> {
+  const url = new URL(`${FEEDMOB_API_BASE}/ai/api/click_urls`);
+  for (const [field, value] of Object.entries(params)) {
+    if (value === undefined) continue;
+    if (Array.isArray(value)) {
+      value.forEach((id) => url.searchParams.append(`${field}[]`, String(id)));
+    } else {
+      url.searchParams.set(field, String(value));
+    }
+  }
+
+  let responseData: ClickUrlsResponse;
+  try {
+    const response = await axios.get<ClickUrlsResponse>(url.toString(), {
+      headers: {
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string),
+      },
+      timeout: 30000,
+    });
+    responseData = response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<ClickUrlsResponse>(error)) {
+      const status = error.response?.status;
+      const data = error.response?.data;
+      const reason = status === 400 ? 'Bad Request (400)'
+        : status === 401 ? 'Unauthorized (Invalid API Key or Token)'
+        : status === 403 ? 'Forbidden (403)'
+        : status === 404 ? 'Not Found (404)'
+        : status ?? error.code ?? 'Unknown error';
+      const details = hasDirectSpendErrors(data?.errors) ? `: ${JSON.stringify(data?.errors)}`
+        : data?.message ? `: ${data.message}` : '';
+      throw new Error(`FeedMob API Click URLs request failed: ${reason}${details}`);
+    }
+    throw new Error('Failed to fetch Click URLs');
+  }
+
+  if (hasDirectSpendErrors(responseData?.errors) || responseData?.status >= 400) {
+    throw new Error(`FeedMob API Click URLs request failed: ${JSON.stringify(responseData)}`);
+  }
+  return responseData;
 }
 
 export async function getClients(
@@ -2779,6 +2936,66 @@ export async function getAppsflyerInAppEventsRetargetReports(
     }
     throw new Error('Failed to fetch AppsFlyer in-app events retarget reports');
   }
+}
+
+export interface BideaseReport {
+  date: string;
+  click_url_id: number | null;
+  campaign_id: number | null;
+  campaign_name: string | null;
+  vendor_id: number | null;
+  vendor_name: string | null;
+  bidease_advertiser_id: number;
+  bidease_campaign_id: string;
+  bidease_campaign_name: string;
+  matched: boolean;
+  impressions: number;
+  clicks: number;
+  conversions: number;
+  partner_net_spend: number;
+}
+
+export async function getBideaseReports(
+  start_date: string,
+  end_date: string
+): Promise<{ status: number; data: BideaseReport[]; csv_file_path?: string }> {
+  const url = new URL(`${FEEDMOB_API_BASE}/ai/api/bidease_reports`);
+  url.searchParams.set('start_date', start_date);
+  url.searchParams.set('end_date', end_date);
+
+  let responseData: { status: number; data: BideaseReport[]; csv_file_path?: string };
+  try {
+    const response = await axios.get(url.toString(), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string),
+      },
+      timeout: 30000,
+    });
+    responseData = response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const detail = error.response?.data?.error;
+      const reason = status === 401 ? 'Unauthorized (Invalid API Key or Token)'
+        : status === 400 ? 'Bad Request (400)'
+        : status === 404 ? 'Not Found (404)'
+        : status === 502 ? 'Bad Gateway (502)'
+        : status ?? error.code ?? 'Unknown error';
+      throw new Error(`FeedMob API Bidease reports request failed: ${reason}${typeof detail === 'string' ? `: ${detail}` : ''}`);
+    }
+    throw new Error('Failed to fetch Bidease reports');
+  }
+
+  if (responseData.data.length > 0) {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    responseData.csv_file_path = saveDataToCsv(
+      responseData.data, `bidease_reports_${start_date}_to_${end_date}_${timestamp}.csv`
+    );
+  }
+  return responseData;
 }
 
 export async function getBeeswaxReports(
