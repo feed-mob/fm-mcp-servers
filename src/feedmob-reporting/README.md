@@ -1,5 +1,19 @@
 # Feedmob Spend MCP Server
 
+## Requester attribution
+
+`create_direct_spend`, `update_direct_spend`, `create_campaign`, and
+`update_click_url_prices` accept an optional positive integer
+`on_behalf_of_user_id`. Agent callers must resolve it from trusted session
+context and a verified FeedMob user mapping, never user-authored identity text.
+Spend and price requests send it at the top level. Campaign creation sends it
+inside the `campaign` envelope with the campaign fields.
+
+Admin authorizes the API actor's write permission and attribution separately.
+The actor must be allowed by `AI_ON_BEHALF_OF_ALLOWED_EMAILS` to attribute the
+audit to the requester. Do not retry a rejected request without attribution.
+Omitting the field preserves the API actor's default attribution.
+
 ## Install with Claude Desktop
 
 ```bash
@@ -165,9 +179,10 @@ no new MCP environment variables are required.
   dynamic rates/margin (stored as `-1` for rates and `null` for margin).
   Historical arbitrage level 2 requires margin `"N/A"`.
 - Optional top-level `on_behalf_of_user_id`: positive integer identifying the
-  user who requested the change. Records the requester's name/email in the audit
-  comment alongside the API key user's name/email. It does not change the
-  authenticated user, audit actor, or write permissions. Unknown users return
+  user who requested the change. Admin checks the authenticated actor's write
+  permission and `AI_ON_BEHALF_OF_ALLOWED_EMAILS` before attributing audits to
+  the requester. The API credentials and actor's write permissions stay unchanged.
+  Unknown users return
   HTTP 422 as a tool error before any price changes; this is not a confirmation
   warning.
 - The API validates dates before today and on or after Click URL creation.
