@@ -1,17 +1,11 @@
 #!/usr/bin/env node
 
-import { FastMCP } from "fastmcp";
+import { FastMCPSession, type Tool, type ToolParameters, type Resource } from "fastmcp";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { UsageRelay } from "./usage-relay.js";
+import { UsageTransport } from "./usage-transport.js";
 import { z } from "zod";
 import { subDays, format } from 'date-fns';
-
-// Create FastMCP server instance
-const server = new FastMCP({
-  name: "work-journals",
-  version: "0.0.3",
-  instructions: `
-This is an MCP server for querying and managing work journals.
-`.trim(),
-});
 
 const API_URL = process.env.API_URL;
 const API_TOKEN = process.env.API_TOKEN;
@@ -21,8 +15,13 @@ if (!API_URL || !API_TOKEN) {
   process.exit(1);
 }
 
-server.addTool({
+function defineTool<Params extends ToolParameters>(tool: Tool<undefined, Params>): Tool<undefined> {
+  return tool as unknown as Tool<undefined>;
+}
+
+const queryJournals = defineTool({
   name: "query_journals",
+  annotations: { readOnlyHint: true },
   description: "Queries work journals, supporting filtering by date range, user ID, and team ID.",
   parameters: z.object({
     scheam: z.string().describe("get from system resources time-off-api-scheam://usage"),
@@ -88,8 +87,9 @@ ${JSON.stringify(data, null, 2)}
   },
 });
 
-server.addTool({
+const createOrUpdateJournal = defineTool({
   name: "create_or_update_journal",
+  annotations: { readOnlyHint: false },
   description: "Creates or updates a work journal.",
   parameters: z.object({
     date: z.string().describe("Journal date (YYYY-MM-DD format)"),
@@ -138,7 +138,7 @@ ${JSON.stringify(data, null, 2)}
   },
 });
 
-server.addResource({
+const schemaResource: Resource<undefined> = {
   uri: "time-off-api-scheam://usage",
   name: "Time Off API Scheam, include Teams, Users Infomation",
   mimeType: "text/json",
@@ -163,8 +163,45 @@ server.addResource({
       throw new Error(`Failed to load resource from URL: ${(error as Error).message}`);
     }
   },
+};
+
+const tools = [queryJournals, createOrUpdateJournal];
+const server = new FastMCPSession({
+  name: "work-journals",
+  version: "0.0.3",
+  instructions: "This is an MCP server for querying and managing work journals.",
+  tools,
+  resources: [schemaResource],
+  resourcesTemplates: [],
+  prompts: [],
+  transportType: "stdio",
 });
 
-server.start({
-  transportType: "stdio"
-});
+let relay: UsageRelay | undefined;
+if (process.env.AI_USAGE_ENABLED === "true") {
+  try {
+    relay = new UsageRelay(API_URL, API_TOKEN);
+  } catch {
+    console.error("[work-journals usage] invalid relay configuration; capture disabled");
+  }
+}
+const stdio = new StdioServerTransport();
+const accessModes = new Map(tools.map((tool) => [
+  tool.name,
+  tool.annotations?.readOnlyHint === true ? "read" as const :
+    tool.annotations?.readOnlyHint === false ? "write" as const : "unknown" as const,
+]));
+const transport = relay ? new UsageTransport(stdio, relay, accessModes) : stdio;
+let stopping = false;
+async function shutdown(): Promise<void> {
+  if (stopping) return;
+  stopping = true;
+  await server.close();
+  await relay?.close();
+  process.exit(0);
+}
+process.stdin.once("end", () => void shutdown());
+process.once("SIGINT", () => void shutdown());
+process.once("SIGTERM", () => void shutdown());
+
+await server.connect(transport);
