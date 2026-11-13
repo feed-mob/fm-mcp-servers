@@ -149,7 +149,7 @@ First call `get_direct_spend_request_options` with `{}`. It calls
 `GET /ai/api/direct_spend_requests/options` and returns the API's current field
 types, required fields, defaults, choice labels and submitted values, custom
 source instructions, and lookup APIs. It uses the existing API credentials and
-does not require write or delegation permission. The full `create` and `fields`
+does not require write or delegation permission. The full `create`, `update` and `fields`
 metadata is returned without filtering or caching.
 
 Submit option **values**, not labels (for example, the status label
@@ -161,7 +161,19 @@ autofill; explicitly supply suggested values such as `Integrated Vendor API`
 when appropriate.
 
 Use `create_direct_spend_request` to call `POST /ai/api/direct_spend_requests`
-with top-level admin-form fields. `client_id` is required; other fields are optional.
+with top-level admin-form fields. Required fields are `client_id` and seven
+nonblank strings: `margin_source`, `margin_type`, `gross_spend_source`,
+`margin_formula`, `gross_spend_formula`, `net_spend_formula`, `net_spend_source`.
+`margin_type` accepts `dynamic` or `fixed`; `margin_source` accepts `click url`,
+`formula`, or `other`. Formula fields use short admin-style phrases or expressions,
+such as `Calculated from net and margin`, `Spend from vendor API`, `from click url`
+or `=net spend / (1-margin)`. Source fields use existing option values or short
+custom names, such as `Integrated Vendor API`, `Partner dashboard` or `Client Report`.
+Choose wording that matches the actual calculation and source. Omit narrative,
+repeated Click URL IDs and current rate snapshots from these fields. Keep `notes`
+to necessary additional business context, or omit it. Missing,
+empty, whitespace-only and non-string values are rejected before calling the API.
+These required fields have no defaults. Other fields are optional.
 The API defaults `status` to `initialized` and normalizes
 `initialized(waiting approve)` to `initialized`.
 
@@ -174,7 +186,11 @@ The API defaults `status` to `initialized` and normalizes
   "vendor_paid_actions": [8],
   "margin_type": "fixed",
   "margin_source": "formula",
-  "notes": "Create spend automation for this Click URL",
+  "gross_spend_source": "calculated based on margin and net spend",
+  "margin_formula": "1 - net / gross",
+  "gross_spend_formula": "Calculated from net and margin",
+  "net_spend_formula": "Spend from vendor API",
+  "net_spend_source": "Integrated Vendor API",
   "schedule": "0 1 * * *",
   "automation_start_date": "2026-11-12"
 }
@@ -189,16 +205,15 @@ Supported optional fields:
   100 all_event_a, 101 first_event_a, 102 all_event_b, 103 first_event_b,
   104 vendor_managed. ID arrays and paid action arrays accept numeric strings;
   scalar values and blank array entries are rejected by the tool.
-- Calculations: `gross_spend_formula`, `net_spend_formula`, `margin_formula`,
-  `margin_type` (`dynamic` or `fixed`), `gross_spend_source`, `net_spend_source`,
-  `margin_source` (`click url`, `formula`, or `other`), `arbitrage_level_switch`.
+- Calculations: `arbitrage_level_switch`.
 - Workflow: `github_ticket`, `hubspot_ticket`, `notes`, `schedule`,
   `automation_start_date` (`YYYY-MM-DD`), `job`, `having_client_report`.
 - Assignees: `marketing_rep`, `pm`, `pa`, `dev` (email strings, as in the admin form).
 - Status: `initialized`, `initialized(waiting approve)`, `pm_manual`, `pa_manual`,
   `in_progress`, `auto_upload`, `pause`, `void`.
-- Attribution: `on_behalf_of_user_id`, recorded in the audit comment. The API key
-  owner remains the creator and audit actor.
+- Attribution: `on_behalf_of_user_id`, a verified active, approved FeedMob user's
+  ID for business permissions, creator and audit attribution. The audit comment
+  also records the API key user. Omit to use the API key user.
 
 Uses the existing `FEEDMOB_KEY`, `FEEDMOB_SECRET`, and `FEEDMOB_API_BASE` environment
 variables. The API key owner must be allowlisted in
@@ -213,6 +228,44 @@ mean the request was saved successfully: inspect them without retrying creation.
 Invalid or duplicate requests (400), authentication failures (401), permission
 failures (403), and unknown requesting users (422) return tool errors with API
 details. No automatic creation retry is performed.
+
+## Update a direct spend request
+
+Use `update_direct_spend_request` to call
+`PATCH /ai/api/direct_spend_requests/:id`. Call `get_direct_spend_request_options`
+first for current field values. Supply the request `id` and at least one field to
+change at the top level, using the same field names as creation:
+
+```json
+{
+  "id": 5284,
+  "gross_spend_formula": "Calculated from net and margin",
+  "net_spend_formula": "Spend from vendor API",
+  "net_spend_source": "Integrated Vendor API",
+  "on_behalf_of_user_id": 123
+}
+```
+
+All writable fields are optional on update. Omitted fields, including `status`,
+are preserved; creation defaults do not apply. Supplied arrays replace existing
+values, and `[]` clears them. False booleans and empty optional text such as
+`notes: ""` are forwarded. Keep formulas, sources and notes concise as above.
+
+The seven mandatory calculation/source fields cannot be cleared. The API checks
+the final record, so legacy requests with missing required fields must have those
+fields completed in the same update. Existing model status restrictions and
+duplicate Click URL checks apply; the tool does not bypass them.
+
+Uses the same credentials and server-side write permission as creation. Optional
+`on_behalf_of_user_id` requires actor delegation permission and uses the verified
+requester for business permissions and update audit attribution. The original
+creator is preserved. Neither `id` alone nor `id` with only delegation metadata
+is a valid update. Protected creator/audit metadata is not forwarded.
+
+HTTP 200 returns the updated request. Validation failures (400), authentication
+or permission failures (401/403), missing or deleted requests (404), and invalid
+requesters (422) return tool errors with API details. Updates are not retried
+automatically. No new environment variables are required.
 
 ## Create a direct spend
 
@@ -289,10 +342,11 @@ Omitted fields are preserved. Optional update fields:
 Gross spend cannot change in an invoiced month. API validation, duplicate,
 not-found, and permission errors are returned as tool errors with the API details.
 
-## Update historical Click URL prices
+## Update past or today's Click URL prices
 
 Use `update_click_url_prices` to call
 `PATCH /ai/api/click_urls/:click_url_id/prices`. Version `0.0.27` adds this tool.
+Version `0.0.29` supports today's prices and displays the notice about future rates.
 The API key owner's email must be in `AI_DIRECT_SPEND_CREATE_ALLOWED_EMAILS`
 on the API server, the same write permission as direct spend creation/updates.
 Use the existing `FEEDMOB_KEY`, `FEEDMOB_SECRET`, and `FEEDMOB_API_BASE` configuration;
@@ -314,7 +368,7 @@ no new MCP environment variables are required.
 - Rates accept finite nonnegative numbers or numeric strings. Margin accepts
   finite numbers or numeric strings, including negatives. `"N/A"` represents
   dynamic rates/margin (stored as `-1` for rates and `null` for margin).
-  Historical arbitrage level 2 requires margin `"N/A"`.
+  Historical arbitrage level 2 and today's arbitrage prices require margin `"N/A"`.
 - Optional top-level `on_behalf_of_user_id`: positive integer identifying the
   user who requested the change. Admin checks the authenticated actor's write
   permission and `AI_ON_BEHALF_OF_ALLOWED_EMAILS` before attributing audits to
@@ -322,11 +376,16 @@ no new MCP environment variables are required.
   Unknown users return
   HTTP 422 as a tool error before any price changes; this is not a confirmation
   warning.
-- The API validates dates before today and on or after Click URL creation.
+- The API validates dates on or before today and on or after Click URL creation.
   Invoiced months cannot be changed, even with `confirm: true`.
-- The entire batch is transactional. Historical paid actions, cap action,
-  direct spend input, and other historical fields are preserved. Current Click URL
-  rates and Direct Spend amounts are unchanged.
+- Before submitting today's prices, inform the user that the supplied NET rate,
+  GROSS rate, and MARGIN apply to today and all future dates until the next rate
+  change. Today's prices update the live Click URL rates while preserving its
+  current paid actions, cap action, and direct spend input. This notice does not
+  add a separate confirmation requirement.
+- The entire batch is transactional. Past dates preserve historical paid actions,
+  cap action, direct spend input, and other historical fields without updating
+  live Click URL rates. Direct Spend amounts are unchanged.
 
 Calculation or margin-type warnings return HTTP 422 with
 `confirmation_required: true`. The tool returns this as a tool error with the
@@ -337,8 +396,11 @@ resend the same prices and `on_behalf_of_user_id` (if supplied) with
 or edit the values to resolve the warnings. The tool never automatically retries.
 Confirmation accepts warnings only and cannot bypass other validation.
 
-Success returns normalized stored prices and any accepted warnings. Validation,
-authentication, permission, and save failures return tool errors with API details.
+Success returns normalized stored prices and any accepted warnings. Batches
+including today also return the API's `TODAY_RATE_NOTICE` in `message`, which the
+tool displays in its success text and preserves in the full response. Past-only
+batches omit this notice. Validation, authentication, permission, and save failures
+return tool errors with API details.
 
 Run `npm test` for mocked HTTP and MCP tool integration tests; no live API writes
 are performed by the tests.

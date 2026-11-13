@@ -13,7 +13,16 @@ Object.assign(process.env, {
 });
 const { registerDirectSpendRequestsTool } = await import("../direct-spend-requests.js");
 
-const args = { client_id: 12, vendor_ids: [34], click_url_ids: [56] };
+const requiredFields = {
+  margin_source: "click url",
+  margin_type: "fixed",
+  gross_spend_source: "Calculated from net",
+  margin_formula: "click url",
+  gross_spend_formula: "net / (1 - margin / 100)",
+  net_spend_formula: "vendor reported spend",
+  net_spend_source: "Vendor API",
+};
+const args = { client_id: 12, vendor_ids: [34], click_url_ids: [56], ...requiredFields };
 const success = {
   status: 201,
   data: { id: 78, ...args, client_name: "Test Client", vendor_names: ["Test Vendor"], status: "initialized", created_by_user_id: 90 },
@@ -28,8 +37,13 @@ const options = {
       payload_key: "direct_spend_request", accepts_top_level_fields: true,
       description: "Submit option values, not labels. Admin page JavaScript autofill is not applied by this API.",
     },
+    update: {
+      method: "PATCH", path: "/ai/api/direct_spend_requests/:id",
+      description: "Omitted fields are preserved; final record must have all required fields.",
+    },
     fields: {
       client_id: { type: "integer", required: true, lookup: { method: "GET", path: "/ai/api/clients", value_field: "id" } },
+      ...Object.fromEntries(Object.keys(requiredFields).map((field) => [field, { type: "string", required: true }])),
       client_paid_actions: {
         type: "array", items: { type: "integer" }, required: false, default: [],
         options: [{ label: "multiple", value: 0 }, { label: "first_install", value: 1 }],
@@ -40,7 +54,7 @@ const options = {
         options: [{ label: "initialized(waiting approve)", value: "initialized" }],
       },
       net_spend_source: {
-        type: "string", required: false, allow_custom: true, integrated_vendor_ids: [34],
+        type: "string", required: true, allow_custom: true, integrated_vendor_ids: [34],
         options: [{ label: "Integrated Vendor API", value: "Integrated Vendor API" }],
         custom_value_instructions: "Submit the actual source string, not custom option.",
       },
@@ -102,6 +116,10 @@ describe("direct spend request tools", () => {
 
   function callOptions() {
     return client.callTool({ name: "get_direct_spend_request_options", arguments: {} });
+  }
+
+  function callUpdate(arguments_: Record<string, unknown> = { id: 78, notes: "Updated" }) {
+    return client.callTool({ name: "update_direct_spend_request", arguments: arguments_ });
   }
 
   test("exposes parameter discovery without arguments and directs creation to use it first", async () => {
@@ -198,15 +216,54 @@ describe("direct spend request tools", () => {
     assert.equal(requests[0].method, "get");
   });
 
-  test("exposes creation with only client_id required and leaves defaults to the API", async () => {
+  test("exposes all required creation fields without defaults and leaves optional defaults to the API", async () => {
     const { tools } = await client.listTools();
     const tool = tools.find(({ name }) => name === "create_direct_spend_request");
     assert.ok(tool);
-    assert.deepEqual(tool.inputSchema.required, ["client_id"]);
-    const result = await callTool({ client_id: 12 });
+    const required = tool.inputSchema.required;
+    assert.ok(Array.isArray(required));
+    assert.deepEqual([...required].sort(), ["client_id", ...Object.keys(requiredFields)].sort());
+    const properties = tool.inputSchema.properties as Record<string, { default?: unknown; minLength?: number; pattern?: string }>;
+    for (const field of Object.keys(requiredFields)) {
+      assert.equal(Object.hasOwn(properties[field], "default"), false);
+      assert.ok(tool.description?.includes(field));
+    }
+    for (const field of ["gross_spend_formula", "net_spend_formula", "margin_formula", "gross_spend_source", "net_spend_source"]) {
+      assert.equal(properties[field].minLength, 1);
+      assert.equal(properties[field].pattern, "\\S");
+    }
+    const payload = { client_id: 12, ...requiredFields };
+    const result = await callTool(payload);
     assert.equal(result.isError, undefined);
-    assert.deepEqual(JSON.parse(requests[0].data), { client_id: 12 });
+    assert.deepEqual(JSON.parse(requests[0].data), payload);
     assert.ok(responseText(result).includes(JSON.stringify(success, null, 2)));
+  });
+
+  for (const field of Object.keys(requiredFields)) {
+    test(`rejects missing, blank or malformed ${field} before HTTP`, async () => {
+      const missing: Record<string, unknown> = { ...args };
+      delete missing[field];
+      await assert.rejects(callTool(missing), /Invalid arguments/);
+      for (const value of [null, "", "  ", "\t\n", false, 123, ["fixed"], { value: "fixed" }]) {
+        await assert.rejects(callTool({ ...args, [field]: value }), /Invalid arguments/);
+      }
+      assert.equal(requests.length, 0);
+    });
+  }
+
+  test("preserves nonblank formulas and custom sources exactly as supplied", async () => {
+    const payload = {
+      ...args,
+      gross_spend_formula: "  net / (1 - margin / 100)  ",
+      net_spend_formula: "\tvendor reported spend\n",
+      margin_formula: "  click url  ",
+      gross_spend_source: "  Custom client API  ",
+      net_spend_source: "  Custom vendor API  ",
+    };
+    const result = await callTool(payload);
+    assert.equal(result.isError, undefined);
+    assert.equal(requests.length, 1);
+    assert.deepEqual(JSON.parse(requests[0].data), payload);
   });
 
   test("sends authenticated POST with all admin-form fields and optional requester", async () => {
@@ -317,6 +374,166 @@ describe("direct spend request tools", () => {
   test("reports network failures without exposing credentials or retrying creation", async () => {
     networkFailure = true;
     const result = await callTool();
+    assert.equal(result.isError, true);
+    assert.match(responseText(result), /ECONNABORTED/);
+    assert.doesNotMatch(responseText(result), /test-key|test-secret|FEEDMOB-TOKEN/);
+    assert.equal(requests.length, 1);
+  });
+
+  test("exposes updates with only id required and no creation defaults", async () => {
+    const { tools } = await client.listTools();
+    const tool = tools.find(({ name }) => name === "update_direct_spend_request");
+    assert.ok(tool);
+    assert.deepEqual(tool.inputSchema.required, ["id"]);
+    const properties = tool.inputSchema.properties as Record<string, Record<string, unknown>>;
+    assert.deepEqual(Object.keys(properties).sort(), ["id", ...Object.keys(tools.find(({ name }) => name === "create_direct_spend_request")!.inputSchema.properties ?? {})].sort());
+    assert.ok(Object.values(properties).every((property) => !Object.hasOwn(property, "default")));
+    assert.match(String(properties.status.description), /omitted status is preserved/);
+    assert.match(tool.description ?? "", /final record must have nonblank/);
+    assert.match(tool.description ?? "", /on_behalf_of_user_id/);
+    assert.equal(requests.length, 0);
+  });
+
+  test("sends an authenticated partial PATCH without adding omitted fields or status", async () => {
+    status = 200;
+    body = { status: 200, data: { ...success.data, notes: "Updated", status: "in_progress" }, errors: [] };
+    const result = await callUpdate();
+    assert.equal(result.isError, undefined);
+    assert.match(responseText(result), /updated successfully/);
+    assert.ok(responseText(result).includes(JSON.stringify(body, null, 2)));
+    assert.equal(requests.length, 1);
+    const request = requests[0];
+    assert.equal(request.method, "patch");
+    assert.equal(request.url, "https://feedmob.test/ai/api/direct_spend_requests/78");
+    assert.deepEqual(JSON.parse(request.data), { notes: "Updated" });
+    assert.equal(request.timeout, 30000);
+    assert.equal(request.headers.get("Content-Type"), "application/json");
+    assert.equal(request.headers.get("Accept"), "application/json");
+    assert.equal(request.headers.get("FEEDMOB-KEY"), "test-key");
+    const token = jwt.verify(String(request.headers.get("FEEDMOB-TOKEN")), "test-secret");
+    assert.equal(typeof token === "object" && token.key, "test-key");
+  });
+
+  test("forwards delegated updates, replacement arrays, empty strings and false values without adding id to the body", async () => {
+    status = 200;
+    body = { status: 200, data: success.data, errors: [] };
+    const fields = {
+      ...args, vendor_ids: [34, "35"], click_url_ids: [], client_paid_actions: [],
+      vendor_paid_actions: ["1", 104], on_behalf_of_user_id: 123,
+      arbitrage_level_switch: false, having_client_report: false, notes: "",
+      status: "initialized(waiting approve)",
+    };
+    const result = await callUpdate({ id: 78, ...fields });
+    assert.equal(result.isError, undefined);
+    assert.equal(requests.length, 1);
+    assert.deepEqual(JSON.parse(requests[0].data), fields);
+  });
+
+  test("accepts each array clear and false boolean as the only changed field", async () => {
+    status = 200;
+    body = { status: 200, data: success.data, errors: [] };
+    for (const fields of [
+      { vendor_ids: [] }, { click_url_ids: [] }, { client_paid_actions: [] },
+      { vendor_paid_actions: [] }, { having_client_report: false }, { arbitrage_level_switch: false },
+    ]) {
+      const result = await callUpdate({ id: 78, ...fields });
+      assert.equal(result.isError, undefined);
+      assert.deepEqual(JSON.parse(requests.at(-1)!.data), fields);
+    }
+  });
+
+  test("rejects empty updates and updates containing only delegation or protected metadata before HTTP", async () => {
+    for (const fields of [
+      {}, { on_behalf_of_user_id: 123 }, { created_by_user_id: 999 }, { user_id: 999 },
+      { audit_comment: "spoofed" }, { deleted_at: "2026-11-16" }, { unknown_field: "test" },
+    ]) {
+      const result = await callUpdate({ id: 78, ...fields });
+      assert.equal(result.isError, true);
+      assert.match(responseText(result), /At least one writable field is required/);
+    }
+    assert.equal(requests.length, 0);
+  });
+
+  test("does not forward protected metadata with valid update fields", async () => {
+    status = 200;
+    body = { status: 200, data: success.data, errors: [] };
+    await callUpdate({ id: 78, notes: "Updated", user_id: 999, created_by_user_id: 999,
+      audit_comment: "spoofed", deleted_at: "2026-11-16" });
+    assert.deepEqual(JSON.parse(requests[0].data), { notes: "Updated" });
+  });
+
+  for (const field of Object.keys(requiredFields)) {
+    test(`rejects clearing or malformed ${field} on update before HTTP`, async () => {
+      for (const value of [null, "", "  ", "\t\n", false, 123, ["fixed"], { value: "fixed" }]) {
+        await assert.rejects(callUpdate({ id: 78, [field]: value }), /Invalid arguments/);
+      }
+      assert.equal(requests.length, 0);
+    });
+  }
+
+  test("rejects malformed update IDs, arrays, options and dates before HTTP", async () => {
+    for (const fields of [
+      { id: undefined }, { id: 0 }, { id: -1 }, { id: 1.5 }, { id: "78" },
+      { client_id: 0 }, { on_behalf_of_user_id: -1 }, { on_behalf_of_user_id: "123" },
+      { vendor_ids: "34" }, { click_url_ids: [0] }, { client_paid_actions: [999] },
+      { vendor_paid_actions: ["-1"] }, { status: "invalid" }, { margin_type: "invalid" },
+      { margin_source: "invalid" }, { automation_start_date: "2026-02-30" },
+      { having_client_report: "false" }, { arbitrage_level_switch: "0" },
+    ]) {
+      await assert.rejects(callUpdate({ id: 78, notes: "Updated", ...fields }), /Invalid arguments/);
+    }
+    assert.equal(requests.length, 0);
+  });
+
+  for (const [code, errors, pattern] of [
+    [400, ["net_spend_formula is required"], /Bad Request \(400\)/],
+    [400, ["You can only change the following fields"], /Bad Request \(400\)/],
+    [400, ["Spend Automation Request already existed!"], /Bad Request \(400\)/],
+    [401, ["Invalid token"], /Unauthorized/],
+    [403, ["You are not allowed to use on_behalf_of_user_id."], /Forbidden \(403\)/],
+    [404, ["Spend Automation Request not found"], /Not Found \(404\)/],
+    [422, ["Invalid on_behalf_of_user_id: user must be active and approved"], /Unprocessable Entity \(422\)/],
+    [500, ["Internal server error"], /500/],
+  ] as const) {
+    test(`returns update HTTP ${code} without retrying: ${JSON.stringify(errors)}`, async () => {
+      status = code;
+      body = { status: code, data: {}, errors };
+      const result = await callUpdate({ id: 78, notes: "Updated", on_behalf_of_user_id: 123 });
+      assert.equal(result.isError, true);
+      assert.match(responseText(result), pattern);
+      assert.ok(responseText(result).includes(JSON.stringify(errors)));
+      assert.doesNotMatch(responseText(result), /updated successfully/);
+      assert.equal(requests.length, 1);
+      assert.equal(requests[0].method, "patch");
+    });
+  }
+
+  test("preserves the update API message when HTTP errors have no errors field", async () => {
+    status = 422;
+    body = { status: 422, message: "Invalid on_behalf_of_user_id" };
+    const result = await callUpdate();
+    assert.equal(result.isError, true);
+    assert.match(responseText(result), /Invalid on_behalf_of_user_id/);
+    assert.equal(requests.length, 1);
+  });
+
+  test("treats update application errors in HTTP success responses as tool errors", async () => {
+    status = 200;
+    for (const payload of [
+      { status: 400, data: {}, errors: [] },
+      { status: 200, data: {}, errors: { net_spend_formula: ["is required"] } },
+    ]) {
+      body = payload;
+      const result = await callUpdate();
+      assert.equal(result.isError, true);
+      assert.ok(responseText(result).includes(JSON.stringify(payload)));
+    }
+    assert.equal(requests.length, 2);
+  });
+
+  test("reports update network failures without exposing credentials or retrying", async () => {
+    networkFailure = true;
+    const result = await callUpdate();
     assert.equal(result.isError, true);
     assert.match(responseText(result), /ECONNABORTED/);
     assert.doesNotMatch(responseText(result), /test-key|test-secret|FEEDMOB-TOKEN/);
