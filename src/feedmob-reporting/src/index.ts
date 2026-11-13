@@ -40,6 +40,7 @@ server.tool(
     partner_paid_action_count: z.union([z.number().finite().int().nonnegative(), z.string().trim().regex(/^[+]?\d+$/).refine((value) => Number.isFinite(Number(value)), "Count must be finite")]).optional().describe("Partner paid actions: integer >= 0; integer strings accepted; blanks and decimals rejected"),
     creative: z.string().optional().describe("Creative; blank values are ignored by the API"),
     audit_comment: z.string().optional().describe("Appended to the creation audit source description"),
+    on_behalf_of_user_id: z.number().int().positive().optional().describe("Optional FeedMob user ID of the person requesting this change, used for audit attribution. Resolve from trusted session identity and a verified FeedMob user mapping. The authenticated API actor must have write permission and authorization to attribute changes to the requester. Omitting this field uses the API actor's default attribution. Preserve the requester ID on retries."),
   },
   async (params) => {
     try {
@@ -79,6 +80,7 @@ server.tool(
     partner_paid_action_count: z.union([z.number().int().nonnegative(), z.string().trim().regex(/^[+]?\d+$/)]).optional().describe("Partner paid actions: integer >= 0; integer strings accepted"),
     creative: z.string().optional().describe("Creative; blank values are ignored by the API"),
     audit_comment: z.string().optional().describe("Appended to the update audit source description when fields change"),
+    on_behalf_of_user_id: z.number().int().positive().optional().describe("Optional FeedMob user ID of the person requesting this change, used for audit attribution. Resolve from trusted session identity and a verified FeedMob user mapping. The authenticated API actor must have write permission and authorization to attribute changes to the requester. Omitting this field uses the API actor's default attribution. Preserve the requester ID on retries."),
   },
   async (params) => {
     try {
@@ -1097,6 +1099,7 @@ server.tool(
     os: z.string().describe("Operating system: 'Android', 'iOS', or 'Universal'"),
     client_id: z.number().describe("Client ID"),
     client_uuid: z.string().describe("Client UUID"),
+    on_behalf_of_user_id: z.number().int().positive().optional().describe("Optional FeedMob user ID of the person requesting this change, used for audit attribution. Resolve from trusted session identity and a verified FeedMob user mapping. The authenticated API actor must have write permission and authorization to attribute changes to the requester. Omitting this field uses the API actor's default attribution. Preserve the requester ID on retries."),
   },
   async (params) => {
     try {
@@ -1105,7 +1108,8 @@ server.tool(
         params.app_info_id,
         params.os,
         params.client_id,
-        params.client_uuid
+        params.client_uuid,
+        params.on_behalf_of_user_id
       );
       const formattedData = JSON.stringify(data, null, 2);
       return {
