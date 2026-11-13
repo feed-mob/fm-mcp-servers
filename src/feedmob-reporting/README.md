@@ -275,10 +275,11 @@ Omitted fields are preserved. Optional update fields:
 Gross spend cannot change in an invoiced month. API validation, duplicate,
 not-found, and permission errors are returned as tool errors with the API details.
 
-## Update historical Click URL prices
+## Update past or today's Click URL prices
 
 Use `update_click_url_prices` to call
 `PATCH /ai/api/click_urls/:click_url_id/prices`. Version `0.0.27` adds this tool.
+Version `0.0.29` supports today's prices and displays the notice about future rates.
 The API key owner's email must be in `AI_DIRECT_SPEND_CREATE_ALLOWED_EMAILS`
 on the API server, the same write permission as direct spend creation/updates.
 Use the existing `FEEDMOB_KEY`, `FEEDMOB_SECRET`, and `FEEDMOB_API_BASE` configuration;
@@ -300,18 +301,23 @@ no new MCP environment variables are required.
 - Rates accept finite nonnegative numbers or numeric strings. Margin accepts
   finite numbers or numeric strings, including negatives. `"N/A"` represents
   dynamic rates/margin (stored as `-1` for rates and `null` for margin).
-  Historical arbitrage level 2 requires margin `"N/A"`.
+  Historical arbitrage level 2 and today's arbitrage prices require margin `"N/A"`.
 - Optional top-level `on_behalf_of_user_id`: positive integer identifying the
   user who requested the change. Records the requester's name/email in the audit
   comment alongside the API key user's name/email. It does not change the
   authenticated user, audit actor, or write permissions. Unknown users return
   HTTP 422 as a tool error before any price changes; this is not a confirmation
   warning.
-- The API validates dates before today and on or after Click URL creation.
+- The API validates dates on or before today and on or after Click URL creation.
   Invoiced months cannot be changed, even with `confirm: true`.
-- The entire batch is transactional. Historical paid actions, cap action,
-  direct spend input, and other historical fields are preserved. Current Click URL
-  rates and Direct Spend amounts are unchanged.
+- Before submitting today's prices, inform the user that the supplied NET rate,
+  GROSS rate, and MARGIN apply to today and all future dates until the next rate
+  change. Today's prices update the live Click URL rates while preserving its
+  current paid actions, cap action, and direct spend input. This notice does not
+  add a separate confirmation requirement.
+- The entire batch is transactional. Past dates preserve historical paid actions,
+  cap action, direct spend input, and other historical fields without updating
+  live Click URL rates. Direct Spend amounts are unchanged.
 
 Calculation or margin-type warnings return HTTP 422 with
 `confirmation_required: true`. The tool returns this as a tool error with the
@@ -322,8 +328,11 @@ resend the same prices and `on_behalf_of_user_id` (if supplied) with
 or edit the values to resolve the warnings. The tool never automatically retries.
 Confirmation accepts warnings only and cannot bypass other validation.
 
-Success returns normalized stored prices and any accepted warnings. Validation,
-authentication, permission, and save failures return tool errors with API details.
+Success returns normalized stored prices and any accepted warnings. Batches
+including today also return the API's `TODAY_RATE_NOTICE` in `message`, which the
+tool displays in its success text and preserves in the full response. Past-only
+batches omit this notice. Validation, authentication, permission, and save failures
+return tool errors with API details.
 
 Run `npm test` for mocked HTTP and MCP tool integration tests; no live API writes
 are performed by the tests.

@@ -12,7 +12,7 @@ import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, get
 // Create server instance
 const server = new McpServer({
   name: "feedmob-reporting",
-  version: "0.0.28",
+  version: "0.0.29",
   capabilities: {
     tools: {},
     prompts: {},

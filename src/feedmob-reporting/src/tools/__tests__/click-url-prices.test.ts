@@ -15,6 +15,7 @@ Object.assign(process.env, testEnv);
 const { registerClickUrlPricesTool } = await import("../click-url-prices.js");
 
 const row = { spend_date: "2026-11-05", net_cpi: "15", gross_cpi: "25", margin: "40" };
+const todayRateNotice = "Updating today's NET rate, GROSS rate, and MARGIN changes the Click URL's rates for today and all future dates until the next rate change.";
 const success = {
   status: 200,
   data: [{ ...row, click_url_id: 123 }],
@@ -80,6 +81,7 @@ describe("update_click_url_prices", () => {
     const result = await callTool({ click_url_id: 123, prices });
     assert.equal(result.isError, undefined);
     assert.match(responseText(result), /updated successfully/);
+    assert.ok(!responseText(result).includes(todayRateNotice));
     assert.ok(responseText(result).includes(JSON.stringify(success, null, 2)));
     assert.equal(requests.length, 1);
     const request = requests[0];
@@ -88,6 +90,31 @@ describe("update_click_url_prices", () => {
     assert.deepEqual(JSON.parse(request.data), { prices, confirm: false });
     assert.equal(request.headers.get("FEEDMOB-KEY"), testEnv.FEEDMOB_KEY);
     assert.ok(request.headers.get("FEEDMOB-TOKEN"));
+  });
+
+  test("advertises today's date and its future rate effect before submission", async () => {
+    const { tools } = await client.listTools();
+    const tool = tools.find((tool) => tool.name === "update_click_url_prices");
+    assert.ok(tool);
+    assert.match(tool.description!, /Before submitting today's prices, inform the user:/);
+    assert.ok(tool.description!.includes(todayRateNotice));
+    const prices = tool.inputSchema.properties!.prices as {
+      items: { properties: { spend_date: { description: string } } };
+    };
+    assert.match(prices.items.properties.spend_date.description, /on or before today/);
+    assert.ok(prices.items.properties.spend_date.description.includes(todayRateNotice));
+  });
+
+  test("submits a mixed past/today batch and displays the API notice without requiring confirmation", async () => {
+    const today = { ...row, spend_date: new Date().toISOString().slice(0, 10) };
+    const prices = [row, today];
+    body = { ...success, data: prices.map((price) => ({ ...price, click_url_id: 123 })), message: todayRateNotice };
+    const result = await callTool({ click_url_id: 123, prices });
+    assert.equal(result.isError, undefined);
+    assert.equal(responseText(result).split("\n")[0], `Click URL prices updated successfully. ${todayRateNotice}`);
+    assert.ok(responseText(result).includes(JSON.stringify(body, null, 2)));
+    assert.equal(requests.length, 1);
+    assert.deepEqual(JSON.parse(requests[0].data), { prices, confirm: false });
   });
 
   test("returns all 422 warning details without saving, retrying, or confirming", async () => {
