@@ -34,7 +34,7 @@ export function registerClickUrlPricesTool(server: McpServer): void {
         });
       }).describe("Nonempty batch of daily prices; each date must be unique and all three price fields are required"),
       confirm: z.boolean().optional().describe("Defaults to false. Set true only after explicit acceptance of returned calculation or margin-type warnings; does not bypass other validation"),
-      on_behalf_of_user_id: z.number().int().positive().optional().describe("Optional verified requester user ID for audit attribution. The authenticated API actor retains its write permissions; Admin authorizes attribution separately"),
+      on_behalf_of_user_id: z.number().int().positive().optional().describe("Optional requesting user's ID, recorded in the audit comment. Does not change the authenticated user, audit actor, or write permissions; unknown users return HTTP 422"),
     },
     async ({ click_url_id, prices, confirm, on_behalf_of_user_id }) => {
       try {
