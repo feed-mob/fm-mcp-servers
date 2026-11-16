@@ -377,6 +377,7 @@ export async function createDirectSpend(
     partner_paid_action_count?: number | string;
     creative?: string;
     audit_comment?: string;
+    on_behalf_of_user_id?: number;
   }
 ): Promise<any> {
   const body = Object.fromEntries(Object.entries(params)
@@ -438,6 +439,7 @@ export async function updateDirectSpend(
     partner_paid_action_count?: number | string;
     creative?: string;
     audit_comment?: string;
+    on_behalf_of_user_id?: number;
   }
 ): Promise<any> {
   const body = Object.fromEntries(Object.entries({
@@ -1849,18 +1851,22 @@ export async function createCampaign(
   app_info_id: number,
   os: string,
   client_id: number,
-  client_uuid: string
+  client_uuid: string,
+  on_behalf_of_user_id?: number
 ): Promise<any> {
   const url = `${FEEDMOB_API_BASE}/ai/api/campaigns`;
 
   try {
     const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.post(url, {
-      name: campaign_name,
-      app_info_id,
-      os,
-      client_id,
-      client_uuid
+      campaign: {
+        name: campaign_name,
+        app_info_id,
+        os,
+        client_id,
+        client_uuid,
+        ...(on_behalf_of_user_id === undefined ? {} : { on_behalf_of_user_id }),
+      }
     }, {
       headers: {
         'Content-Type': 'application/json',
