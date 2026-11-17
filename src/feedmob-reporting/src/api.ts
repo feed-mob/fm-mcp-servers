@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import dotenv from "dotenv";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
-import type { CreateDirectSpendRequestParams } from "./schemas/direct-spend-request.js";
+import type { CreateDirectSpendRequestParams, UpdateDirectSpendRequestParams } from "./schemas/direct-spend-request.js";
 import type { ClickUrlsQuery } from "./schemas/click-urls.js";
 
 dotenv.config(); // Load environment variables from .env file
@@ -987,6 +987,7 @@ export interface DirectSpendRequestOptionsResponse {
   status: number;
   data: {
     create: Record<string, unknown>;
+    update?: Record<string, unknown>;
     fields: Record<string, unknown>;
   };
   errors: unknown;
@@ -1030,7 +1031,7 @@ export async function getDirectSpendRequestOptions(): Promise<DirectSpendRequest
   return responseData;
 }
 
-export interface CreateDirectSpendRequestResponse {
+interface DirectSpendRequestWriteResponse {
   status: number;
   data: Record<string, unknown>;
   errors: unknown;
@@ -1038,16 +1039,39 @@ export interface CreateDirectSpendRequestResponse {
   message?: string;
 }
 
+export type CreateDirectSpendRequestResponse = DirectSpendRequestWriteResponse;
+export type UpdateDirectSpendRequestResponse = DirectSpendRequestWriteResponse;
+
 export async function createDirectSpendRequest(
   params: CreateDirectSpendRequestParams
 ): Promise<CreateDirectSpendRequestResponse> {
+  return writeDirectSpendRequest("post", "/ai/api/direct_spend_requests", params);
+}
+
+export async function updateDirectSpendRequest(
+  params: UpdateDirectSpendRequestParams
+): Promise<UpdateDirectSpendRequestResponse> {
+  const { id, on_behalf_of_user_id, ...fields } = params;
+  if (!Object.values(fields).some((value) => value !== undefined)) {
+    throw new Error("At least one writable field is required");
+  }
+  return writeDirectSpendRequest("patch", `/ai/api/direct_spend_requests/${id}`, {
+    ...fields, on_behalf_of_user_id,
+  });
+}
+
+async function writeDirectSpendRequest(
+  method: "post" | "patch", path: string, params: Record<string, unknown>
+): Promise<DirectSpendRequestWriteResponse> {
+  const operation = method === "post" ? "creation" : "update";
+  const verb = method === "post" ? "create" : "update";
   const body = Object.fromEntries(Object.entries(params).filter(([, value]) => value !== undefined));
-  let responseData: CreateDirectSpendRequestResponse;
+  let responseData: DirectSpendRequestWriteResponse;
 
   try {
     const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
-    const response = await axios.post<CreateDirectSpendRequestResponse>(
-      `${FEEDMOB_API_BASE}/ai/api/direct_spend_requests`, body, {
+    const response = await axios[method]<DirectSpendRequestWriteResponse>(
+      `${FEEDMOB_API_BASE}${path}`, body, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -1059,7 +1083,7 @@ export async function createDirectSpendRequest(
     );
     responseData = response.data;
   } catch (error: unknown) {
-    if (axios.isAxiosError<CreateDirectSpendRequestResponse>(error)) {
+    if (axios.isAxiosError<DirectSpendRequestWriteResponse>(error)) {
       const status = error.response?.status;
       const data = error.response?.data;
       const reason = status === 400 ? 'Bad Request (400)'
@@ -1070,13 +1094,13 @@ export async function createDirectSpendRequest(
         : status ?? error.code ?? 'Unknown error';
       const details = hasDirectSpendErrors(data?.errors) ? `: ${JSON.stringify(data?.errors)}`
         : data?.message ? `: ${data.message}` : '';
-      throw new Error(`FeedMob API direct spend request creation failed: ${reason}${details}`);
+      throw new Error(`FeedMob API direct spend request ${operation} failed: ${reason}${details}`);
     }
-    throw new Error('Failed to create direct spend request');
+    throw new Error(`Failed to ${verb} direct spend request`);
   }
 
   if (hasDirectSpendErrors(responseData?.errors) || responseData?.status >= 400) {
-    throw new Error(`FeedMob API direct spend request creation failed: ${JSON.stringify(responseData)}`);
+    throw new Error(`FeedMob API direct spend request ${operation} failed: ${JSON.stringify(responseData)}`);
   }
   return responseData;
 }

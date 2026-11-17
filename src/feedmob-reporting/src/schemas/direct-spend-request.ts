@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const positiveId = z.number().int().positive();
+const requiredString = z.string().min(1).regex(/\S/, "Must contain a non-whitespace character");
 const arrayId = z.union([positiveId, z.string().regex(/^[1-9]\d*$/)]);
 const paidActionCodes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 101, 102, 103, 104];
 const paidAction = z.union([z.number().int(), z.string().regex(/^\d+$/)])
@@ -14,17 +15,17 @@ export const directSpendRequestSchema = z.object({
   client_paid_actions: z.array(paidAction).optional().describe(paidActionDescription),
   vendor_paid_actions: z.array(paidAction).optional().describe(paidActionDescription),
   direct_spend_job_stat_id: positiveId.optional().describe("Associated direct spend job stat ID"),
-  gross_spend_formula: z.string().optional().describe("Gross spend calculation formula"),
-  net_spend_formula: z.string().optional().describe("Net spend calculation formula"),
-  margin_formula: z.string().optional().describe("Margin calculation formula"),
-  margin_type: z.enum(["dynamic", "fixed"]).optional().describe("Margin type"),
-  gross_spend_source: z.string().optional().describe("Gross spend data source"),
-  net_spend_source: z.string().optional().describe("Net spend data source"),
-  margin_source: z.enum(["click url", "formula", "other"]).optional().describe("Margin source; add details to notes when using other"),
+  gross_spend_formula: requiredString.describe("Nonblank. Use a short admin-style phrase or expression, e.g. Calculated from net and margin, =net spend / (1-margin), or =gross rate * 1st REG. Omit narrative, Click URL IDs and current rate values"),
+  net_spend_formula: requiredString.describe("Nonblank. Use a short admin-style phrase or expression, e.g. Spend from vendor API, Spend from partner dashboard, or =net rate * 1st install. Omit narrative, Click URL IDs and current rate values"),
+  margin_formula: requiredString.describe("Nonblank. Use a short admin-style phrase or expression, e.g. from click url or 1 - net / gross. Omit narrative and current margin values"),
+  margin_type: z.enum(["dynamic", "fixed"]).describe("Margin type"),
+  gross_spend_source: requiredString.describe("Nonblank. Use an existing option value or a short custom source name, e.g. Client Report, vendor report, or calculated based on margin and net spend"),
+  net_spend_source: requiredString.describe("Nonblank. Use an existing option value or a short custom source name, e.g. Integrated Vendor API, Partner dashboard, or vendor report"),
+  margin_source: z.enum(["click url", "formula", "other"]).describe("Margin source; add details to notes when using other"),
   github_ticket: z.string().optional().describe("GitHub ticket reference"),
   hubspot_ticket: z.string().optional().describe("HubSpot ticket reference"),
   arbitrage_level_switch: z.boolean().optional().describe("Arbitrage level switch"),
-  notes: z.string().optional().describe("Additional request details"),
+  notes: z.string().optional().describe("Brief additional business context only; omit when unnecessary. Avoid repeating IDs, formulas, current rates, environment or creation narration"),
   schedule: z.string().optional().describe("Automation schedule, for example 0 1 * * *"),
   automation_start_date: z.string().date().optional().describe("Automation start date in YYYY-MM-DD format"),
   job: z.string().optional().describe("Automation job"),
@@ -35,7 +36,14 @@ export const directSpendRequestSchema = z.object({
   status: z.enum(["initialized", "initialized(waiting approve)", "pm_manual", "pa_manual", "in_progress", "auto_upload", "pause", "void"])
     .optional().describe("Defaults to initialized on the API; initialized(waiting approve) is normalized to initialized"),
   having_client_report: z.boolean().optional().describe("Whether a client report is available"),
-  on_behalf_of_user_id: positiveId.optional().describe("Optional requester's user ID for the audit comment; requires additional delegation permission. The API key owner remains the creator and audit actor"),
+  on_behalf_of_user_id: positiveId.optional().describe("Optional verified requester's FeedMob user ID for business permissions and audit attribution; requires actor delegation permission. On creation, the requester is also the creator; omit to use the API key user"),
 });
 
 export type CreateDirectSpendRequestParams = z.infer<typeof directSpendRequestSchema>;
+
+export const updateDirectSpendRequestSchema = directSpendRequestSchema.partial().extend({
+  id: positiveId.describe("Existing Spend Automation Request ID"),
+  status: directSpendRequestSchema.shape.status.describe("Optional new status; omitted status is preserved. initialized(waiting approve) is normalized to initialized"),
+});
+
+export type UpdateDirectSpendRequestParams = z.infer<typeof updateDirectSpendRequestSchema>;
