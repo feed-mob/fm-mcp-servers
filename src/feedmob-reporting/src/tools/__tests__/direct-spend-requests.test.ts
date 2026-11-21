@@ -305,6 +305,39 @@ describe("direct spend request tools", () => {
     assert.equal(requests.length, 1);
   });
 
+  test("exposes auto_upload guidance during discovery before any write", async () => {
+    const { tools } = await client.listTools();
+    for (const name of ["create_direct_spend_request", "update_direct_spend_request"]) {
+      const tool = tools.find((entry) => entry.name === name)!;
+      assert.match(tool.description ?? "", /before submitting/);
+      assert.match(tool.description ?? "", /Never invent a job ID or ticket/);
+      const properties = tool.inputSchema.properties as Record<string, Record<string, unknown>>;
+      assert.match(String(properties.status.description), /Before setting status to 'auto_upload'/);
+      assert.match(String(properties.status.description), /omitted fields are preserved, not necessarily blank/);
+      for (const field of ["direct_spend_job_stat_id", "github_ticket"]) {
+        assert.ok(!Array.isArray(tool.inputSchema.required) || !tool.inputSchema.required.includes(field));
+        assert.match(String(properties[field].description), /Before setting auto_upload/);
+      }
+    }
+    assert.equal(requests.length, 0);
+  });
+
+  for (const operation of ["create", "update"] as const) {
+    test(`keeps auto_upload job stat and ticket optional for ${operation}`, async () => {
+      status = operation === "create" ? 201 : 200;
+      body = { ...success, status, data: { ...success.data, status: "auto_upload" } };
+      const result = operation === "create"
+        ? await callTool({ ...args, status: "auto_upload" })
+        : await callUpdate({ id: 78, status: "auto_upload" });
+      assert.equal(result.isError, undefined);
+      assert.equal(requests.length, 1);
+      const sent = JSON.parse(requests[0].data);
+      assert.equal(sent.status, "auto_upload");
+      assert.ok(!Object.hasOwn(sent, "direct_spend_job_stat_id"));
+      assert.ok(!Object.hasOwn(sent, "github_ticket"));
+    });
+  }
+
   test("rejects malformed IDs, arrays, codes, dates, enums and booleans before HTTP", async () => {
     for (const arguments_ of [
       {}, { ...args, client_id: 0 }, { ...args, client_id: 1.5 },

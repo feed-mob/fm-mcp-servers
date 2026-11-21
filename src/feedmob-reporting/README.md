@@ -229,6 +229,19 @@ Invalid or duplicate requests (400), authentication failures (401), permission
 failures (403), and unknown requesting users (422) return tool errors with API
 details. No automatic creation retry is performed.
 
+Before creating with `status: "auto_upload"` or changing an existing request to
+`auto_upload`, review `direct_spend_job_stat_id` (Direct spend job stat) and
+`github_ticket` (Github ticket). If either is blank or cannot be verified, inform
+the user **before submitting**:
+
+> Before setting status to 'auto_upload', please remember to update 'Direct spend job stat' and 'Github ticket' if needed.
+
+For updates, consider supplied values and known existing values; omitted fields
+are preserved, not necessarily blank. Never invent a job ID or ticket. Both
+fields remain optional; this guidance adds no confirmation requirement or
+post-save warning. Both write tool descriptions and input schemas expose the
+rule during tool discovery; `get_direct_spend_request_options` also returns it.
+
 ## Update a direct spend request
 
 Use `update_direct_spend_request` to call
