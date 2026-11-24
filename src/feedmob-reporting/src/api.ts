@@ -36,7 +36,7 @@ function adminApiHeaders(jsonContentType = true) {
     'Accept': 'application/json',
     'FEEDMOB-KEY': FEEDMOB_KEY,
     'FEEDMOB-TOKEN': generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string),
-    'X-FeedMob-Client': 'feedmob-reporting-stdio',
+    'X-FeedMob-Client': 'feedmob-reporting',
   };
 }
 
