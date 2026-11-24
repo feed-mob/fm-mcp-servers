@@ -101,6 +101,90 @@ API errors, including validation (400) and Bidease upstream failures (502),
 are returned as tool errors with the API error message.
 Uses the existing `FEEDMOB_KEY`, `FEEDMOB_SECRET`, and `FEEDMOB_API_BASE` configuration.
 
+## Creative reports and Beeswax creative details
+
+Version `0.0.34` adds these read tools for the creative endpoints introduced in
+feedmob_admin commit `cd3393fc5522cb3151480ca49e2ffde11dc559c1`:
+
+| Tool | GET endpoint | Required arguments |
+| --- | --- | --- |
+| `get_beeswax_reports_creative` | `/ai/api/beeswax_reports/creative` | `start_date`, `end_date` |
+| `get_bidease_reports_creative` | `/ai/api/bidease_reports/creative` | `start_date`, `end_date` |
+| `get_beeswax_creative` | `/ai/api/beeswax_reports/creative/:creative_id` | `creative_id` |
+
+Both report tools accept valid `YYYY-MM-DD` dates with an inclusive range and
+`start_date <= end_date`; no client ID is required:
+
+```json
+{
+  "start_date": "2026-11-01",
+  "end_date": "2026-11-10"
+}
+```
+
+Beeswax rows include `beeswax_campaign_id`, `beeswax_campaign_name`,
+`beeswax_line_item_id`, `beeswax_line_item_name`, `beeswax_creative_id`,
+`impressions`, `clicks`, `partner_net_spend`, and `apac_fee`.
+`partner_net_spend` is media spend plus vendor fees, excluding bid shading fees.
+`apac_fee` is separate and repeated across creative rows: count it only once per
+Click URL and date when calculating totals.
+
+Bidease rows include `bidease_advertiser_id`, `bidease_campaign_id`,
+`bidease_campaign_name`, `bidease_creative_id`, `impressions`, `clicks`,
+`conversions`, and `partner_net_spend`. Both providers retain mapped FeedMob
+metadata and unmatched rows (`matched: false` with null FeedMob metadata).
+Nonempty reports also return `csv_file_path` for a CSV saved under `./tmp`;
+empty reports return `data: []` without creating a CSV.
+
+Use the Beeswax creative ID from a report to retrieve its original REST JSON:
+
+```json
+{ "creative_id": "12345" }
+```
+
+`creative_id` must be a string containing a positive integer. The response keeps
+the API's `{ "status": 200, "data": ... }` envelope and the original creative
+JSON inside `data`, without CSV conversion. Validation, authentication, missing
+creative, upstream and network failures return tool errors with API details.
+Uses the existing `FEEDMOB_KEY`, `FEEDMOB_SECRET`, and `FEEDMOB_API_BASE`
+configuration; no new environment variables are required.
+
+## IronSource Aura reports
+
+Version `0.0.35` adds two tools for the endpoints introduced in feedmob_admin
+commit `cc1b02e340c5a163542e22e49005623d5c24e235`:
+
+| Tool | GET endpoint |
+| --- | --- |
+| `get_ironsource_aura_reports` | `/ai/api/ironsource_aura_reports` |
+| `get_ironsource_aura_reports_geo` | `/ai/api/ironsource_aura_reports/geo` |
+
+Both tools require valid `YYYY-MM-DD` dates with an inclusive range and
+`start_date <= end_date`; no client ID is required:
+
+```json
+{
+  "start_date": "2026-11-01",
+  "end_date": "2026-11-10"
+}
+```
+
+Returns daily campaign rows with `date`, `ironsource_aura_campaign_name`,
+`impressions`, `clicks`, `completions`, `installs`, `partner_net_spend`, `matched`,
+and FeedMob `click_url_id`, `campaign_id`, `campaign_name`, `vendor_id`, `vendor_name`.
+The geo tool also returns `country_code`, which may be null if the provider omits it.
+Aura Click URLs (vendor 288) are matched by the trailing Click URL ID in campaign
+names, or by campaign name when no trailing ID is present. Unmatched campaigns
+remain in the response with `matched: false` and null FeedMob metadata.
+Multiple matching Click URLs repeat campaign metrics: do not sum these across
+Click URLs.
+
+Nonempty results include `csv_file_path` for a CSV saved under `./tmp`; empty
+results return `data: []` without a CSV. API and network failures return tool
+errors with API details, including provider errors (429, 502, 503).
+Uses the existing `FEEDMOB_KEY`, `FEEDMOB_SECRET`, and `FEEDMOB_API_BASE`
+configuration; no additional MCP environment variables are required.
+
 ## List Click URLs
 
 Use `get_click_urls` to call `GET /ai/api/click_urls`. All filters are optional;

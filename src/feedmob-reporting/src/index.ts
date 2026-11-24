@@ -5,6 +5,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { registerClickUrlPricesTool } from "./tools/click-url-prices.js";
 import { registerBideaseReportsTool } from "./tools/bidease-reports.js";
+import { registerCreativeReportsTools } from "./tools/creative-reports.js";
+import { registerIronsourceAuraReportsTools } from "./tools/ironsource-aura-reports.js";
 import { registerDirectSpendRequestsTool } from "./tools/direct-spend-requests.js";
 import { registerClickUrlsTool } from "./tools/click-urls.js";
 import { registerClientReportRequestsTools } from "./tools/client-report-requests.js";
@@ -13,7 +15,7 @@ import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, get
 // Create server instance
 const server = new McpServer({
   name: "feedmob-reporting",
-  version: "0.0.32",
+  version: "0.0.35",
   capabilities: {
     tools: {},
     prompts: {},
@@ -22,6 +24,8 @@ const server = new McpServer({
 
 registerClickUrlPricesTool(server);
 registerBideaseReportsTool(server);
+registerCreativeReportsTools(server);
+registerIronsourceAuraReportsTools(server);
 registerDirectSpendRequestsTool(server);
 registerClickUrlsTool(server);
 registerClientReportRequestsTools(server);

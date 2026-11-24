@@ -3115,6 +3115,158 @@ export async function getBideaseReports(
   return responseData;
 }
 
+export interface BideaseCreativeReport extends BideaseReport {
+  bidease_creative_id: string;
+}
+
+export interface BeeswaxCreativeReport {
+  date: string;
+  click_url_id: number | null;
+  campaign_id: number | null;
+  campaign_name: string | null;
+  vendor_id: number | null;
+  vendor_name: string | null;
+  beeswax_campaign_id: string;
+  beeswax_campaign_name: string;
+  beeswax_line_item_id: string;
+  beeswax_line_item_name: string;
+  beeswax_creative_id: string;
+  matched: boolean;
+  impressions: number;
+  clicks: number;
+  partner_net_spend: number;
+  apac_fee: number;
+}
+
+interface ReportsResponse<Row> {
+  status: number;
+  data: Row[];
+  csv_file_path?: string;
+}
+
+async function fetchFeedmobData<T>(url: URL, label: string): Promise<T> {
+  try {
+    const response = await axios.get<T>(url.toString(), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string),
+      },
+      timeout: 30000,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<{ error?: string }>(error)) {
+      const status = error.response?.status;
+      const detail = error.response?.data?.error;
+      const reason = status === 401 ? 'Unauthorized (Invalid API Key or Token)'
+        : status === 400 ? 'Bad Request (400)'
+        : status === 404 ? 'Not Found (404)'
+        : status === 502 ? 'Bad Gateway (502)'
+        : status ?? error.code ?? 'Unknown error';
+      throw new Error(`FeedMob API ${label} request failed: ${reason}${typeof detail === 'string' ? `: ${detail}` : ''}`);
+    }
+    throw new Error(`Failed to fetch ${label}`);
+  }
+}
+
+async function getCreativeReports<Row>(
+  provider: 'beeswax' | 'bidease',
+  label: string,
+  start_date: string,
+  end_date: string
+): Promise<ReportsResponse<Row>> {
+  const url = new URL(`${FEEDMOB_API_BASE}/ai/api/${provider}_reports/creative`);
+  url.searchParams.set('start_date', start_date);
+  url.searchParams.set('end_date', end_date);
+  const responseData = await fetchFeedmobData<ReportsResponse<Row>>(url, label);
+
+  if (responseData.data.length > 0) {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    responseData.csv_file_path = saveDataToCsv(
+      responseData.data, `${provider}_reports_creative_${start_date}_to_${end_date}_${timestamp}.csv`
+    );
+  }
+  return responseData;
+}
+
+export function getBideaseReportsCreative(
+  start_date: string,
+  end_date: string
+): Promise<ReportsResponse<BideaseCreativeReport>> {
+  return getCreativeReports('bidease', 'Bidease creative reports', start_date, end_date);
+}
+
+export function getBeeswaxReportsCreative(
+  start_date: string,
+  end_date: string
+): Promise<ReportsResponse<BeeswaxCreativeReport>> {
+  return getCreativeReports('beeswax', 'Beeswax creative reports', start_date, end_date);
+}
+
+export function getBeeswaxCreative(creative_id: string): Promise<{ status: number; data: unknown }> {
+  if (!/^[0-9]+$/.test(creative_id) || !/[1-9]/.test(creative_id)) {
+    throw new Error('creative_id must be a positive integer');
+  }
+  const url = new URL(`${FEEDMOB_API_BASE}/ai/api/beeswax_reports/creative/${creative_id}`);
+  return fetchFeedmobData(url, 'Beeswax creative');
+}
+
+export interface IronsourceAuraReport {
+  date: string;
+  click_url_id: number | null;
+  campaign_id: number | null;
+  campaign_name: string | null;
+  vendor_id: number | null;
+  vendor_name: string | null;
+  ironsource_aura_campaign_name: string | null;
+  matched: boolean;
+  impressions: number;
+  clicks: number;
+  completions: number;
+  installs: number;
+  partner_net_spend: number;
+}
+
+export interface IronsourceAuraGeoReport extends IronsourceAuraReport {
+  country_code: string | null;
+}
+
+async function fetchIronsourceAuraReports<Row>(
+  start_date: string,
+  end_date: string,
+  geo: boolean
+): Promise<ReportsResponse<Row>> {
+  const url = new URL(`${FEEDMOB_API_BASE}/ai/api/ironsource_aura_reports${geo ? '/geo' : ''}`);
+  url.searchParams.set('start_date', start_date);
+  url.searchParams.set('end_date', end_date);
+  const responseData = await fetchFeedmobData<ReportsResponse<Row>>(
+    url, geo ? 'IronSource Aura geo reports' : 'IronSource Aura reports'
+  );
+  if (responseData.data.length > 0) {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    responseData.csv_file_path = saveDataToCsv(
+      responseData.data, `ironsource_aura_reports${geo ? '_geo' : ''}_${start_date}_to_${end_date}_${timestamp}.csv`
+    );
+  }
+  return responseData;
+}
+
+export function getIronsourceAuraReports(
+  start_date: string,
+  end_date: string
+): Promise<ReportsResponse<IronsourceAuraReport>> {
+  return fetchIronsourceAuraReports(start_date, end_date, false);
+}
+
+export function getIronsourceAuraReportsGeo(
+  start_date: string,
+  end_date: string
+): Promise<ReportsResponse<IronsourceAuraGeoReport>> {
+  return fetchIronsourceAuraReports(start_date, end_date, true);
+}
+
 export async function getBeeswaxReports(
   start_date: string,
   end_date: string
