@@ -30,6 +30,16 @@ function generateToken(key: string, secret: string): string {
   return jwt.sign(payload, secret, { algorithm: 'HS256' });
 }
 
+function adminApiHeaders(jsonContentType = true) {
+  return {
+    ...(jsonContentType ? { 'Content-Type': 'application/json' } : {}),
+    'Accept': 'application/json',
+    'FEEDMOB-KEY': FEEDMOB_KEY,
+    'FEEDMOB-TOKEN': generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string),
+    'X-FeedMob-Client': 'feedmob-reporting-stdio',
+  };
+}
+
 // Helper function to convert JSON array to CSV and save to file
 function saveDataToCsv(data: any[], filename: string): string {
   if (!data || data.length === 0) {
@@ -105,14 +115,8 @@ export async function fetchDirectSpendsData(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -164,14 +168,8 @@ export async function getAgencyConversionMetrics(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token,
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -224,14 +222,8 @@ export async function getClickUrlHistories(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token,
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -281,14 +273,8 @@ export async function getInmobiReportIds(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
     return response.data;
@@ -324,14 +310,8 @@ export async function checkInmobiReportStatus(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
     return response.data;
@@ -386,14 +366,8 @@ export async function createDirectSpend(
   let responseData: any;
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.post(url, body, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
     responseData = response.data;
@@ -451,14 +425,8 @@ export async function updateDirectSpend(
   let responseData: any;
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.patch(url, body, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
     responseData = response.data;
@@ -515,14 +483,8 @@ export async function updateClickUrlPrices(
   let responseData: ClickUrlPricesResponse;
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.patch<ClickUrlPricesResponse>(url, body, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token,
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
     responseData = response.data;
@@ -566,14 +528,8 @@ export async function getInmobiReports(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -654,14 +610,8 @@ export async function getAppsflyerReports(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -726,14 +676,8 @@ export async function getKochavaReports(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -781,14 +725,8 @@ export async function getAdopsReports(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -840,14 +778,8 @@ export async function getPossibleFinanceSingularReports(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -885,14 +817,8 @@ export async function getUserInfos(): Promise<any> {
   const url = `${FEEDMOB_API_BASE}/ai/api/user_infos`;
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -937,14 +863,8 @@ export async function searchUserInfos(username: string): Promise<any> {
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -998,14 +918,9 @@ export async function getDirectSpendRequestOptions(): Promise<DirectSpendRequest
   let responseData: DirectSpendRequestOptionsResponse;
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get<DirectSpendRequestOptionsResponse>(
       `${FEEDMOB_API_BASE}/ai/api/direct_spend_requests/options`, {
-        headers: {
-          'Accept': 'application/json',
-          'FEEDMOB-KEY': FEEDMOB_KEY,
-          'FEEDMOB-TOKEN': token,
-        },
+        headers: adminApiHeaders(false),
         timeout: 30000,
       }
     );
@@ -1069,15 +984,9 @@ async function writeDirectSpendRequest(
   let responseData: DirectSpendRequestWriteResponse;
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios[method]<DirectSpendRequestWriteResponse>(
       `${FEEDMOB_API_BASE}${path}`, body, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'FEEDMOB-KEY': FEEDMOB_KEY,
-          'FEEDMOB-TOKEN': token,
-        },
+        headers: adminApiHeaders(),
         timeout: 30000,
       }
     );
@@ -1134,14 +1043,8 @@ export async function getDirectSpendRequests(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -1197,14 +1100,8 @@ export async function getHubspotTickets(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -1256,14 +1153,8 @@ export async function getPrivacyHawkSingularReports(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -1310,14 +1201,8 @@ export async function getKohoFinancialSingularReports(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -1364,14 +1249,8 @@ export async function getTextnowAdjustReports(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -1432,11 +1311,7 @@ export async function getClickUrls(params: ClickUrlsQuery = {}): Promise<ClickUr
   let responseData: ClickUrlsResponse;
   try {
     const response = await axios.get<ClickUrlsResponse>(url.toString(), {
-      headers: {
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string),
-      },
+      headers: adminApiHeaders(false),
       timeout: 30000,
     });
     responseData = response.data;
@@ -1475,14 +1350,8 @@ export async function getClients(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -1534,14 +1403,8 @@ export async function getCampaigns(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -1593,14 +1456,8 @@ export async function getVendors(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -1653,14 +1510,8 @@ export async function getJamppReports(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -1713,14 +1564,8 @@ export async function getJamppReportsGeo(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -1780,14 +1625,8 @@ export async function getDirectSpendJobStats(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -1835,19 +1674,13 @@ export async function previewCampaign(
   const url = `${FEEDMOB_API_BASE}/ai/api/campaigns/preview`;
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.post(url, {
       name: campaign_name,
       app_info_id,
       os,
       client_uuid
     }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
     return response.data;
@@ -1881,7 +1714,6 @@ export async function createCampaign(
   const url = `${FEEDMOB_API_BASE}/ai/api/campaigns`;
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.post(url, {
       campaign: {
         name: campaign_name,
@@ -1892,12 +1724,7 @@ export async function createCampaign(
         ...(on_behalf_of_user_id === undefined ? {} : { on_behalf_of_user_id }),
       }
     }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
     return response.data;
@@ -1931,14 +1758,8 @@ export async function getApps(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
     return response.data;
@@ -1978,14 +1799,8 @@ export async function getAdopsSpendCheckReports(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
     return response.data;
@@ -2034,14 +1849,8 @@ export async function getAgencyConversionRecords(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -2091,14 +1900,8 @@ export async function getSmadexReportIds(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
     return response.data;
@@ -2130,14 +1933,8 @@ export async function checkSmadexReportStatus(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
     return response.data;
@@ -2169,14 +1966,8 @@ export async function getSmadexReports(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -2226,14 +2017,8 @@ export async function getYouappiReports(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -2283,14 +2068,8 @@ export async function getYouappiReportsGeo(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -2340,14 +2119,8 @@ export async function getKayzenReports(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -2397,14 +2170,8 @@ export async function getLiftoffReportIds(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
     return response.data;
@@ -2438,14 +2205,8 @@ export async function checkLiftoffReportStatus(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
     return response.data;
@@ -2483,14 +2244,8 @@ export async function getLiftoffReports(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -2533,14 +2288,8 @@ export async function getClientReportSpendReportNames(): Promise<any> {
   const url = `${FEEDMOB_API_BASE}/ai/api/client_report_spends/report_names`;
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
     return response.data;
@@ -2576,14 +2325,8 @@ export async function getClientReportSpends(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -2634,14 +2377,8 @@ export async function getSamsungReports(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -2693,14 +2430,8 @@ export async function getPubmaticReports(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -2750,14 +2481,8 @@ export async function getPubmaticReportsGeo(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -2807,14 +2532,8 @@ export async function getAppsflyerCohortRevenues(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -2864,14 +2583,8 @@ export async function getAppsflyerCohortRevenuesGeo(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -2922,14 +2635,8 @@ export async function getAppsflyerInAppEventsRetargetReports(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -2996,12 +2703,7 @@ export async function getBideaseReports(
   let responseData: { status: number; data: BideaseReport[]; csv_file_path?: string };
   try {
     const response = await axios.get(url.toString(), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string),
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
     responseData = response.data;
@@ -3039,14 +2741,8 @@ export async function getBeeswaxReports(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -3098,14 +2794,8 @@ export async function getRemergeReports(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
@@ -3157,14 +2847,8 @@ export async function getRemergeReportsGeo(
   const url = urlObj.toString();
 
   try {
-    const token = generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string);
     const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': token
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
 
