@@ -109,12 +109,32 @@ describe("get_bidease_reports", () => {
     const token = jwt.verify(String(request.headers.get("FEEDMOB-TOKEN")), "test-secret");
     assert.equal(typeof token === "object" && token.key, "test-key");
     assert.match(data.csv_file_path, /bidease_reports_2026-11-01_to_2026-11-10_.*\.csv$/);
+    assert.match(data.csv_file_path, /_[a-f0-9]{8}\.csv$/);
     const csv = readFileSync(data.csv_file_path, "utf8");
     assert.ok(csv.includes('"Campaign ""A"", JP"'));
     assert.ok(csv.includes('"false"'));
     assert.ok(csv.includes('"12.34"'));
     assert.equal(csv.split("\n").length, 3);
     assert.ok(text.includes(`CSV file saved to: ${data.csv_file_path}`));
+  });
+
+  test("keeps separate CSV files when repeated requests use the same timestamp", async (context) => {
+    context.mock.method(Date.prototype, "toISOString", () => "2026-11-26T00:00:00.000Z");
+    const first = await callTool();
+    const firstPath = JSON.parse(responseText(first).split("```json\n")[1].split("\n```")[0]).csv_file_path;
+    const firstCsv = readFileSync(firstPath, "utf8");
+    body = { status: 200, data: [{ ...matchedRow, partner_net_spend: 99.99 }] };
+    const second = await callTool();
+    const secondPath = JSON.parse(responseText(second).split("```json\n")[1].split("\n```")[0]).csv_file_path;
+
+    for (const path of [firstPath, secondPath]) {
+      assert.match(path, /_2026-11-26T00-00-00-000Z_[a-f0-9]{8}\.csv$/);
+    }
+    assert.notEqual(firstPath, secondPath);
+    assert.equal(readFileSync(firstPath, "utf8"), firstCsv);
+    assert.ok(readFileSync(secondPath, "utf8").includes('"99.99"'));
+    assert.equal(readdirSync(join(directory, "tmp")).length, 2);
+    assert.equal(requests.length, 2);
   });
 
   test("returns empty results without a CSV and accepts a single-day range", async () => {

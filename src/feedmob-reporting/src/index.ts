@@ -7,12 +7,13 @@ import { registerClickUrlPricesTool } from "./tools/click-url-prices.js";
 import { registerBideaseReportsTool } from "./tools/bidease-reports.js";
 import { registerDirectSpendRequestsTool } from "./tools/direct-spend-requests.js";
 import { registerClickUrlsTool } from "./tools/click-urls.js";
+import { registerMappingsTools } from "./tools/mappings.js";
 import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, updateDirectSpend, getAppsflyerReports, getKochavaReports, getAppsflyerInAppEventsRetargetReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getKohoFinancialSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getJamppReportsGeo, getDirectSpendJobStats, previewCampaign, createCampaign, getApps, getAdopsSpendCheckReports, getAgencyConversionRecords, getSmadexReportIds, checkSmadexReportStatus, getSmadexReports, getYouappiReports, getYouappiReportsGeo, getKayzenReports, getLiftoffReportIds, checkLiftoffReportStatus, getLiftoffReports, getSamsungReports, getBeeswaxReports, getRemergeReports, getRemergeReportsGeo, getClientReportSpendReportNames, getClientReportSpends, getPubmaticReports, getPubmaticReportsGeo, getAppsflyerCohortRevenues, getAppsflyerCohortRevenuesGeo } from "./api.js";
 
 // Create server instance
 const server = new McpServer({
   name: "feedmob-reporting",
-  version: "0.0.31",
+  version: "0.0.34",
   capabilities: {
     tools: {},
     prompts: {},
@@ -23,6 +24,7 @@ registerClickUrlPricesTool(server);
 registerBideaseReportsTool(server);
 registerDirectSpendRequestsTool(server);
 registerClickUrlsTool(server);
+registerMappingsTools(server);
 
 // Tool Definition for Creating Direct Spend
 server.tool(
