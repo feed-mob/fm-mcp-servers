@@ -5,6 +5,8 @@ import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
 import type { CreateDirectSpendRequestParams, UpdateDirectSpendRequestParams } from "./schemas/direct-spend-request.js";
 import type { ClickUrlsQuery } from "./schemas/click-urls.js";
+import { clientReportRequestSchema, clientReportRequestsQuerySchema, updateClientReportRequestSchema } from "./schemas/client-report-request.js";
+import type { ClientReportRequestsQuery, CreateClientReportRequestParams, UpdateClientReportRequestParams } from "./schemas/client-report-request.js";
 
 dotenv.config(); // Load environment variables from .env file
 
@@ -1101,6 +1103,91 @@ async function writeDirectSpendRequest(
 
   if (hasDirectSpendErrors(responseData?.errors) || responseData?.status >= 400) {
     throw new Error(`FeedMob API direct spend request ${operation} failed: ${JSON.stringify(responseData)}`);
+  }
+  return responseData;
+}
+
+interface ClientReportRequestResponse {
+  status: number;
+  data: unknown;
+  errors: unknown;
+  message?: string;
+}
+
+// The index endpoint returns a bare array; options and writes return envelopes.
+type ClientReportRequestResult = ClientReportRequestResponse | Record<string, unknown>[];
+
+export async function getClientReportRequests(params: ClientReportRequestsQuery = {}): Promise<ClientReportRequestResult> {
+  const filters = clientReportRequestsQuerySchema.parse(params);
+  for (const [start, end] of [[filters.start_date, filters.end_date], [filters.automation_start_date, filters.automation_end_date]]) {
+    if (start && end && start > end) {
+      throw new Error("Date range start must be on or before its end");
+    }
+  }
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (Array.isArray(value)) {
+      value.forEach((item) => query.append(`${key}[]`, item));
+    } else if (value !== undefined) {
+      query.append(key, String(value));
+    }
+  }
+  const suffix = query.size ? `?${query.toString()}` : "";
+  return requestClientReportRequests("get", `/ai/api/client_report_requests${suffix}`);
+}
+
+export async function getClientReportRequestOptions(): Promise<ClientReportRequestResult> {
+  return requestClientReportRequests("get", "/ai/api/client_report_requests/options");
+}
+
+export async function createClientReportRequest(params: CreateClientReportRequestParams): Promise<ClientReportRequestResult> {
+  return requestClientReportRequests("post", "/ai/api/client_report_requests", clientReportRequestSchema.parse(params));
+}
+
+export async function updateClientReportRequest(params: UpdateClientReportRequestParams): Promise<ClientReportRequestResult> {
+  const { id, on_behalf_of_user_id, ...fields } = updateClientReportRequestSchema.parse(params);
+  if (!Object.values(fields).some((value) => value !== undefined)) {
+    throw new Error("At least one writable field is required");
+  }
+  return requestClientReportRequests("patch", `/ai/api/client_report_requests/${id}`, { ...fields, on_behalf_of_user_id });
+}
+
+async function requestClientReportRequests(
+  method: "get" | "post" | "patch", path: string, params?: Record<string, unknown>
+): Promise<ClientReportRequestResult> {
+  let responseData: ClientReportRequestResult;
+  try {
+    const response = await axios.request<ClientReportRequestResult>({
+      method,
+      url: `${FEEDMOB_API_BASE}${path}`,
+      ...(params === undefined ? {} : { data: Object.fromEntries(Object.entries(params).filter(([, value]) => value !== undefined)) }),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string),
+      },
+      timeout: 30000,
+    });
+    responseData = response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<ClientReportRequestResponse>(error)) {
+      const status = error.response?.status;
+      const data = error.response?.data;
+      const reason = status === 400 ? 'Bad Request (400)'
+        : status === 401 ? 'Unauthorized (401)'
+        : status === 403 ? 'Forbidden (403)'
+        : status === 404 ? 'Not Found (404)'
+        : status === 422 ? 'Unprocessable Entity (422)'
+        : status ?? error.code ?? 'Unknown error';
+      const details = hasDirectSpendErrors(data?.errors) ? `: ${JSON.stringify(data?.errors)}`
+        : data?.message ? `: ${data.message}` : '';
+      throw new Error(`FeedMob API client report request failed: ${reason}${details}`);
+    }
+    throw new Error("Failed to call client report requests API");
+  }
+  if (!Array.isArray(responseData) && (hasDirectSpendErrors(responseData?.errors) || responseData?.status >= 400)) {
+    throw new Error(`FeedMob API client report request failed: ${JSON.stringify(responseData)}`);
   }
   return responseData;
 }
@@ -3026,6 +3113,158 @@ export async function getBideaseReports(
     );
   }
   return responseData;
+}
+
+export interface BideaseCreativeReport extends BideaseReport {
+  bidease_creative_id: string;
+}
+
+export interface BeeswaxCreativeReport {
+  date: string;
+  click_url_id: number | null;
+  campaign_id: number | null;
+  campaign_name: string | null;
+  vendor_id: number | null;
+  vendor_name: string | null;
+  beeswax_campaign_id: string;
+  beeswax_campaign_name: string;
+  beeswax_line_item_id: string;
+  beeswax_line_item_name: string;
+  beeswax_creative_id: string;
+  matched: boolean;
+  impressions: number;
+  clicks: number;
+  partner_net_spend: number;
+  apac_fee: number;
+}
+
+interface ReportsResponse<Row> {
+  status: number;
+  data: Row[];
+  csv_file_path?: string;
+}
+
+async function fetchFeedmobData<T>(url: URL, label: string): Promise<T> {
+  try {
+    const response = await axios.get<T>(url.toString(), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string),
+      },
+      timeout: 30000,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<{ error?: string }>(error)) {
+      const status = error.response?.status;
+      const detail = error.response?.data?.error;
+      const reason = status === 401 ? 'Unauthorized (Invalid API Key or Token)'
+        : status === 400 ? 'Bad Request (400)'
+        : status === 404 ? 'Not Found (404)'
+        : status === 502 ? 'Bad Gateway (502)'
+        : status ?? error.code ?? 'Unknown error';
+      throw new Error(`FeedMob API ${label} request failed: ${reason}${typeof detail === 'string' ? `: ${detail}` : ''}`);
+    }
+    throw new Error(`Failed to fetch ${label}`);
+  }
+}
+
+async function getCreativeReports<Row>(
+  provider: 'beeswax' | 'bidease',
+  label: string,
+  start_date: string,
+  end_date: string
+): Promise<ReportsResponse<Row>> {
+  const url = new URL(`${FEEDMOB_API_BASE}/ai/api/${provider}_reports/creative`);
+  url.searchParams.set('start_date', start_date);
+  url.searchParams.set('end_date', end_date);
+  const responseData = await fetchFeedmobData<ReportsResponse<Row>>(url, label);
+
+  if (responseData.data.length > 0) {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    responseData.csv_file_path = saveDataToCsv(
+      responseData.data, `${provider}_reports_creative_${start_date}_to_${end_date}_${timestamp}.csv`
+    );
+  }
+  return responseData;
+}
+
+export function getBideaseReportsCreative(
+  start_date: string,
+  end_date: string
+): Promise<ReportsResponse<BideaseCreativeReport>> {
+  return getCreativeReports('bidease', 'Bidease creative reports', start_date, end_date);
+}
+
+export function getBeeswaxReportsCreative(
+  start_date: string,
+  end_date: string
+): Promise<ReportsResponse<BeeswaxCreativeReport>> {
+  return getCreativeReports('beeswax', 'Beeswax creative reports', start_date, end_date);
+}
+
+export function getBeeswaxCreative(creative_id: string): Promise<{ status: number; data: unknown }> {
+  if (!/^[0-9]+$/.test(creative_id) || !/[1-9]/.test(creative_id)) {
+    throw new Error('creative_id must be a positive integer');
+  }
+  const url = new URL(`${FEEDMOB_API_BASE}/ai/api/beeswax_reports/creative/${creative_id}`);
+  return fetchFeedmobData(url, 'Beeswax creative');
+}
+
+export interface IronsourceAuraReport {
+  date: string;
+  click_url_id: number | null;
+  campaign_id: number | null;
+  campaign_name: string | null;
+  vendor_id: number | null;
+  vendor_name: string | null;
+  ironsource_aura_campaign_name: string | null;
+  matched: boolean;
+  impressions: number;
+  clicks: number;
+  completions: number;
+  installs: number;
+  partner_net_spend: number;
+}
+
+export interface IronsourceAuraGeoReport extends IronsourceAuraReport {
+  country_code: string | null;
+}
+
+async function fetchIronsourceAuraReports<Row>(
+  start_date: string,
+  end_date: string,
+  geo: boolean
+): Promise<ReportsResponse<Row>> {
+  const url = new URL(`${FEEDMOB_API_BASE}/ai/api/ironsource_aura_reports${geo ? '/geo' : ''}`);
+  url.searchParams.set('start_date', start_date);
+  url.searchParams.set('end_date', end_date);
+  const responseData = await fetchFeedmobData<ReportsResponse<Row>>(
+    url, geo ? 'IronSource Aura geo reports' : 'IronSource Aura reports'
+  );
+  if (responseData.data.length > 0) {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    responseData.csv_file_path = saveDataToCsv(
+      responseData.data, `ironsource_aura_reports${geo ? '_geo' : ''}_${start_date}_to_${end_date}_${timestamp}.csv`
+    );
+  }
+  return responseData;
+}
+
+export function getIronsourceAuraReports(
+  start_date: string,
+  end_date: string
+): Promise<ReportsResponse<IronsourceAuraReport>> {
+  return fetchIronsourceAuraReports(start_date, end_date, false);
+}
+
+export function getIronsourceAuraReportsGeo(
+  start_date: string,
+  end_date: string
+): Promise<ReportsResponse<IronsourceAuraGeoReport>> {
+  return fetchIronsourceAuraReports(start_date, end_date, true);
 }
 
 export async function getBeeswaxReports(

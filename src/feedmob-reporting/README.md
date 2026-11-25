@@ -101,6 +101,90 @@ API errors, including validation (400) and Bidease upstream failures (502),
 are returned as tool errors with the API error message.
 Uses the existing `FEEDMOB_KEY`, `FEEDMOB_SECRET`, and `FEEDMOB_API_BASE` configuration.
 
+## Creative reports and Beeswax creative details
+
+Version `0.0.34` adds these read tools for the creative endpoints introduced in
+feedmob_admin commit `cd3393fc5522cb3151480ca49e2ffde11dc559c1`:
+
+| Tool | GET endpoint | Required arguments |
+| --- | --- | --- |
+| `get_beeswax_reports_creative` | `/ai/api/beeswax_reports/creative` | `start_date`, `end_date` |
+| `get_bidease_reports_creative` | `/ai/api/bidease_reports/creative` | `start_date`, `end_date` |
+| `get_beeswax_creative` | `/ai/api/beeswax_reports/creative/:creative_id` | `creative_id` |
+
+Both report tools accept valid `YYYY-MM-DD` dates with an inclusive range and
+`start_date <= end_date`; no client ID is required:
+
+```json
+{
+  "start_date": "2026-11-01",
+  "end_date": "2026-11-10"
+}
+```
+
+Beeswax rows include `beeswax_campaign_id`, `beeswax_campaign_name`,
+`beeswax_line_item_id`, `beeswax_line_item_name`, `beeswax_creative_id`,
+`impressions`, `clicks`, `partner_net_spend`, and `apac_fee`.
+`partner_net_spend` is media spend plus vendor fees, excluding bid shading fees.
+`apac_fee` is separate and repeated across creative rows: count it only once per
+Click URL and date when calculating totals.
+
+Bidease rows include `bidease_advertiser_id`, `bidease_campaign_id`,
+`bidease_campaign_name`, `bidease_creative_id`, `impressions`, `clicks`,
+`conversions`, and `partner_net_spend`. Both providers retain mapped FeedMob
+metadata and unmatched rows (`matched: false` with null FeedMob metadata).
+Nonempty reports also return `csv_file_path` for a CSV saved under `./tmp`;
+empty reports return `data: []` without creating a CSV.
+
+Use the Beeswax creative ID from a report to retrieve its original REST JSON:
+
+```json
+{ "creative_id": "12345" }
+```
+
+`creative_id` must be a string containing a positive integer. The response keeps
+the API's `{ "status": 200, "data": ... }` envelope and the original creative
+JSON inside `data`, without CSV conversion. Validation, authentication, missing
+creative, upstream and network failures return tool errors with API details.
+Uses the existing `FEEDMOB_KEY`, `FEEDMOB_SECRET`, and `FEEDMOB_API_BASE`
+configuration; no new environment variables are required.
+
+## IronSource Aura reports
+
+Version `0.0.35` adds two tools for the endpoints introduced in feedmob_admin
+commit `cc1b02e340c5a163542e22e49005623d5c24e235`:
+
+| Tool | GET endpoint |
+| --- | --- |
+| `get_ironsource_aura_reports` | `/ai/api/ironsource_aura_reports` |
+| `get_ironsource_aura_reports_geo` | `/ai/api/ironsource_aura_reports/geo` |
+
+Both tools require valid `YYYY-MM-DD` dates with an inclusive range and
+`start_date <= end_date`; no client ID is required:
+
+```json
+{
+  "start_date": "2026-11-01",
+  "end_date": "2026-11-10"
+}
+```
+
+Returns daily campaign rows with `date`, `ironsource_aura_campaign_name`,
+`impressions`, `clicks`, `completions`, `installs`, `partner_net_spend`, `matched`,
+and FeedMob `click_url_id`, `campaign_id`, `campaign_name`, `vendor_id`, `vendor_name`.
+The geo tool also returns `country_code`, which may be null if the provider omits it.
+Aura Click URLs (vendor 288) are matched by the trailing Click URL ID in campaign
+names, or by campaign name when no trailing ID is present. Unmatched campaigns
+remain in the response with `matched: false` and null FeedMob metadata.
+Multiple matching Click URLs repeat campaign metrics: do not sum these across
+Click URLs.
+
+Nonempty results include `csv_file_path` for a CSV saved under `./tmp`; empty
+results return `data: []` without a CSV. API and network failures return tool
+errors with API details, including provider errors (429, 502, 503).
+Uses the existing `FEEDMOB_KEY`, `FEEDMOB_SECRET`, and `FEEDMOB_API_BASE`
+configuration; no additional MCP environment variables are required.
+
 ## List Click URLs
 
 Use `get_click_urls` to call `GET /ai/api/click_urls`. All filters are optional;
@@ -142,6 +226,98 @@ API validation, authentication and other failures return tool errors.
 
 Use this tool to select `click_url_ids` for `create_direct_spend_request`, after
 checking `get_direct_spend_request_options` for parameter guidance.
+
+## Client report requests
+
+Four tools support the Client Report Request API using the existing
+`FEEDMOB_API_BASE`, `FEEDMOB_KEY`, and `FEEDMOB_SECRET` configuration:
+
+| Tool | Endpoint |
+| --- | --- |
+| `get_client_report_requests` | `GET /ai/api/client_report_requests` |
+| `get_client_report_request_options` | `GET /ai/api/client_report_requests/options` |
+| `create_client_report_request` | `POST /ai/api/client_report_requests` |
+| `update_client_report_request` | `PATCH /ai/api/client_report_requests/:id` |
+
+Call `get_client_report_request_options` with `{}` before writing. It returns
+the complete live `create`, `update`, and `fields` metadata, including defaults,
+option labels and submitted values, active/paused Report Jobs, and lookup APIs.
+Submit option values, and use verified IDs and assignee email strings. Options
+are fetched on every call. Reads require API authentication; writes require
+the separate `feedmob-reporting/create_client_report_request` or
+`feedmob-reporting/update_client_report_request` permission.
+
+Create with top-level fields; only a nonblank `report_name` is required:
+
+```json
+{
+  "report_name": "Daily client report",
+  "report_categories": ["client_report"],
+  "client_ids": [123],
+  "vendor_ids": [0],
+  "delivery_methods": ["Email"],
+  "pm": "pm@example.com"
+}
+```
+
+Omitted fields keep model defaults (`status` defaults to `initialized`). The API
+generates `report_number` and `report_code` when absent; `report_number` is not a
+writable field. The legacy report type and category use the spelling
+`internel_report`. For `client_ids` and `vendor_ids`, `[0]` selects all and `[]`
+clears selections; do not combine 0 with specific IDs. `report_config_id` is a
+Report Job selected from options; `schedule_export_id` is a verified positive
+Schedule Export ID. `client_id` and `vendor_id` are legacy singular references;
+prefer the plural selection fields.
+
+Update with an existing `id` and at least one writable field:
+
+```json
+{
+  "id": 78,
+  "note": "Update delivery setup",
+  "delivery_methods": ["S3"],
+  "automation_start_date": null
+}
+```
+
+Omitted fields, status, the original creator, and report number are preserved.
+Arrays replace selections; `[]` clears them. `null` clears nullable references,
+legacy type, scope, and automation date. The final report name must be nonblank.
+Dates use valid `YYYY-MM-DD` strings. Updates never create a missing record.
+
+Both writes accept optional top-level `on_behalf_of_user_id`. Resolve it from
+trusted session identity and a verified FeedMob user mapping. The API actor needs
+the action's execution and delegation permissions. The verified requester owns
+new records and receives audit attribution on both writes; updates preserve the
+original creator. Omit it to use the API key owner. Preserve attribution on
+retries; do not retry a denied request without it.
+
+List with `{}` for all non-deleted records, newest first, or intersect filters:
+
+```json
+{
+  "creator_user_id": 90,
+  "client_id": 123,
+  "report_categories": ["client_report", "schedule_report"],
+  "start_date": "2026-11-01",
+  "end_date": "2026-11-24"
+}
+```
+
+Supported filters: `id`, `creator_user_id`, `client_id`, `vendor_id`, `report_name`,
+`report_code`, `status`, `report_type`, `scope`, `report_categories`, `start_date`,
+`end_date`, `automation_start_date`, and `automation_end_date`. Client/vendor
+filters also match all selections. `report_name` is a case-insensitive literal
+substring; `report_code` is exact. Categories match any supplied value; `[]`
+applies no category filter. Creation date bounds use the application time zone;
+automation date bounds both filter `automation_start_date`. Bounds are inclusive
+and each start must be on or before its end.
+
+The list tool preserves the API's bare array (including empty results); options
+and writes preserve the full response envelope. Validation, authorization,
+missing records, and API failures return tool errors with API details. Calls
+are not retried automatically. `npm test` covers HTTP and MCP behavior with
+mocked requests and performs no live writes.
 
 ## Create a direct spend request
 

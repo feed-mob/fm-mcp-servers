@@ -5,14 +5,17 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { registerClickUrlPricesTool } from "./tools/click-url-prices.js";
 import { registerBideaseReportsTool } from "./tools/bidease-reports.js";
+import { registerCreativeReportsTools } from "./tools/creative-reports.js";
+import { registerIronsourceAuraReportsTools } from "./tools/ironsource-aura-reports.js";
 import { registerDirectSpendRequestsTool } from "./tools/direct-spend-requests.js";
 import { registerClickUrlsTool } from "./tools/click-urls.js";
+import { registerClientReportRequestsTools } from "./tools/client-report-requests.js";
 import { fetchDirectSpendsData, getInmobiReportIds, checkInmobiReportStatus, getInmobiReports, createDirectSpend, updateDirectSpend, getAppsflyerReports, getKochavaReports, getAppsflyerInAppEventsRetargetReports, getAdopsReports, getAgencyConversionMetrics, getClickUrlHistories, getPossibleFinanceSingularReports, getUserInfos, searchUserInfos, getDirectSpendRequests, getHubspotTickets, getPrivacyHawkSingularReports, getKohoFinancialSingularReports, getTextnowAdjustReports, getClients, getCampaigns, getVendors, getJamppReports, getJamppReportsGeo, getDirectSpendJobStats, previewCampaign, createCampaign, getApps, getAdopsSpendCheckReports, getAgencyConversionRecords, getSmadexReportIds, checkSmadexReportStatus, getSmadexReports, getYouappiReports, getYouappiReportsGeo, getKayzenReports, getLiftoffReportIds, checkLiftoffReportStatus, getLiftoffReports, getSamsungReports, getBeeswaxReports, getRemergeReports, getRemergeReportsGeo, getClientReportSpendReportNames, getClientReportSpends, getPubmaticReports, getPubmaticReportsGeo, getAppsflyerCohortRevenues, getAppsflyerCohortRevenuesGeo } from "./api.js";
 
 // Create server instance
 const server = new McpServer({
   name: "feedmob-reporting",
-  version: "0.0.31",
+  version: "0.0.35",
   capabilities: {
     tools: {},
     prompts: {},
@@ -21,8 +24,11 @@ const server = new McpServer({
 
 registerClickUrlPricesTool(server);
 registerBideaseReportsTool(server);
+registerCreativeReportsTools(server);
+registerIronsourceAuraReportsTools(server);
 registerDirectSpendRequestsTool(server);
 registerClickUrlsTool(server);
+registerClientReportRequestsTools(server);
 
 // Tool Definition for Creating Direct Spend
 server.tool(
