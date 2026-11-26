@@ -1,5 +1,13 @@
 # Feedmob Spend MCP Server
 
+## CSV exports
+
+All CSV exports use the shared `saveDataToCsv` helper, which appends an
+8-character random hexadecimal suffix before `.csv`. Combined with each report's
+timestamp, this reduces filename collisions for repeated or concurrent queries.
+The returned `csv_file_path` points to the generated file under `./tmp` in the
+MCP server's working directory.
+
 ## Requester attribution
 
 `create_direct_spend`, `update_direct_spend`, `create_campaign`, and
@@ -13,6 +21,10 @@ Admin authorizes the API actor's write permission and attribution separately.
 The actor must be allowed by `AI_ON_BEHALF_OF_ALLOWED_EMAILS` to attribute the
 audit to the requester. Do not retry a rejected request without attribution.
 Omitting the field preserves the API actor's default attribution.
+
+Partner campaign mapping writes also accept top-level `on_behalf_of_user_id`,
+with execution and delegation permissions stored in `AiToolPermission` as
+described below.
 
 ## Install with Claude Desktop
 
@@ -76,6 +88,134 @@ cd src/feedmob-reporting && npm run build
   }
 }
 ```
+
+## Campaign and event mappings
+
+Version `0.0.34` adds five mapping tools matching the admin AI API:
+
+| Tool | API | Channels |
+| --- | --- | --- |
+| `get_partner_campaign_mappings` | `GET /ai/api/partner_campaign_mappings` | amazon, appier, applovin, bidease, bigo, digital_turbine, freewheel, inmobi, ironsource, kayzen, lg, liftoff, mintegral, personaly, pubmatic, remerge, rtb_house, samsung, smadex, youappi |
+| `get_mmp_campaign_mappings` | `GET /ai/api/mmp_campaign_mappings` | adjust, branch, impact, kochava, appsflyer |
+| `get_mmp_event_mappings` | `GET /ai/api/mmp_event_mappings` | adjust, impact, kochava, appsflyer |
+| `create_partner_campaign_mapping` | `POST /ai/api/partner_campaign_mappings` | bidease, freewheel, remerge |
+| `update_partner_campaign_mapping` | `PATCH /ai/api/partner_campaign_mappings/:id` | bidease, freewheel, remerge |
+
+### Query mappings
+
+Each read requires `channel`. Campaign reads accept optional positive integer
+`client_id`, `campaign_id`, `vendor_id`, and `click_url_id` filters. Partner
+`liftoff` does not support `vendor_id`; MMP `click_url_id` filtering supports
+only Impact, Kochava and AppsFlyer. AppsFlyer campaign rows are
+`ClickUrlParamsMapping` records. Singular is unsupported by the MMP tools.
+
+Event reads accept optional `client_id`, external string `app_id`, and `status`
+(`active` or `paused`). `app_id` selects Adjust `app_id`, AppsFlyer `af_app_id`, or
+Kochava `app_guid`; Impact does not support it. `status` supports only Adjust and
+AppsFlyer. Unsupported filter/channel combinations return API tool errors.
+
+```json
+{"channel":"appier","campaign_id":123,"page":1,"per_page":25}
+```
+
+```json
+{"channel":"adjust","client_id":12,"app_id":"id123","status":"active"}
+```
+
+Filters are intersected. Optional `page` and `per_page` are positive integers;
+API defaults are 1 and 25, with page size capped at 100. Each call fetches one
+page ordered by `created_at DESC, id DESC`. Read `meta.total_pages` and request
+subsequent pages before treating results as complete. The full `status`, `data`
+and `meta` envelope is returned, including empty results and zero totals.
+
+Each nonempty query also saves the current page as CSV under `./tmp` in the MCP
+server's working directory and adds an absolute `csv_file_path` to the JSON
+response. Filenames include the mapping type, channel, API page number, timestamp
+and an 8-character random suffix to keep repeated queries separate. Each CSV contains only
+the returned page, not all matching records; subsequent pages require separate
+calls. Nested objects and arrays (including `mapping`) are stored as JSON strings
+inside CSV cells. Empty results, failed requests, and create/update operations do
+not generate CSV files. These are local temporary files; the returned path is
+usable only in environments with access to the MCP server's filesystem.
+
+Campaign rows contain related client/campaign/vendor/Click URL IDs,
+channel-specific `mapping` fields and timestamps; unavailable IDs are null.
+Event rows contain client/app IDs, mapping fields and timestamps. Event objects
+and malformed historical event strings are preserved as returned by the API.
+Partner records follow each channel's existing deletion/discard scope. MMP
+deleted/discarded records are excluded; paused records remain unless filtered.
+
+### Create or update partner mappings
+
+Supply top-level `channel` and a channel-specific `mapping` object. Updates also
+require the mapping `id` within that channel's table and at least one mapping
+field. IDs must be positive integers; mapping IDs, `click_url_id` and Bidease
+advertiser IDs must fit a signed 32-bit integer.
+
+| Channel | Required creation fields inside `mapping` | Optional fields |
+| --- | --- | --- |
+| bidease | `click_url_id`, `bidease_advertiser_id`, `bidease_campaign_id` | None |
+| freewheel | `click_url_id`, `freewheel_campaign_id`, `freewheel_campaign_name` | `line_item_id`, `line_item_name`, `memo` |
+| remerge | `click_url_id`, `remerge_campaign_name` | None |
+
+Campaign IDs/names are nonblank strings; Bidease advertiser ID is an integer.
+Freewheel line-item fields allow empty strings. `memo` is an object with optional
+`allocation` (number or numeric string from 0 to 100, at most two decimal places)
+and `note` (string up to 255 characters). Unknown/protected mapping fields,
+other partners' fields and nulls are rejected before HTTP.
+
+Example `create_partner_campaign_mapping` arguments:
+
+```json
+{
+  "channel": "bidease",
+  "mapping": {
+    "click_url_id": 789,
+    "bidease_advertiser_id": 123,
+    "bidease_campaign_id": "654321"
+  },
+  "on_behalf_of_user_id": 42
+}
+```
+
+Example `update_partner_campaign_mapping` arguments:
+
+```json
+{
+  "channel": "freewheel",
+  "id": 456,
+  "mapping": {"line_item_name":"Updated","memo":{"allocation":12.34,"note":"Approved"}}
+}
+```
+
+Omitted update fields are preserved. A supplied Freewheel memo replaces the
+entire object; `{}` clears it. Freewheel duplicate campaign/line-item pairs are
+allowed, matching the admin form. Bidease advertiser/campaign pairs and Remerge
+campaign names retain their uniqueness rules. Discarded Bidease/Freewheel
+mappings cannot be updated. No deletion or restoration tool is exposed.
+
+Writes use `AiToolPermission` rows with `mcp_name=feedmob-reporting` and the
+corresponding `tool_key` (`create_partner_campaign_mapping` or
+`update_partner_campaign_mapping`). The API actor needs `allowed_emails` access
+on that tool's row. Optional top-level `on_behalf_of_user_id` requires a verified
+active, approved requester and actor access in `on_behalf_of_allowed_emails` on
+the same row. `denied_emails` overrides both lists and applies to the requester.
+Create/update permissions are independent; these writes do not use the older
+TrackingConfig write allowlists. Bidease also requires the effective user's
+QA/PM business role. Audits use the requester when supplied, otherwise the API
+actor. Resolve attribution from trusted session identity and a verified FeedMob
+user mapping; do not retry rejected requests without attribution.
+
+Creation returns status 201 and updates return 200, including successful no-op
+updates. The full response is preserved. API validation (400), authentication
+(401), permissions (403), missing/discarded targets (404), model validation or
+invalid requesters (422), and logging failures (503) return tool errors with the
+API payload. Business errors in HTTP success responses also return tool errors.
+Writes are never automatically retried.
+
+All five tools use the existing `FEEDMOB_KEY`, `FEEDMOB_SECRET` and
+`FEEDMOB_API_BASE`; no new environment variables are required. `npm test` covers
+MCP discovery, validation and mocked HTTP requests without live API writes.
 
 ## Bidease reports
 

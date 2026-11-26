@@ -3,8 +3,14 @@ import jwt from 'jsonwebtoken';
 import dotenv from "dotenv";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
+import { randomBytes } from "node:crypto";
 import type { CreateDirectSpendRequestParams, UpdateDirectSpendRequestParams } from "./schemas/direct-spend-request.js";
 import type { ClickUrlsQuery } from "./schemas/click-urls.js";
+import {
+  partnerMappingCreateSchemas, partnerMappingUpdateSchemas,
+  type PartnerCampaignMappingsQuery, type MmpCampaignMappingsQuery, type MmpEventMappingsQuery,
+  type CreatePartnerCampaignMappingParams, type UpdatePartnerCampaignMappingParams,
+} from "./schemas/mappings.js";
 
 dotenv.config(); // Load environment variables from .env file
 
@@ -73,7 +79,9 @@ function saveDataToCsv(data: any[], filename: string): string {
   }
 
   // Save to file in ./tmp directory
-  const filePath = join(tmpDirectory, filename);
+  const suffix = randomBytes(4).toString("hex");
+  const uniqueFilename = filename.replace(/\.csv$/i, `_${suffix}.csv`);
+  const filePath = join(tmpDirectory, uniqueFilename);
   writeFileSync(filePath, csvContent, 'utf-8');
 
   return filePath;
@@ -1458,6 +1466,95 @@ export async function getClickUrls(params: ClickUrlsQuery = {}): Promise<ClickUr
 
   if (hasDirectSpendErrors(responseData?.errors) || responseData?.status >= 400) {
     throw new Error(`FeedMob API Click URLs request failed: ${JSON.stringify(responseData)}`);
+  }
+  return responseData;
+}
+
+export function getPartnerCampaignMappings(params: PartnerCampaignMappingsQuery): Promise<MappingsResponse> {
+  return getMappingsPage("partner_campaign_mappings", params);
+}
+
+export function getMmpCampaignMappings(params: MmpCampaignMappingsQuery): Promise<MappingsResponse> {
+  return getMappingsPage("mmp_campaign_mappings", params);
+}
+
+export function getMmpEventMappings(params: MmpEventMappingsQuery): Promise<MappingsResponse> {
+  return getMappingsPage("mmp_event_mappings", params);
+}
+
+async function getMappingsPage(
+  resource: "partner_campaign_mappings" | "mmp_campaign_mappings" | "mmp_event_mappings",
+  params: PartnerCampaignMappingsQuery | MmpCampaignMappingsQuery | MmpEventMappingsQuery,
+): Promise<MappingsResponse> {
+  const response = await requestMappings<MappingsResponse>("get", `/ai/api/${resource}`, params);
+  if (response.data.length === 0) return response;
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const filename = `${resource}_${params.channel}_page_${response.meta.current_page}_${timestamp}.csv`;
+  return { ...response, csv_file_path: saveDataToCsv(response.data, filename) };
+}
+
+export function createPartnerCampaignMapping(params: CreatePartnerCampaignMappingParams): Promise<MappingWriteResponse> {
+  const mapping = partnerMappingCreateSchemas[params.channel].parse(params.mapping);
+  return requestMappings("post", "/ai/api/partner_campaign_mappings", { ...params, mapping });
+}
+
+export function updatePartnerCampaignMapping(params: UpdatePartnerCampaignMappingParams): Promise<MappingWriteResponse> {
+  const { id, ...body } = params;
+  const mapping = partnerMappingUpdateSchemas[body.channel].parse(body.mapping);
+  return requestMappings("patch", `/ai/api/partner_campaign_mappings/${id}`, { ...body, mapping });
+}
+
+export interface MappingsResponse {
+  status: number;
+  data: Record<string, unknown>[];
+  meta: { current_page: number; per_page: number; total_count: number; total_pages: number };
+  errors?: unknown;
+  csv_file_path?: string;
+}
+
+export interface MappingWriteResponse {
+  status: number;
+  data: Record<string, unknown>;
+  errors: unknown;
+}
+
+async function requestMappings<T extends MappingsResponse | MappingWriteResponse>(
+  method: "get" | "post" | "patch", path: string, params: Record<string, unknown>
+): Promise<T> {
+  const url = new URL(`${FEEDMOB_API_BASE}${path}`);
+  const fields = Object.fromEntries(Object.entries(params).filter(([, value]) => value !== undefined));
+  if (method === "get") {
+    for (const [field, value] of Object.entries(fields)) {
+      url.searchParams.set(field, String(value));
+    }
+  }
+
+  let responseData: T;
+  try {
+    const response = await axios.request<T>({
+      method,
+      url: url.toString(),
+      ...(method === "get" ? {} : { data: fields }),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string),
+      },
+      timeout: 30000,
+    });
+    responseData = response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      const reason = error.response?.status ?? error.code ?? "Unknown error";
+      const details = error.response?.data === undefined ? "" : `: ${JSON.stringify(error.response.data)}`;
+      throw new Error(`FeedMob API mappings request failed (${reason})${details}`);
+    }
+    throw new Error("Failed to request FeedMob mappings");
+  }
+  if (responseData?.status >= 400 || hasDirectSpendErrors(responseData?.errors)) {
+    throw new Error(`FeedMob API mappings request failed: ${JSON.stringify(responseData)}`);
   }
   return responseData;
 }
