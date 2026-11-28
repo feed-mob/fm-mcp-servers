@@ -77,6 +77,10 @@ cd src/feedmob-reporting && npm run build
 }
 ```
 
+FeedMob Reporting stdio sends `X-FeedMob-Client: feedmob-reporting` on its
+Admin AI API requests. Admin records it under **MCP server** in the AI Usage report.
+Authentication and actor attribution continue to use the FeedMob API key.
+
 ## Bidease reports
 
 Version `0.0.28` adds `get_bidease_reports`, calling `GET /ai/api/bidease_reports`.
