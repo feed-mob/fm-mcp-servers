@@ -5,6 +5,8 @@ import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
 import type { CreateDirectSpendRequestParams, UpdateDirectSpendRequestParams } from "./schemas/direct-spend-request.js";
 import type { ClickUrlsQuery } from "./schemas/click-urls.js";
+import { clientReportRequestSchema, clientReportRequestsQuerySchema, updateClientReportRequestSchema } from "./schemas/client-report-request.js";
+import type { ClientReportRequestsQuery, CreateClientReportRequestParams, UpdateClientReportRequestParams } from "./schemas/client-report-request.js";
 
 dotenv.config(); // Load environment variables from .env file
 
@@ -1010,6 +1012,91 @@ async function writeDirectSpendRequest(
 
   if (hasDirectSpendErrors(responseData?.errors) || responseData?.status >= 400) {
     throw new Error(`FeedMob API direct spend request ${operation} failed: ${JSON.stringify(responseData)}`);
+  }
+  return responseData;
+}
+
+interface ClientReportRequestResponse {
+  status: number;
+  data: unknown;
+  errors: unknown;
+  message?: string;
+}
+
+// The index endpoint returns a bare array; options and writes return envelopes.
+type ClientReportRequestResult = ClientReportRequestResponse | Record<string, unknown>[];
+
+export async function getClientReportRequests(params: ClientReportRequestsQuery = {}): Promise<ClientReportRequestResult> {
+  const filters = clientReportRequestsQuerySchema.parse(params);
+  for (const [start, end] of [[filters.start_date, filters.end_date], [filters.automation_start_date, filters.automation_end_date]]) {
+    if (start && end && start > end) {
+      throw new Error("Date range start must be on or before its end");
+    }
+  }
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (Array.isArray(value)) {
+      value.forEach((item) => query.append(`${key}[]`, item));
+    } else if (value !== undefined) {
+      query.append(key, String(value));
+    }
+  }
+  const suffix = query.size ? `?${query.toString()}` : "";
+  return requestClientReportRequests("get", `/ai/api/client_report_requests${suffix}`);
+}
+
+export async function getClientReportRequestOptions(): Promise<ClientReportRequestResult> {
+  return requestClientReportRequests("get", "/ai/api/client_report_requests/options");
+}
+
+export async function createClientReportRequest(params: CreateClientReportRequestParams): Promise<ClientReportRequestResult> {
+  return requestClientReportRequests("post", "/ai/api/client_report_requests", clientReportRequestSchema.parse(params));
+}
+
+export async function updateClientReportRequest(params: UpdateClientReportRequestParams): Promise<ClientReportRequestResult> {
+  const { id, on_behalf_of_user_id, ...fields } = updateClientReportRequestSchema.parse(params);
+  if (!Object.values(fields).some((value) => value !== undefined)) {
+    throw new Error("At least one writable field is required");
+  }
+  return requestClientReportRequests("patch", `/ai/api/client_report_requests/${id}`, { ...fields, on_behalf_of_user_id });
+}
+
+async function requestClientReportRequests(
+  method: "get" | "post" | "patch", path: string, params?: Record<string, unknown>
+): Promise<ClientReportRequestResult> {
+  let responseData: ClientReportRequestResult;
+  try {
+    const response = await axios.request<ClientReportRequestResult>({
+      method,
+      url: `${FEEDMOB_API_BASE}${path}`,
+      ...(params === undefined ? {} : { data: Object.fromEntries(Object.entries(params).filter(([, value]) => value !== undefined)) }),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'FEEDMOB-KEY': FEEDMOB_KEY,
+        'FEEDMOB-TOKEN': generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string),
+      },
+      timeout: 30000,
+    });
+    responseData = response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<ClientReportRequestResponse>(error)) {
+      const status = error.response?.status;
+      const data = error.response?.data;
+      const reason = status === 400 ? 'Bad Request (400)'
+        : status === 401 ? 'Unauthorized (401)'
+        : status === 403 ? 'Forbidden (403)'
+        : status === 404 ? 'Not Found (404)'
+        : status === 422 ? 'Unprocessable Entity (422)'
+        : status ?? error.code ?? 'Unknown error';
+      const details = hasDirectSpendErrors(data?.errors) ? `: ${JSON.stringify(data?.errors)}`
+        : data?.message ? `: ${data.message}` : '';
+      throw new Error(`FeedMob API client report request failed: ${reason}${details}`);
+    }
+    throw new Error("Failed to call client report requests API");
+  }
+  if (!Array.isArray(responseData) && (hasDirectSpendErrors(responseData?.errors) || responseData?.status >= 400)) {
+    throw new Error(`FeedMob API client report request failed: ${JSON.stringify(responseData)}`);
   }
   return responseData;
 }
