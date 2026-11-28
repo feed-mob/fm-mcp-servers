@@ -1070,12 +1070,7 @@ async function requestClientReportRequests(
       method,
       url: `${FEEDMOB_API_BASE}${path}`,
       ...(params === undefined ? {} : { data: Object.fromEntries(Object.entries(params).filter(([, value]) => value !== undefined)) }),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'FEEDMOB-KEY': FEEDMOB_KEY,
-        'FEEDMOB-TOKEN': generateToken(FEEDMOB_KEY as string, FEEDMOB_SECRET as string),
-      },
+      headers: adminApiHeaders(),
       timeout: 30000,
     });
     responseData = response.data;

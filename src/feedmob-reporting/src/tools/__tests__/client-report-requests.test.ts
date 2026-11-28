@@ -71,6 +71,7 @@ describe("client report request tools", () => {
     assert.equal(request.timeout, 30000);
     assert.equal(request.headers.get("Accept"), "application/json");
     assert.equal(request.headers.get("FEEDMOB-KEY"), "test-key");
+    assert.equal(request.headers.get("X-FeedMob-Client"), "feedmob-reporting");
     const token = jwt.verify(String(request.headers.get("FEEDMOB-TOKEN")), "test-secret");
     assert.equal(typeof token === "object" && token.key, "test-key");
   }
